@@ -1,0 +1,99 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Usuario {
+  id            Int           @id @default(autoincrement())
+  nombre        String
+  apellido      String
+  email         String        @unique
+  password      String
+  rol           Rol
+  activo        Boolean       @default(true)
+  clientes      Cliente[]
+  oportunidades Oportunidad[]
+  tareas        Tarea[]
+  actividades   Actividad[]
+  creadoEn      DateTime      @default(now())
+}
+
+model Cliente {
+  id            Int           @id @default(autoincrement())
+  nombre        String
+  empresa       String?
+  telefono      String?
+  email         String?
+  notas         String?
+  usuario       Usuario?      @relation(fields: [usuarioId], references: [id])
+  usuarioId     Int?
+  oportunidades Oportunidad[]
+  tareas        Tarea[]
+  creadoEn      DateTime      @default(now())
+}
+
+model Oportunidad {
+  id          Int          @id @default(autoincrement())
+  titulo      String
+  notas       String?
+  tipo        String?
+  estado      String?
+  valor       Float?
+  etapa       Etapa        @default(CONTACTO)
+  fechaCierre DateTime?
+  cliente     Cliente      @relation(fields: [clienteId], references: [id])
+  clienteId   Int
+  usuario     Usuario?     @relation(fields: [usuarioId], references: [id])
+  usuarioId   Int?
+  tareas      Tarea[]
+  actividades Actividad[]
+  creadoEn    DateTime     @default(now())
+}
+
+model Tarea {
+  id            Int          @id @default(autoincrement())
+  descripcion   String
+  completada    Boolean      @default(false)
+  fechaLimite   DateTime?
+  cliente       Cliente?     @relation(fields: [clienteId], references: [id])
+  clienteId     Int?
+  oportunidad   Oportunidad? @relation(fields: [oportunidadId], references: [id])
+  oportunidadId Int?
+  usuario       Usuario?     @relation(fields: [usuarioId], references: [id])
+  usuarioId     Int?
+  creadoEn      DateTime     @default(now())
+}
+
+model Actividad {
+  id                 Int          @id @default(autoincrement())
+  tipo               String       // "LLAMADA", "REUNION", "EMAIL", "TAREA"
+  titulo             String
+  descripcion        String?
+  fechaVencimiento   DateTime
+  completada         Boolean      @default(false)
+  fechaCompletada    DateTime?
+  oportunidad        Oportunidad  @relation(fields: [oportunidadId], references: [id], onDelete: Cascade)
+  oportunidadId      Int
+  usuario            Usuario      @relation(fields: [usuarioId], references: [id])
+  usuarioId          Int
+  creadoEn           DateTime     @default(now())
+  actualizadoEn      DateTime     @updatedAt
+}
+
+enum Rol {
+  GERENTE
+  VENDEDOR
+  ADMINISTRADOR
+}
+
+enum Etapa {
+  CONTACTO
+  NEGOCIACION
+  EN_ALQUILER
+  EN_VENTA
+  NO_CONCRETADO
+}
