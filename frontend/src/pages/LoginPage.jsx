@@ -23,8 +23,9 @@ export default function LoginPage() {
     try {
       const res = await axios.post("http://localhost:3000/auth/login", { email, password });
       login(res.data.token, res.data.usuario);
-    } catch {
-      error("Credenciales incorrectas");
+    } catch (err) {
+      const mensajeError = err.response?.data?.error || "Error al intentar iniciar sesión";
+      error(mensajeError);
     } finally {
       setLoading(false);
     }
