@@ -32,7 +32,7 @@ export const listarOportunidades = async (req, res) => {
   res.json(data);
 };
 
-// Crear oportunidad
+
 export const crearOportunidad = async (req, res) => {
   const usuario = req.usuario;
   const { titulo, notas, tipo, estado, valor, etapa, clienteId } = req.body;
@@ -53,65 +53,138 @@ export const crearOportunidad = async (req, res) => {
   res.json(op);
 };
 
-// Editar oportunidad
+
 export const editarOportunidad = async (req, res) => {
   const { id } = req.params;
   const { titulo, notas, tipo, estado, valor, clienteId } = req.body;
+  const usuario = req.usuario;
 
-  // Obtener la oportunidad actual para verificar cambios de estado
-  const oppActual = await prisma.oportunidad.findUnique({
-    where: { id: Number(id) }
-  });
-
-  // Determinar si debemos actualizar fechaCierre
-  let fechaCierre = oppActual.fechaCierre;
-  
-  if (estado && estado !== oppActual.estado) {
-    // Si el estado cambió a Alquilada o Vendida y no tiene fechaCierre
-    if ((estado === "Alquilada" || estado === "Vendida") && !oppActual.fechaCierre) {
-      fechaCierre = new Date();
-    }
-    // Si vuelve a otro estado (no Alquilada ni Vendida), resetear fechaCierre
-    else if (estado !== "Alquilada" && estado !== "Vendida") {
-      fechaCierre = null;
-    }
+  const oportunidadId = Number(id);
+  if (Number.isNaN(oportunidadId)) {
+    return res.status(400).json({ error: "ID inválido" });
   }
 
-  const op = await prisma.oportunidad.update({
-    where: { id: Number(id) },
-    data: { 
-      titulo, 
-      notas: notas || null, 
-      tipo: tipo || null, 
-      estado: estado || null, 
-      valor, 
-      clienteId,
-      fechaCierre
-    }
-  });
+  try {
+    const oppActual = await prisma.oportunidad.findUnique({
+      where: { id: oportunidadId }
+    });
 
-  res.json(op);
+    if (!oppActual) {
+      return res.status(404).json({ error: "Oportunidad no encontrada" });
+    }
+
+    if (usuario.rol === "VENDEDOR" && oppActual.usuarioId !== usuario.id) {
+      return res.status(403).json({ error: "No tienes permiso para modificar esta oportunidad" });
+    }
+
+    let fechaCierre = oppActual.fechaCierre;
+    
+    if (estado && estado !== oppActual.estado) {
+
+      if ((estado === "Alquilada" || estado === "Vendida") && !oppActual.fechaCierre) {
+        fechaCierre = new Date();
+      }
+
+      else if (estado !== "Alquilada" && estado !== "Vendida") {
+        fechaCierre = null;
+      }
+    }
+
+    const op = await prisma.oportunidad.update({
+      where: { id: oportunidadId },
+      data: { 
+        titulo, 
+        notas: notas || null, 
+        tipo: tipo || null, 
+        estado: estado || null, 
+        valor, 
+        clienteId,
+        fechaCierre
+      }
+    });
+
+    return res.json(op);
+  } catch (error) {
+    console.error("Error en editarOportunidad:", error);
+    return res.status(500).json({ error: "Error al editar la oportunidad" });
+  }
 };
 
-// Eliminar oportunidad
+
 export const eliminarOportunidad = async (req, res) => {
   const { id } = req.params;
+  const usuario = req.usuario;
 
-  await prisma.oportunidad.delete({
-    where: { id: Number(id) }
-  });
+  const oportunidadId = Number(id);
+  if (Number.isNaN(oportunidadId)) {
+    return res.status(400).json({ error: "ID inválido" });
+  }
 
-  res.json({ mensaje: "Oportunidad eliminada" });
+  try {
+    const oportunidad = await prisma.oportunidad.findUnique({
+      where: { id: oportunidadId }
+    });
+
+    if (!oportunidad) {
+      return res.status(404).json({ error: "Oportunidad no encontrada" });
+    }
+
+    if (usuario.rol === "VENDEDOR" && oportunidad.usuarioId !== usuario.id) {
+      return res.status(403).json({ error: "No tienes permiso para eliminar esta oportunidad" });
+    }
+
+    await prisma.oportunidad.delete({
+      where: { id: oportunidadId }
+    });
+
+    return res.json({ mensaje: "Oportunidad eliminada" });
+  } catch (error) {
+    console.error("Error en eliminarOportunidad:", error);
+    return res.status(500).json({ error: "Error al eliminar la oportunidad" });
+  }
 };
+
 
 export const cambiarEtapa = async (req, res) => {
   const { id } = req.params;
   const { etapa } = req.body;
+  const usuario = req.usuario;
 
-  const op = await prisma.oportunidad.update({
-    where: { id: Number(id) },
-    data: { etapa }
-  });
+  const oportunidadId = Number(id);
+  if (Number.isNaN(oportunidadId)) {
+    return res.status(400).json({ error: "ID inválido" });
+  }
 
-  res.json(op);
+  if (!etapa) {
+    return res.status(400).json({ error: "La etapa es requerida" });
+  }
+
+  const etapasValidas = ["CONTACTO", "NEGOCIACION", "EN_ALQUILER", "EN_VENTA", "NO_CONCRETADO"];
+  if (!etapasValidas.includes(etapa)) {
+    return res.status(400).json({ error: "Etapa inválida" });
+  }
+
+  try {
+    const oportunidad = await prisma.oportunidad.findUnique({
+      where: { id: oportunidadId }
+    });
+
+    if (!oportunidad) {
+      return res.status(404).json({ error: "Oportunidad no encontrada" });
+    }
+
+    if (usuario.rol === "VENDEDOR" && oportunidad.usuarioId !== usuario.id) {
+      return res.status(403).json({ error: "No tienes permiso para modificar esta oportunidad" });
+    }
+
+    const op = await prisma.oportunidad.update({
+      where: { id: oportunidadId },
+      data: { etapa }
+    });
+
+    return res.json(op);
+  } catch (error) {
+    console.error("Error en cambiarEtapa:", error);
+   return res.status(500).json({ error: "Error al cambiar la etapa" });
+  }
 };
