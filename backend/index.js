@@ -6,6 +6,7 @@ import clienteRoutes from "./routes/clienteRoutes.js";
 import oportunidadRoutes from "./routes/oportunidadRoutes.js";
 import actividadRoutes from "./routes/actividadRoutes.js";
 import usuarioRoutes from "./routes/usuarioRoutes.js";
+import propiedadRoutes from "./routes/propiedadRoutes.js";
 import { swaggerSpec, swaggerUiMiddleware, swaggerUiSetup } from "./swagger.js";
 import reportesRoutes from "./routes/reportesRoutes.js";
 
@@ -15,12 +16,11 @@ app.use(express.json());
 app.use("/auth", authRoutes);
 app.use("/clientes", clienteRoutes);
 app.use("/oportunidades", oportunidadRoutes);
+app.use("/propiedades", propiedadRoutes);
 app.use("/actividades", actividadRoutes);
 app.use("/usuarios", usuarioRoutes);
 app.use("/docs", swaggerUiMiddleware, swaggerUiSetup);
 app.use("/reportes", reportesRoutes);
-
-
 
 app.get("/", (req, res) => {
   res.json({ mensaje: "API CRM funcionando" });
