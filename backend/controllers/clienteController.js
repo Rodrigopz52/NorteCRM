@@ -98,44 +98,53 @@ export const editarCliente = async (req, res) => {
 
 export const eliminarCliente = async (req, res) => {
   try {
-    const usuario = req.usuario;
-
-    if (usuario.rol !== "GERENTE" && usuario.rol !== "ADMINISTRADOR") {
-      return res.status(403).json({ error: "Solo el gerente o administrador pueden eliminar clientes" });
-    }
-
     const { id } = req.params;
+    const { id: usuarioId, rol } = req.usuario;
 
-    // Verificar si el cliente tiene oportunidades o tareas asociadas
-    const oportunidadesCount = await prisma.oportunidad.count({ 
-      where: { clienteId: Number(id) } 
-    });
-    
-    const tareasCount = await prisma.tarea.count({ 
-      where: { clienteId: Number(id) } 
-    });
-
-    // Eliminar todas las relaciones antes de eliminar el cliente
-    if (tareasCount > 0) {
-      await prisma.tarea.deleteMany({ where: { clienteId: Number(id) } });
+    const clienteId = Number(id);
+    if (Number.isNaN(clienteId)) {
+      return res.status(400).json({ error: "ID inválido" });
     }
-    
-    if (oportunidadesCount > 0) {
-      await prisma.oportunidad.deleteMany({ where: { clienteId: Number(id) } });
-    }
-    
-    // Luego eliminar el cliente
-    await prisma.cliente.delete({ where: { id: Number(id) } });
 
-    res.json({ 
-      mensaje: "Cliente eliminado exitosamente",
-      info: oportunidadesCount > 0 
-        ? `Se eliminaron ${oportunidadesCount} oportunidad(es) asociada(s)` 
-        : null
+    const cliente = await prisma.cliente.findUnique({
+      where: { id: clienteId }
     });
+
+    if (!cliente) {
+      return res.status(404).json({ error: "Cliente no encontrado" });
+    }
+
+    if (rol === "VENDEDOR" && cliente.usuarioId !== usuarioId) {
+      return res.status(403).json({ error: "No tienes permiso para eliminar este cliente" });
+    }
+
+    await prisma.$transaction(async (tx) => {
+
+      const oportunidades = await tx.oportunidad.findMany({
+        where: { clienteId },
+        select: { id: true }
+      });
+
+      if (oportunidades.length > 0) {
+        const oportunidadIds = oportunidades.map(o => o.id);
+        await tx.actividad.deleteMany({
+          where: { oportunidadId: { in: oportunidadIds } }
+        });
+      }
+
+      await tx.oportunidad.deleteMany({
+        where: { clienteId }
+      });
+
+      await tx.cliente.delete({
+        where: { id: clienteId }
+      });
+    });
+
+    return res.json({ mensaje: "Cliente eliminado correctamente" });
 
   } catch (error) {
     console.error("Error al eliminar cliente:", error);
-    res.status(500).json({ error: "Error al eliminar cliente: " + error.message });
+    return res.status(500).json({ error: "Error al eliminar cliente" });
   }
 };
