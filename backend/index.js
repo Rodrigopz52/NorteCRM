@@ -7,6 +7,7 @@ import oportunidadRoutes from "./routes/oportunidadRoutes.js";
 import actividadRoutes from "./routes/actividadRoutes.js";
 import usuarioRoutes from "./routes/usuarioRoutes.js";
 import propiedadRoutes from "./routes/propiedadRoutes.js";
+import tareaRoutes from "./routes/tareaRoutes.js";
 import { swaggerSpec, swaggerUiMiddleware, swaggerUiSetup } from "./swagger.js";
 import reportesRoutes from "./routes/reportesRoutes.js";
 
@@ -19,6 +20,7 @@ app.use("/oportunidades", oportunidadRoutes);
 app.use("/propiedades", propiedadRoutes);
 app.use("/actividades", actividadRoutes);
 app.use("/usuarios", usuarioRoutes);
+app.use("/tareas", tareaRoutes);
 app.use("/docs", swaggerUiMiddleware, swaggerUiSetup);
 app.use("/reportes", reportesRoutes);
 
