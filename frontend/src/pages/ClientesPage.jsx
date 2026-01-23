@@ -72,7 +72,7 @@ const crearCliente = async () => {
 
   const eliminar = async (id) => {
     try {
-      const { data: oportunidades } = await axios.get("http://localhost:3000/oportunidades", {
+      const { data: oportunidades } = await axios.get("http://localhost:3000/propiedades", {
         headers: { Authorization: `Bearer ${token}` }
       });
       
@@ -82,8 +82,8 @@ const crearCliente = async () => {
       let message = "Esta acción no se puede deshacer.";
       
       if (oportunidadesDelCliente.length > 0) {
-        title = "⚠️ Cliente con oportunidades asociadas";
-        message = `Este cliente tiene ${oportunidadesDelCliente.length} oportunidad(es) asociada(s).\n\nAl eliminar el cliente, también se eliminarán todas sus oportunidades.\n\n¿Deseas continuar?`;
+        title = "⚠️ Cliente con propiedades asociadas";
+        message = `Este cliente tiene ${oportunidadesDelCliente.length} oportunidad(es) asociada(s).\n\nAl eliminar el cliente, también se eliminarán todas sus propiedades.\n\n¿Deseas continuar?`;
       }
       
       const confirmed = await showConfirm({

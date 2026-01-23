@@ -76,7 +76,7 @@ export default function OportunidadesPage() {
       if (form.id) {
         // EDITAR oportunidad existente
         await axios.put(
-          `http://localhost:3000/oportunidades/${form.id}`,
+          `http://localhost:3000/propiedades/${form.id}`,
           {
             titulo: form.titulo,
             notas: form.notas || null,
@@ -91,7 +91,7 @@ export default function OportunidadesPage() {
       } else {
         // CREAR nueva oportunidad
         await axios.post(
-          "http://localhost:3000/oportunidades",
+          "http://localhost:3000/propiedades",
           {
             titulo: form.titulo,
             notas: form.notas || null,
@@ -125,7 +125,7 @@ export default function OportunidadesPage() {
 
       if (!confirmed) return;
 
-      await axios.delete(`http://localhost:3000/oportunidades/${id}`, {
+      await axios.delete(`http://localhost:3000/propiedades/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
@@ -171,13 +171,13 @@ export default function OportunidadesPage() {
   const toggleActividadCompletada = async (actividadId, completada) => {
     try {
       await axios.put(
-        `http://localhost:3000/actividades/${actividadId}/completar`,
+        `http://localhost:3000/tareas/${actividadId}/completar`,
         { completada: !completada },
         { headers: { Authorization: `Bearer ${token}` } }
       );
       load();
     } catch (error) {
-      console.error("Error al actualizar actividad:", error);
+      console.error("Error al actualizar tarea:", error);
     }
   };
 
@@ -191,15 +191,15 @@ export default function OportunidadesPage() {
 
       if (!confirmed) return;
 
-      await axios.delete(`http://localhost:3000/actividades/${actividadId}`, {
+      await axios.delete(`http://localhost:3000/tareas/${actividadId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
-      success("Actividad eliminada correctamente");
+      success("Tarea eliminada correctamente");
       load();
     } catch (err) {
-      console.error("Error al eliminar actividad:", err);
-      error(err.response?.data?.error || "Error al eliminar la actividad");
+      console.error("Error al eliminar tarea:", err);
+      error(err.response?.data?.error || "Error al eliminar la tarea");
     }
   };
 
@@ -210,7 +210,7 @@ export default function OportunidadesPage() {
     const nuevaEtapa = result.destination.droppableId;
 
     await axios.put(
-      `http://localhost:3000/oportunidades/${id}/etapa`,
+      `http://localhost:3000/propiedades/${id}/etapa`,
       { etapa: nuevaEtapa },
       { headers: { Authorization: `Bearer ${token}` } }
     );

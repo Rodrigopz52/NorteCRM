@@ -230,13 +230,13 @@ function DashboardVendedor({ data }) {
             <ExclamationTriangleIcon className="w-5 h-5 sm:w-6 sm:h-6 text-red-600 flex-shrink-0 mt-1" />
             <div className="flex-1">
               <h3 className="text-base sm:text-lg font-bold text-red-800 mb-2 sm:mb-3">
-                ⚠️ Tareas sin Actividad Reciente
+                Tareas sin actividad reciente
               </h3>
               <div className="space-y-2">
                 {data.oportunidadesEstancadas.map(opp => {
                   const diasEstancada = opp.actividades.length === 0 
-                    ? "Sin actividades"
-                    : `Última actividad: ${new Date(opp.actividades[0].fechaVencimiento).toLocaleDateString()}`;
+                    ? "Sin tareas"
+                    : `Última tarea: ${new Date(opp.actividades[0].fechaVencimiento).toLocaleDateString()}`;
                   
                   return (
                     <div key={opp.id} className="bg-white p-3 rounded-lg border border-red-200">
@@ -436,7 +436,7 @@ function DashboardGerente({ data }) {
             ) : (
               data.oportunidadesEstancadas.map(opp => {
                 const diasEstancada = opp.actividades.length === 0 
-                  ? "Sin actividades"
+                  ? "Sin tareas"
                   : `Última: ${new Date(opp.actividades[0].fechaVencimiento).toLocaleDateString()}`;
                 
                 return (

@@ -47,17 +47,17 @@ export default function ActividadesPage() {
 
   const load = async () => {
     try {
-      const { data } = await axios.get("http://localhost:3000/actividades", {
+      const { data } = await axios.get("http://localhost:3000/tareas", {
         headers: { Authorization: `Bearer ${token}` }
       });
       setActividades(data);
 
-      const opps = await axios.get("http://localhost:3000/oportunidades", {
+      const opps = await axios.get("http://localhost:3000/propiedades", {
         headers: { Authorization: `Bearer ${token}` }
       });
       setOportunidades(opps.data);
     } catch (error) {
-      console.error("Error al cargar actividades:", error);
+      console.error("Error al cargar tareas:", error);
     }
   };
 
@@ -75,7 +75,7 @@ export default function ActividadesPage() {
       if (form.id) {
         // EDITAR
         await axios.put(
-          `http://localhost:3000/actividades/${form.id}`,
+          `http://localhost:3000/tareas/${form.id}`,
           {
             tipo: form.tipo,
             titulo: form.titulo,
@@ -89,7 +89,7 @@ export default function ActividadesPage() {
       } else {
         // CREAR
         await axios.post(
-          "http://localhost:3000/actividades",
+          "http://localhost:3000/tareas",
           form,
           { headers: { Authorization: `Bearer ${token}` } }
         );
@@ -115,7 +115,7 @@ export default function ActividadesPage() {
   const toggleCompletada = async (id, completada) => {
     try {
       await axios.put(
-        `http://localhost:3000/actividades/${id}/completar`,
+        `http://localhost:3000/tareas/${id}/completar`,
         { completada: !completada },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -135,7 +135,7 @@ export default function ActividadesPage() {
 
       if (!confirmed) return;
 
-      await axios.delete(`http://localhost:3000/actividades/${id}`, {
+      await axios.delete(`http://localhost:3000/tareas/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
@@ -244,7 +244,7 @@ export default function ActividadesPage() {
           {actividadesFiltradas.length === 0 ? (
             <div className="p-12 text-center text-gray-500">
               <ClipboardDocumentListIcon className="w-16 h-16 mx-auto mb-4 opacity-50" />
-              <p className="text-lg">No hay actividades {filtro.toLowerCase()}</p>
+              <p className="text-lg">No hay tareas {filtro.toLowerCase()}</p>
             </div>
           ) : (
             <div className="divide-y divide-gray-200">
