@@ -43,12 +43,31 @@ export default function App() {
         />
 
         <Route
+        path="propiedades"
+        element={
+          <PrivateRoute>
+            <Navbar />
+            <OportunidadesPage />
+          </PrivateRoute>
+        }
+        />
+
+        <Route
           path="/actividades"
           element={
             <PrivateRoute>
               <ActividadesPage />
             </PrivateRoute>
           }
+        />
+
+        <Route
+        path="tareas"
+        element={
+          <PrivateRoute>
+            <ActividadesPage />
+          </PrivateRoute>
+        }
         />
 
         <Route
