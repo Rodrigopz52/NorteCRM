@@ -2,7 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import LoginPage from "./pages/LoginPage.jsx";
 import ClientesPage from "./pages/ClientesPage.jsx";
 import PropiedadesPage from "./pages/PropiedadesPage.jsx";
-import ActividadesPage from "./pages/ActividadesPage.jsx";
+import TareasPage from "./pages/TareasPage.jsx";
 import UsuariosPage from "./pages/UsuariosPage.jsx";
 import Navbar from "./components/Navbar.jsx";
 import { useContext } from "react";
@@ -56,7 +56,7 @@ export default function App() {
           path="/actividades"
           element={
             <PrivateRoute>
-              <ActividadesPage />
+              <TareasPage />
             </PrivateRoute>
           }
         />
@@ -65,7 +65,7 @@ export default function App() {
         path="tareas"
         element={
           <PrivateRoute>
-            <ActividadesPage />
+            <TareasPage />
           </PrivateRoute>
         }
         />

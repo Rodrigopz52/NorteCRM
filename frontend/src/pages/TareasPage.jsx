@@ -13,7 +13,7 @@ import {
   PlusIcon
 } from "@heroicons/react/24/outline";
 
-export default function ActividadesPage() {
+export default function TareasPage() {
   const { token, usuario } = useContext(AuthContext);
   const { success, error, ToastContainer } = useToast();
   const { showConfirm, ConfirmContainer } = useConfirm();
