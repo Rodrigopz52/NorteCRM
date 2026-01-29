@@ -1,5 +1,5 @@
 import { useState, useContext } from "react";
-import axios from "axios";
+import api from "../api/api.js";
 import { AuthContext } from "../context/AuthContext.jsx";
 import { useToast } from "../hooks/useNotifications.jsx";
 import { LockClosedIcon, EnvelopeIcon } from "@heroicons/react/24/outline";
@@ -21,7 +21,7 @@ export default function LoginPage() {
     
     setLoading(true);
     try {
-      const res = await axios.post("http://localhost:3000/auth/login", { email, password });
+      const res = await api.post("/auth/login", { email, password });
       login(res.data.token, res.data.usuario);
     } catch (err) {
       const mensajeError = err.response?.data?.error || "Error al intentar iniciar sesión";

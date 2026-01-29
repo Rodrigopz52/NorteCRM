@@ -1,5 +1,5 @@
 import { useContext, useEffect, useState } from "react";
-import axios from "axios";
+import api from "../api/api.js";
 import { AuthContext } from "../context/AuthContext.jsx";
 import { useToast, useConfirm } from "../hooks/useNotifications.jsx";
 
@@ -15,7 +15,7 @@ export default function ClientesPage() {
   const [form, setForm] = useState({ nombre: "", empresa: "", telefono: "", email: "", notas: "" });
 
   const fetchClientes = async () => {
-    const { data } = await axios.get("http://localhost:3000/clientes", {
+    const { data } = await api.get("/clientes", {
       headers: { Authorization: `Bearer ${token}` }
     });
     setClientes(data);
@@ -50,12 +50,12 @@ const crearCliente = async () => {
     }
 
     if (form.id) {
-      await axios.put(`http://localhost:3000/clientes/${form.id}`, form, {
+      await api.put(`/clientes/${form.id}`, form, {
         headers: { Authorization: `Bearer ${token}` }
       });
       success("Cliente actualizado correctamente");
     } else {
-      await axios.post("http://localhost:3000/clientes", form, {
+      await api.post("/clientes", form, {
         headers: { Authorization: `Bearer ${token}` }
       });
       success("Cliente creado exitosamente");
@@ -72,7 +72,7 @@ const crearCliente = async () => {
 
   const eliminar = async (id) => {
     try {
-      const { data: oportunidades } = await axios.get("http://localhost:3000/propiedades", {
+      const { data: oportunidades } = await api.get("/propiedades", {
         headers: { Authorization: `Bearer ${token}` }
       });
       
@@ -94,7 +94,7 @@ const crearCliente = async () => {
 
       if (!confirmed) return;
       
-      const response = await axios.delete(`http://localhost:3000/clientes/${id}`, {
+      const response = await api.delete(`/clientes/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       

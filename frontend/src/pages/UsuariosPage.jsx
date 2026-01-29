@@ -1,5 +1,5 @@
 import { useContext, useEffect, useState } from "react";
-import axios from "axios";
+import api from "../api/api.js";
 import { AuthContext } from "../context/AuthContext.jsx";
 import { UserGroupIcon, CheckCircleIcon, XCircleIcon, KeyIcon } from "@heroicons/react/24/outline";
 import { useToast, useConfirm } from "../hooks/useNotifications.jsx";
@@ -24,7 +24,7 @@ export default function UsuariosPage() {
 
   const fetchUsuarios = async () => {
     try {
-      const { data } = await axios.get("http://localhost:3000/usuarios", {
+      const { data } = await api.get("/usuarios", {
         headers: { Authorization: `Bearer ${token}` }
       });
       setUsuarios(data);
@@ -53,7 +53,7 @@ export default function UsuariosPage() {
 
       if (form.id) {
         // EDITAR
-        await axios.put(`http://localhost:3000/usuarios/${form.id}`, {
+        await api.put(`/usuarios/${form.id}`, {
           nombre: form.nombre,
           apellido: form.apellido,
           email: form.email
@@ -63,7 +63,7 @@ export default function UsuariosPage() {
         success("Usuario actualizado correctamente");
       } else {
         // CREAR
-        await axios.post("http://localhost:3000/usuarios", form, {
+        await api.post("/usuarios", form, {
           headers: { Authorization: `Bearer ${token}` }
         });
         success("Usuario creado exitosamente");
@@ -88,7 +88,7 @@ export default function UsuariosPage() {
 
       if (!confirmed) return;
 
-      await axios.put(`http://localhost:3000/usuarios/${id}/toggle-activo`, {}, {
+      await api.put(`/usuarios/${id}/toggle-activo`, {}, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
@@ -117,8 +117,8 @@ export default function UsuariosPage() {
         return;
       }
 
-      await axios.put(
-        `http://localhost:3000/usuarios/${selectedUser.id}/resetear-password`, 
+      await api.put(
+        `/usuarios/${selectedUser.id}/resetear-password`, 
         { password: passwordForm.password },
         { headers: { Authorization: `Bearer ${token}` }}
       );

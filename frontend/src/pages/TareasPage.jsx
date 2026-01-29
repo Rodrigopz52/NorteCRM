@@ -1,5 +1,5 @@
 import { useEffect, useState, useContext } from "react";
-import axios from "axios";
+import api from "../api/api.js";
 import { AuthContext } from "../context/AuthContext.jsx";
 import { useToast, useConfirm } from "../hooks/useNotifications.jsx";
 import Navbar from "../components/Navbar.jsx";
@@ -47,12 +47,12 @@ export default function TareasPage() {
 
   const load = async () => {
     try {
-      const { data } = await axios.get("http://localhost:3000/tareas", {
+      const { data } = await api.get("/tareas", {
         headers: { Authorization: `Bearer ${token}` }
       });
       setActividades(data);
 
-      const opps = await axios.get("http://localhost:3000/propiedades", {
+      const opps = await api.get("/propiedades", {
         headers: { Authorization: `Bearer ${token}` }
       });
       setOportunidades(opps.data);
@@ -74,8 +74,8 @@ export default function TareasPage() {
     try {
       if (form.id) {
         // EDITAR
-        await axios.put(
-          `http://localhost:3000/tareas/${form.id}`,
+        await api.put(
+          `/tareas/${form.id}`,
           {
             tipo: form.tipo,
             titulo: form.titulo,
@@ -88,8 +88,8 @@ export default function TareasPage() {
         success("Actividad actualizada exitosamente");
       } else {
         // CREAR
-        await axios.post(
-          "http://localhost:3000/tareas",
+        await api.post(
+          "/tareas",
           form,
           { headers: { Authorization: `Bearer ${token}` } }
         );
@@ -114,8 +114,8 @@ export default function TareasPage() {
 
   const toggleCompletada = async (id, completada) => {
     try {
-      await axios.put(
-        `http://localhost:3000/tareas/${id}/completar`,
+      await api.put(
+        `/tareas/${id}/completar`,
         { completada: !completada },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -135,7 +135,7 @@ export default function TareasPage() {
 
       if (!confirmed) return;
 
-      await axios.delete(`http://localhost:3000/tareas/${id}`, {
+      await api.delete(`/tareas/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       

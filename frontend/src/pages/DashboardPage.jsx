@@ -1,5 +1,5 @@
 import { useEffect, useState, useContext } from "react";
-import axios from "axios";
+import api from "../api/api.js";
 import { AuthContext } from "../context/AuthContext.jsx";
 import { 
   ChartBarIcon, 
@@ -22,7 +22,7 @@ export default function DashboardPage() {
 
   const load = async () => {
     try {
-      const { data } = await axios.get("http://localhost:3000/reportes/dashboard-personalizado", {
+      const { data } = await api.get("/reportes/dashboard-personalizado", {
         headers: { Authorization: `Bearer ${token}` }
       });
       console.log("✅ Dashboard data recibida:", data);
