@@ -1,7 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import LoginPage from "./pages/LoginPage.jsx";
 import ClientesPage from "./pages/ClientesPage.jsx";
-import OportunidadesPage from "./pages/OportunidadesPage.jsx";
+import PropiedadesPage from "./pages/PropiedadesPage.jsx";
 import ActividadesPage from "./pages/ActividadesPage.jsx";
 import UsuariosPage from "./pages/UsuariosPage.jsx";
 import Navbar from "./components/Navbar.jsx";
@@ -37,7 +37,7 @@ export default function App() {
           element={
             <PrivateRoute>
               <Navbar />
-              <OportunidadesPage />
+              <PropiedadesPage />
             </PrivateRoute>
           }
         />
@@ -47,7 +47,7 @@ export default function App() {
         element={
           <PrivateRoute>
             <Navbar />
-            <OportunidadesPage />
+            <PropiedadesPage />
           </PrivateRoute>
         }
         />

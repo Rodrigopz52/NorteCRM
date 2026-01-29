@@ -16,7 +16,7 @@ import {
 
 const etapas = ["CONTACTO", "NEGOCIACION", "EN_ALQUILER", "EN_VENTA", "NO_CONCRETADO"];
 
-export default function OportunidadesPage() {
+export default function PropiedadesPage() {
   const { token, usuario } = useContext(AuthContext);
   const { success, error, ToastContainer } = useToast();
   const { showConfirm, ConfirmContainer } = useConfirm();
