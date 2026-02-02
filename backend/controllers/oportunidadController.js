@@ -1,5 +1,4 @@
-import { PrismaClient } from "@prisma/client";
-const prisma = new PrismaClient();
+import prisma from "../prismaClient.js";
 
 export const listarOportunidades = async (req, res) => {
   const usuario = req.usuario;

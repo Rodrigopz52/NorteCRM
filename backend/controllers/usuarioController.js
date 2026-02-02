@@ -1,7 +1,5 @@
-import { PrismaClient } from "@prisma/client";
+import prisma from "../prismaClient.js";
 import bcrypt from "bcrypt";
-
-const prisma = new PrismaClient();
 
 // Listar todos los usuarios (GERENTE y ADMINISTRADOR)
 export const listarUsuarios = async (req, res) => {

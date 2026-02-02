@@ -1,5 +1,4 @@
-import { PrismaClient } from "@prisma/client";
-const prisma = new PrismaClient();
+import prisma from "../prismaClient.js";
 
 export const dashboard = async (req, res) => {
   // Solo GERENTE o ADMINISTRADOR pueden ver todo

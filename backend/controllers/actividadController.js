@@ -1,5 +1,4 @@
-import { PrismaClient } from "@prisma/client";
-const prisma = new PrismaClient();
+import prisma from "../prismaClient.js";
 
 // Obtener actividades (Vendedor: solo suyas, Gerente/Administrador: todas)
 export const obtenerActividades = async (req, res) => {
