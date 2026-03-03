@@ -12,6 +12,7 @@ model Usuario {
   nombre        String
   apellido      String
   email         String        @unique
+  dni           String?       @unique
   password      String
   rol           Rol
   activo        Boolean       @default(true)
