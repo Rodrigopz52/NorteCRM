@@ -12,7 +12,13 @@ import { swaggerSpec, swaggerUiMiddleware, swaggerUiSetup } from "./swagger.js";
 import reportesRoutes from "./routes/reportesRoutes.js";
 
 const app = express();
-app.use(cors());
+app.use(cors({
+  origin: "http://localhost:5174",
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+}));
+
+app.options(/.*/, cors());
 app.use(express.json());
 app.use("/auth", authRoutes);
 app.use("/clientes", clienteRoutes);

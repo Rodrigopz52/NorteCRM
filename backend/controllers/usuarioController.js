@@ -1,6 +1,9 @@
 import prisma from "../prismaClient.js";
 import bcrypt from "bcrypt";
 
+// Validar formato DNI argentino (7-8 dígitos numéricos)
+const validarDNI = (dni) => /^\d{7,8}$/.test(dni);
+
 // Listar todos los usuarios (GERENTE y ADMINISTRADOR)
 export const listarUsuarios = async (req, res) => {
   try {
@@ -35,19 +38,36 @@ export const crearUsuario = async (req, res) => {
       return res.status(403).json({ error: "Solo el gerente puede crear usuarios" });
     }
 
-    const { nombre, apellido, email, password, rol } = req.body;
+    const { nombre, apellido, email, password, rol, dni } = req.body;
 
-    if (!nombre || !apellido || !email || !password) {
+    const nombreTrim = nombre?.trim();
+    const apellidoTrim = apellido?.trim();
+    const emailNorm = email?.trim().toLowerCase();
+
+    if (!nombreTrim || !apellidoTrim || !emailNorm || !password) {
       return res.status(400).json({ error: "Faltan campos requeridos" });
     }
 
-    // Verificar que el email no exista
+    if (dni && !validarDNI(dni)) {
+      return res.status(400).json({ error: "El DNI debe tener 7 u 8 dígitos numéricos" });
+    }
+
+    // Verificar que el email no exista  
     const existente = await prisma.usuario.findUnique({
-      where: { email }
+      where: { email: emailNorm }
     });
 
     if (existente) {
       return res.status(400).json({ error: "El email ya está registrado" });
+    }
+
+    if (dni) {
+      const dniExistente = await prisma.usuario.findUnique({
+        where: { dni }
+      });
+      if (dniExistente) {
+        return res.status(400).json({ error: "El DNI ya está registrado" });
+      }
     }
 
     // Hash de la contraseña
@@ -55,18 +75,20 @@ export const crearUsuario = async (req, res) => {
 
     const usuario = await prisma.usuario.create({
       data: {
-        nombre,
-        apellido,
-        email,
+        nombre: nombreTrim,
+        apellido: apellidoTrim,
+        email: emailNorm,
         password: hashedPassword,
         rol: rol || "VENDEDOR",
-        activo: true
+        activo: true,
+        ...(dni && { dni })
       },
       select: {
         id: true,
         nombre: true,
         apellido: true,
         email: true,
+        dni: true,
         rol: true,
         activo: true,
         creadoEn: true
