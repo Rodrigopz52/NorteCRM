@@ -44,27 +44,28 @@ export const crearUsuario = async (req, res) => {
     const nombreTrim = nombre?.trim();
     const apellidoTrim = apellido?.trim();
     const emailNorm = email?.trim().toLowerCase();
+    const dniNorm = dni ? String(dni).trim() : null;
 
     if (!nombreTrim || !apellidoTrim || !emailNorm || !password) {
-      return res.status(400).json({ error: "Faltan campos requeridos" });
+      return res.status(400).json({ error: "Nombre, apellido, email y contraseña son obligatorios" });
     }
 
-    if (dni && !validarDNI(dni)) {
+    if (dniNorm && !validarDNI(dniNorm)) {
       return res.status(400).json({ error: "El DNI debe tener 7 u 8 dígitos numéricos" });
     }
 
     // Verificar que el email no exista  
-    const existente = await prisma.usuario.findUnique({
+    const emailExistente = await prisma.usuario.findUnique({
       where: { email: emailNorm }
     });
 
-    if (existente) {
+    if (emailExistente) {
       return res.status(400).json({ error: "El email ya está registrado" });
     }
 
-    if (dni) {
+    if (dniNorm) {
       const dniExistente = await prisma.usuario.findUnique({
-        where: { dni }
+        where: { dni: dniNorm }
       });
       if (dniExistente) {
         return res.status(400).json({ error: "El DNI ya está registrado" });
@@ -82,7 +83,7 @@ export const crearUsuario = async (req, res) => {
         password: hashedPassword,
         rol: rol || "VENDEDOR",
         activo: true,
-        ...(dni && { dni })
+        dni: dniNorm
       },
       select: {
         id: true,
@@ -114,15 +115,57 @@ export const editarUsuario = async (req, res) => {
     }
 
     const { id } = req.params;
+    const idNum = Number(id);
+
+    if (isNaN(idNum)) {
+      return res.status(400).json({ error: "ID inválido" });
+    }
+
     const { nombre, apellido, email, dni } = req.body;
 
+    const nombreTrim = nombre?.trim();
+    const apellidoTrim = apellido?.trim();
+    const emailNorm = email?.trim().toLowerCase();
+    const dniNorm = dni ? String(dni).trim() : null;
+    
+    if (!nombreTrim || !apellidoTrim || !emailNorm) {
+      return res.status(400).json({ error: "Nombre, apellido y email son obligatorios" });
+    }
+
+    if (dniNorm && !validarDNI(dniNorm)) {
+     return res.status(400).json({ error: "El DNI debe tener 7 u 8 dígitos numéricos"});
+    }
+    
+    const emailExistente = await prisma.usuario.findFirst({
+      where: {
+      email: emailNorm,
+      NOT: { id: idNum }
+    }
+    });
+
+    if (emailExistente) {
+      return res.status(400).json({ error: "El email ya está registrado" });
+    }
+
+    if (dniNorm) {
+      const dniExistente = await prisma.usuario.findFirst({
+      where: {
+      dni: dniNorm,
+      NOT: { id: idNum }
+    }
+    });
+
+    if (dniExistente) {
+    return res.status(400).json({error: "El DNI ya está registrado en otro usuario"});}
+    }
+
     const usuario = await prisma.usuario.update({
-      where: { id: Number(id) },
+      where: { id: idNum },
       data: {
-        nombre,
-        apellido,
-        email,
-        dni
+        nombre: nombreTrim,
+        apellido: apellidoTrim,
+        email: emailNorm,
+        dni: dniNorm
       },
       select: {
         id: true,
