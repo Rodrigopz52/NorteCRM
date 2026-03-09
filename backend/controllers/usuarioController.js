@@ -16,6 +16,7 @@ export const listarUsuarios = async (req, res) => {
         id: true,
         nombre: true,
         apellido: true,
+        dni: true,
         email: true,
         rol: true,
         activo: true,
@@ -113,14 +114,15 @@ export const editarUsuario = async (req, res) => {
     }
 
     const { id } = req.params;
-    const { nombre, apellido, email } = req.body;
+    const { nombre, apellido, email, dni } = req.body;
 
     const usuario = await prisma.usuario.update({
       where: { id: Number(id) },
       data: {
         nombre,
         apellido,
-        email
+        email,
+        dni
       },
       select: {
         id: true,
@@ -128,6 +130,7 @@ export const editarUsuario = async (req, res) => {
         apellido: true,
         email: true,
         rol: true,
+        dni: true,
         activo: true,
         creadoEn: true
       }

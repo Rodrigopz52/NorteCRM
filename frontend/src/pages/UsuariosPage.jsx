@@ -16,6 +16,7 @@ export default function UsuariosPage() {
     id: null, 
     nombre: "", 
     apellido: "", 
+    dni: "",
     email: "", 
     password: "",
     rol: "VENDEDOR" 
@@ -56,21 +57,29 @@ export default function UsuariosPage() {
         await api.put(`/usuarios/${form.id}`, {
           nombre: form.nombre,
           apellido: form.apellido,
-          email: form.email
+          email: form.email,
+          dni: form.dni?.trim() || null
         }, {
           headers: { Authorization: `Bearer ${token}` }
         });
         success("Usuario actualizado correctamente");
       } else {
         // CREAR
-        await api.post("/usuarios", form, {
+        await api.post("/usuarios", {
+          nombre: form.nombre,
+          apellido: form.apellido,
+          email: form.email,
+          dni: form.dni?.trim() || null,
+          password: form.password,
+          rol: form.rol
+        }, {
           headers: { Authorization: `Bearer ${token}` }
         });
         success("Usuario creado exitosamente");
       }
 
       setOpenForm(false);
-      setForm({ id: null, nombre: "", apellido: "", email: "", password: "", rol: "VENDEDOR" });
+      setForm({ id: null, nombre: "", apellido: "", dni: "", email: "", password: "", rol: "VENDEDOR" });
       fetchUsuarios();
     } catch (err) {
       console.error("Error al guardar usuario:", err);
@@ -216,10 +225,11 @@ export default function UsuariosPage() {
 
       {/* TABLA */}
       <div className="bg-white shadow-md rounded-lg overflow-x-auto border border-gray-200">
-        <table className="w-full text-left min-w-[640px]">
+        <table className="w-full text-left min-w-[760px]">
           <thead className="bg-gradient-to-r from-purple-50 to-purple-100 border-b-2 border-purple-200">
             <tr>
               <th className="p-3 sm:p-4 font-semibold text-gray-700 text-sm">Nombre</th>
+              <th className="p-3 sm:p-4 font-semibold text-gray-700 text-sm">DNI</th>
               <th className="p-3 sm:p-4 font-semibold text-gray-700 text-sm">Email</th>
               <th className="p-3 sm:p-4 font-semibold text-gray-700 text-sm">Rol</th>
               <th className="p-3 sm:p-4 font-semibold text-gray-700 text-center text-sm">Estado</th>
@@ -239,6 +249,7 @@ export default function UsuariosPage() {
                     </p>
                   </div>
                 </td>
+                <td className="p-3 sm:p-4 text-sm text-gray-600">{u.dni || "-"}</td>
                 <td className="p-3 sm:p-4 text-sm text-gray-600">{u.email}</td>
                 <td className="p-3 sm:p-4">
                   <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold ${
@@ -273,6 +284,7 @@ export default function UsuariosPage() {
                             id: u.id,
                             nombre: u.nombre,
                             apellido: u.apellido,
+                            dni: u.dni || "",
                             email: u.email,
                             password: "",
                             rol: u.rol
@@ -355,6 +367,22 @@ export default function UsuariosPage() {
               </div>
 
               <div>
+               <label className="block text-sm font-medium text-gray-700 mb-2">
+                DNI 
+               </label>
+               <input
+                 className="w-full border-2 border-gray-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 p-3 rounded-lg transition-all outline-none"
+                 value={form.dni}
+                 onChange={(e) => setForm({ ...form, dni: e.target.value.replace(/\D/g, "") })}
+                 placeholder="40123456"
+                 maxLength={8}
+                 />
+                <p className="text-xs text-gray-500 mt-1">
+                Opcional. Solo números, 7 u 8 dígitos.
+                </p>
+              </div>
+
+              <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Email *
                 </label>
@@ -417,7 +445,7 @@ export default function UsuariosPage() {
               <button
                 onClick={() => {
                   setOpenForm(false);
-                  setForm({ id: null, nombre: "", apellido: "", email: "", password: "", rol: "VENDEDOR" });
+                  setForm({ id: null, nombre: "", apellido: "", email: "", dni: "", password: "", rol: "VENDEDOR" });
                 }}
                 className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2.5 rounded-lg font-medium transition-all"
               >
