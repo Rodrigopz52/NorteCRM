@@ -165,7 +165,7 @@ export const dashboardPersonalizado = async (req, res) => {
       const todasMisOportunidades = await prisma.oportunidad.findMany({
         where: {
           usuarioId,
-          estado: { not: "Alquilada", not: "Vendida" },
+          estado: { notIn: ["Alquilada", "Vendida"] },
           etapa: { not: "NO_CONCRETADO" }
         },
         include: {
