@@ -88,10 +88,15 @@ export const dashboard = async (req, res) => {
 export const dashboardPersonalizado = async (req, res) => {
   console.log("🎯 Dashboard personalizado llamado para usuario:", req.usuario);
   
-  const usuarioId = req.usuario.id;
-  const rol = req.usuario.rol;
+const usuarioAutenticadoId = req.usuario.id;
+const rol = req.usuario.rol;
+const { vendedorId } = req.query;
+
+let vistaEquipo = false;
+let targetUsuarioId = null;
+let usuarioConsultado = null;
   
-  console.log("📋 Usuario ID:", usuarioId, "Rol:", rol);
+  console.log("📋 Usuario ID:", usuarioAutenticadoId, "Rol:", rol);
   
   const hoy = new Date();
   hoy.setHours(0, 0, 0, 0);
@@ -102,13 +107,56 @@ export const dashboardPersonalizado = async (req, res) => {
   const finMes = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0, 23, 59, 59, 999);
 
   try {
-    if (rol === "VENDEDOR") {
-      console.log("📦 Consultando datos para VENDEDOR, usuarioId:", usuarioId);
+if (rol === "VENDEDOR") {
+  if (vendedorId !== undefined) {
+    return res.status(403).json({ error: "No tienes permisos para consultar métricas de otros vendedores" });
+  }
+
+  targetUsuarioId = usuarioAutenticadoId;
+}
+
+if (rol === "GERENTE" || rol === "ADMINISTRADOR") {
+  if (vendedorId === undefined) {
+    vistaEquipo = true;
+  } else {
+    const vendedorIdNumero = Number(vendedorId);
+
+    if (!Number.isInteger(vendedorIdNumero) || vendedorIdNumero <= 0) {
+      return res.status(400).json({ error: "vendedorId inválido" });
+    }
+
+    const vendedor = await prisma.usuario.findUnique({
+      where: { id: vendedorIdNumero },
+      select: {
+        id: true,
+        nombre: true,
+        apellido: true,
+        rol: true,
+        activo: true
+      }
+    });
+
+    if (!vendedor || vendedor.rol !== "VENDEDOR") {
+      return res.status(404).json({ error: "Vendedor no encontrado" });
+    }
+
+    targetUsuarioId = vendedor.id;
+    usuarioConsultado = {
+      id: vendedor.id,
+      nombre: vendedor.nombre,
+      apellido: vendedor.apellido,
+      activo: vendedor.activo
+    };
+  }
+}
+
+    if (!vistaEquipo) {
+      console.log("📦 Consultando dashboard individual, targetUsuarioId:", targetUsuarioId);
       
       // ACTIVIDADES DEL DÍA
       const actividadesHoy = await prisma.actividad.findMany({
         where: {
-          usuarioId,
+          usuarioId: targetUsuarioId,
           completada: false,
           fechaVencimiento: {
             gte: hoy,
@@ -128,7 +176,7 @@ export const dashboardPersonalizado = async (req, res) => {
       // ACTIVIDADES VENCIDAS
       const actividadesVencidas = await prisma.actividad.count({
         where: {
-          usuarioId,
+          usuarioId: targetUsuarioId,
           completada: false,
           fechaVencimiento: { lt: hoy }
         }
@@ -137,7 +185,7 @@ export const dashboardPersonalizado = async (req, res) => {
       // VISITAS DE HOY
       const visitasHoy = await prisma.actividad.count({
         where: {
-          usuarioId,
+          usuarioId: targetUsuarioId,
           tipo: "REUNION",
           completada: false,
           fechaVencimiento: {
@@ -150,7 +198,7 @@ export const dashboardPersonalizado = async (req, res) => {
       // OPORTUNIDADES CALIENTES (en NEGOCIACION)
       const oportunidadesCalientes = await prisma.oportunidad.findMany({
         where: {
-          usuarioId,
+          usuarioId: targetUsuarioId,
           etapa: "NEGOCIACION"
         },
         include: { cliente: true },
@@ -164,7 +212,7 @@ export const dashboardPersonalizado = async (req, res) => {
       
       const todasMisOportunidades = await prisma.oportunidad.findMany({
         where: {
-          usuarioId,
+          usuarioId: targetUsuarioId,
           estado: { notIn: ["Alquilada", "Vendida"] },
           etapa: { not: "NO_CONCRETADO" }
         },
@@ -186,7 +234,7 @@ export const dashboardPersonalizado = async (req, res) => {
       // RESUMEN DEL MES
       const oportunidadesGanadasMes = await prisma.oportunidad.findMany({
         where: {
-          usuarioId,
+          usuarioId: targetUsuarioId,
           OR: [
             { estado: "Alquilada" },
             { estado: "Vendida" }
@@ -200,7 +248,7 @@ export const dashboardPersonalizado = async (req, res) => {
 
       const oportunidadesActivasMes = await prisma.oportunidad.count({
         where: {
-          usuarioId,
+          usuarioId: targetUsuarioId,
           estado: { notIn: ["Alquilada", "Vendida"] },
           etapa: { not: "NO_CONCRETADO" }
         }
@@ -211,7 +259,7 @@ export const dashboardPersonalizado = async (req, res) => {
         by: ['estado'],
         _count: { id: true },
         where: {
-          usuarioId,
+          usuarioId: targetUsuarioId,
           estado: { not: null }
         }
       });
@@ -231,7 +279,7 @@ export const dashboardPersonalizado = async (req, res) => {
         
         const ventasDelMes = await prisma.oportunidad.findMany({
           where: {
-            usuarioId,
+            usuarioId: targetUsuarioId,
             OR: [
               { estado: "Alquilada" },
               { estado: "Vendida" }
@@ -259,6 +307,7 @@ export const dashboardPersonalizado = async (req, res) => {
 
       return res.json({
         rol: "VENDEDOR",
+        usuarioConsultado,
         actividadesHoy,
         actividadesVencidas,
         visitasHoy,
