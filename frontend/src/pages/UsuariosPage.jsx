@@ -3,10 +3,12 @@ import api from "../api/api.js";
 import { AuthContext } from "../context/AuthContext.jsx";
 import { UserGroupIcon, CheckCircleIcon, XCircleIcon, KeyIcon } from "@heroicons/react/24/outline";
 import { useToast, useConfirm } from "../hooks/useNotifications.jsx";
+import { useNavigate } from "react-router-dom";
 
 export default function UsuariosPage() {
   const { token, usuario } = useContext(AuthContext);
   const { success, error, ToastContainer } = useToast();
+  const navigate = useNavigate();
   const { showConfirm, ConfirmContainer } = useConfirm();
   const [usuarios, setUsuarios] = useState([]);
   const [openForm, setOpenForm] = useState(false);
@@ -274,11 +276,19 @@ export default function UsuariosPage() {
                   )}
                 </td>
                 <td className="p-3 sm:p-4">
-                  {esAdministrador ? (
-                    <span className="text-gray-400 text-xs sm:text-sm italic">Solo lectura</span>
-                  ) : (
                     <div className="flex flex-col sm:flex-row gap-2">
-                      <button
+                      {(usuario?.rol === "GERENTE" || usuario?.rol === "ADMINISTRADOR") && u.rol === "VENDEDOR" && (
+                       <button
+                         onClick={() => navigate(`/dashboard?vendedorId=${u.id}`)}
+                          className="text-emerald-600 hover:text-emerald-800 font-bold hover:underline transition-colors text-xs sm:text-sm"
+                       > 
+                       Ver métricas
+                       </button>
+                      )}
+
+                    {!esAdministrador && (
+                    <>
+                   <button   
                         onClick={() => {
                           setForm({
                             id: u.id,
@@ -317,8 +327,13 @@ export default function UsuariosPage() {
                         <KeyIcon className="w-3 h-3 sm:w-4 sm:h-4" />
                         Resetear
                       </button>
+                         </>
+                       )} 
+                      
+                        {esAdministrador && u.rol !== "VENDEDOR" && (
+                         <span className="text-gray-400 text-xs sm:text-sm italic">Solo lectura</span>
+                      )}
                     </div>
-                  )}
                 </td>
               </tr>
             ))}

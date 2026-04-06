@@ -1,6 +1,7 @@
 import { useEffect, useState, useContext } from "react";
 import api from "../api/api.js";
 import { AuthContext } from "../context/AuthContext.jsx";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { 
   ChartBarIcon, 
   TrophyIcon, 
@@ -17,12 +18,17 @@ import Navbar from "../components/Navbar.jsx";
 
 export default function DashboardPage() {
   const { token, usuario } = useContext(AuthContext);
+  const navigate = useNavigate();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+   
+  const [searchParams] = useSearchParams();
+  const vendedorId = searchParams.get("vendedorId");
 
   const load = async () => {
     try {
       const { data } = await api.get("/reportes/dashboard-personalizado", {
+        params: vendedorId ? { vendedorId } : {},
         headers: { Authorization: `Bearer ${token}` }
       });
       console.log("✅ Dashboard data recibida:", data);
@@ -35,7 +41,7 @@ export default function DashboardPage() {
     }
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [vendedorId, token]);
 
   if (loading) {
     return (
@@ -83,12 +89,35 @@ export default function DashboardPage() {
             <h2 className="text-xl sm:text-2xl font-bold text-gray-800">
               ¡Hola, {usuario?.nombre}! 👋
             </h2>
+
+             {data?.usuarioConsultado ? (
+              <p className="text-sm text-purple-700 font-medium mt-1">
+               Métricas de {data.usuarioConsultado.nombre} {data.usuarioConsultado.apellido}
+               {data.usuarioConsultado.activo === false && " • Inactivo"}
+             </p>
+            ) : (
+              (usuario?.rol === "GERENTE" || usuario?.rol === "ADMINISTRADOR") && (
+                <p className="text-sm text-purple-700 font-medium mt-1">
+                  📊 Métricas generales del equipo
+                </p>
+              )
+            )}
+
+        {data?.usuarioConsultado && (
+          <button
+            onClick={() => navigate("/dashboard")}
+            className="text-xs text-purple-600 hover:text-purple-800 font-medium mt-1 flex items-center gap-1 transition-colors"
+          >
+            ← Volver a métricas generales
+          </button>
+        )}
+
             <p className="text-xs sm:text-sm text-gray-600 mt-0.5">
               {new Date().toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
             </p>
           </div>
           <div className="text-xs text-gray-500 bg-white px-2.5 py-1.5 rounded-lg shadow">
-            Rol: <span className="font-bold text-purple-600">{data?.rol}</span>
+            Rol: <span className="font-bold text-purple-600">{usuario?.rol}</span>
           </div>
         </div>
 
