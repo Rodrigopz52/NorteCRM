@@ -1,7 +1,7 @@
 import { useEffect, useState, useContext } from "react";
 import api from "../api/api.js";
 import { AuthContext } from "../context/AuthContext.jsx";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { 
   ChartBarIcon, 
   TrophyIcon, 
@@ -18,6 +18,7 @@ import Navbar from "../components/Navbar.jsx";
 
 export default function DashboardPage() {
   const { token, usuario } = useContext(AuthContext);
+  const navigate = useNavigate();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
    
@@ -89,12 +90,27 @@ export default function DashboardPage() {
               ¡Hola, {usuario?.nombre}! 👋
             </h2>
 
-             {data?.usuarioConsultado && (
+             {data?.usuarioConsultado ? (
               <p className="text-sm text-purple-700 font-medium mt-1">
                Métricas de {data.usuarioConsultado.nombre} {data.usuarioConsultado.apellido}
                {data.usuarioConsultado.activo === false && " • Inactivo"}
              </p>
-         )}
+            ) : (
+              (usuario?.rol === "GERENTE" || usuario?.rol === "ADMINISTRADOR") && (
+                <p className="text-sm text-purple-700 font-medium mt-1">
+                  📊 Métricas generales del equipo
+                </p>
+              )
+            )}
+
+        {data?.usuarioConsultado && (
+          <button
+            onClick={() => navigate("/dashboard")}
+            className="text-xs text-purple-600 hover:text-purple-800 font-medium mt-1 flex items-center gap-1 transition-colors"
+          >
+            ← Volver a métricas generales
+          </button>
+        )}
 
             <p className="text-xs sm:text-sm text-gray-600 mt-0.5">
               {new Date().toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
