@@ -7,85 +7,108 @@ export default function ClientesPage() {
   const { token, usuario } = useContext(AuthContext);
   const { success, error, ToastContainer } = useToast();
   const { showConfirm, ConfirmContainer } = useConfirm();
-  
+
   const [clientes, setClientes] = useState([]);
   const [filtroTipo, setFiltroTipo] = useState("Todos");
   const [busqueda, setBusqueda] = useState("");
   const [openForm, setOpenForm] = useState(false);
   const [form, setForm] = useState({ nombre: "", empresa: "", telefono: "", email: "", notas: "" });
 
+  // Paginación
+  const [pagina, setPagina] = useState(1);
+  const [totalPaginas, setTotalPaginas] = useState(1);
+  const [totalClientes, setTotalClientes] = useState(0);
+  const limit = 10;
+
   const fetchClientes = async () => {
-    const { data } = await axios.get("http://localhost:3000/clientes", {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    setClientes(data);
+    try {
+      const params = new URLSearchParams({ page: pagina, limit });
+      if (filtroTipo !== "Todos") params.append("tipo", filtroTipo);
+      if (busqueda.trim()) params.append("busqueda", busqueda.trim());
+
+      const { data } = await axios.get(`http://localhost:3000/clientes?${params.toString()}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setClientes(data.data);
+      setTotalPaginas(data.meta.totalPaginas);
+      setTotalClientes(data.meta.total);
+    } catch (err) {
+      console.error("Error al cargar clientes:", err);
+    }
   };
 
-  useEffect(() => { fetchClientes(); }, []);
-
-const crearCliente = async () => {
-  try {
-    if (!form.nombre) {
-      error("El nombre es obligatorio");
-      return;
-    }
-
-    if (form.telefono) {
-      if (!/^\d+$/.test(form.telefono)) {
-        error("El teléfono debe contener solo números");
-        return;
-      }
-      if (form.telefono.length > 11) {
-        error("El teléfono no puede tener más de 11 dígitos");
-        return;
-      }
-    }
-
-    if (form.email) {
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(form.email)) {
-        error("El email no tiene un formato válido");
-        return;
-      }
-    }
-
-    if (form.id) {
-      await axios.put(`http://localhost:3000/clientes/${form.id}`, form, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      success("Cliente actualizado correctamente");
-    } else {
-      await axios.post("http://localhost:3000/clientes", form, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      success("Cliente creado exitosamente");
-    }
-
-    setOpenForm(false);
-    setForm({ nombre: "", empresa: "", telefono: "", email: "", notas: "" });
+  useEffect(() => {
     fetchClientes();
-  } catch (err) {
-    console.error("Error al guardar cliente:", err);
-    error(err.response?.data?.error || "Error al guardar el cliente");
-  }
-};
+  }, [pagina, filtroTipo, busqueda]); // Refetch automático al cambiar params
+
+  // Si cambia el filtro o la búsqueda, volver a la página 1
+  useEffect(() => {
+    setPagina(1);
+  }, [filtroTipo, busqueda]);
+
+  const crearCliente = async () => {
+    try {
+      if (!form.nombre) {
+        error("El nombre es obligatorio");
+        return;
+      }
+
+      if (form.telefono) {
+        if (!/^\d+$/.test(form.telefono)) {
+          error("El teléfono debe contener solo números");
+          return;
+        }
+        if (form.telefono.length > 11) {
+          error("El teléfono no puede tener más de 11 dígitos");
+          return;
+        }
+      }
+
+      if (form.email) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(form.email)) {
+          error("El email no tiene un formato válido");
+          return;
+        }
+      }
+
+      if (form.id) {
+        await axios.put(`http://localhost:3000/clientes/${form.id}`, form, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        success("Cliente actualizado correctamente");
+      } else {
+        await axios.post("http://localhost:3000/clientes", form, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        success("Cliente creado exitosamente");
+      }
+
+      setOpenForm(false);
+      setForm({ nombre: "", empresa: "", telefono: "", email: "", notas: "" });
+      fetchClientes();
+    } catch (err) {
+      console.error("Error al guardar cliente:", err);
+      error(err.response?.data?.error || "Error al guardar el cliente");
+    }
+  };
 
   const eliminar = async (id) => {
     try {
       const { data: oportunidades } = await axios.get("http://localhost:3000/oportunidades", {
         headers: { Authorization: `Bearer ${token}` }
       });
-      
+
       const oportunidadesDelCliente = oportunidades.filter(op => op.clienteId === id);
-      
+
       let title = "¿Seguro que deseas eliminar este cliente?";
       let message = "Esta acción no se puede deshacer.";
-      
+
       if (oportunidadesDelCliente.length > 0) {
         title = "⚠️ Cliente con oportunidades asociadas";
         message = `Este cliente tiene ${oportunidadesDelCliente.length} oportunidad(es) asociada(s).\n\nAl eliminar el cliente, también se eliminarán todas sus oportunidades.\n\n¿Deseas continuar?`;
       }
-      
+
       const confirmed = await showConfirm({
         title,
         message,
@@ -93,17 +116,17 @@ const crearCliente = async () => {
       });
 
       if (!confirmed) return;
-      
+
       const response = await axios.delete(`http://localhost:3000/clientes/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      
+
       if (response.data.info) {
         success(`${response.data.mensaje} - ${response.data.info}`);
       } else {
         success(response.data.mensaje);
       }
-      
+
       fetchClientes();
     } catch (err) {
       console.error("Error al eliminar cliente:", err);
@@ -111,19 +134,7 @@ const crearCliente = async () => {
     }
   };
 
-  const clientesFiltrados = clientes.filter(c => {
-    // Filtro por tipo
-    const pasaTipo = filtroTipo === "Todos" || c.empresa === filtroTipo;
-    
-    // Filtro por búsqueda (nombre, email o teléfono)
-    const terminoBusqueda = busqueda.toLowerCase().trim();
-    const pasaBusqueda = !terminoBusqueda || 
-      c.nombre?.toLowerCase().includes(terminoBusqueda) ||
-      c.email?.toLowerCase().includes(terminoBusqueda) ||
-      c.telefono?.includes(terminoBusqueda);
-    
-    return pasaTipo && pasaBusqueda;
-  });
+  // Eliminado el filtro local ya que ahora se hace en el backend
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-4 sm:p-6 overflow-x-hidden">
@@ -148,21 +159,20 @@ const crearCliente = async () => {
                 <button
                   key={tipo}
                   onClick={() => setFiltroTipo(tipo)}
-                  className={`px-2.5 py-1.5 rounded-lg font-medium text-xs transition-all ${
-                    filtroTipo === tipo
+                  className={`px-2.5 py-1.5 rounded-lg font-medium text-xs transition-all ${filtroTipo === tipo
                       ? "bg-purple-600 text-white shadow-md"
                       : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                  }`}
+                    }`}
                 >
                   {tipo === "INQUILINO" ? "🏠 Inquilino" : tipo === "PROPIETARIO" ? "🏘️ Propietario" : tipo === "COMPRADOR" ? "💰 Comprador" : "Todos"}
                 </button>
               ))}
               <span className="flex items-center text-xs text-gray-500 px-2">
-                ({clientesFiltrados.length})
+                ({totalClientes})
               </span>
             </div>
           </div>
-          
+
           {/* Buscador */}
           <div className="flex items-center gap-2 lg:ml-auto w-full lg:w-auto">
             <div className="relative flex-1 lg:flex-initial">
@@ -202,16 +212,15 @@ const crearCliente = async () => {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
-            {clientesFiltrados.map(c => (
+            {clientes.length > 0 ? clientes.map(c => (
               <tr key={c.id} className="hover:bg-purple-50/50 transition-colors">
                 <td className="px-3 py-2 text-sm text-gray-800 font-medium">{c.nombre}</td>
                 <td className="px-3 py-2">
-                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${
-                    c.empresa === 'INQUILINO' ? 'bg-green-100 text-green-700 border border-green-200' :
-                    c.empresa === 'PROPIETARIO' ? 'bg-purple-100 text-purple-700 border border-purple-200' :
-                    c.empresa === 'COMPRADOR' ? 'bg-blue-100 text-blue-700 border border-blue-200' :
-                    'bg-gray-100 text-gray-700 border border-gray-200'
-                  }`}>
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${c.empresa === 'INQUILINO' ? 'bg-green-100 text-green-700 border border-green-200' :
+                      c.empresa === 'PROPIETARIO' ? 'bg-purple-100 text-purple-700 border border-purple-200' :
+                        c.empresa === 'COMPRADOR' ? 'bg-blue-100 text-blue-700 border border-blue-200' :
+                          'bg-gray-100 text-gray-700 border border-gray-200'
+                    }`}>
                     {c.empresa || "-"}
                   </span>
                 </td>
@@ -244,29 +253,55 @@ const crearCliente = async () => {
                   )}
                 </td>
               </tr>
-            ))}
+            )) : (
+              <tr>
+                <td colSpan="6" className="px-3 py-4 text-center text-sm text-gray-500">
+                  No se encontraron clientes
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
 
+      {/* Controles de Paginación */}
+      <div className="flex justify-center items-center gap-4 mt-6 mb-4">
+        <button
+          disabled={pagina <= 1}
+          onClick={() => setPagina(pagina - 1)}
+          className="px-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+        >
+          Anterior
+        </button>
+        <span className="text-sm font-medium text-gray-700">
+          Página {pagina} de {totalPaginas}
+        </span>
+        <button
+          disabled={pagina >= totalPaginas}
+          onClick={() => setPagina(pagina + 1)}
+          className="px-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+        >
+          Siguiente
+        </button>
+      </div>
+
       {/* Cards para móvil */}
       <div className="md:hidden space-y-2">
-        {clientesFiltrados.map(c => (
+        {clientes.map(c => (
           <div key={c.id} className="bg-white rounded-lg shadow-md border border-gray-200 p-3">
             <div className="flex justify-between items-start mb-2">
               <div className="flex-1">
                 <h3 className="text-sm font-bold text-gray-800 mb-1">{c.nombre}</h3>
-                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${
-                  c.empresa === 'INQUILINO' ? 'bg-green-100 text-green-700 border border-green-200' :
-                  c.empresa === 'PROPIETARIO' ? 'bg-purple-100 text-purple-700 border border-purple-200' :
-                  c.empresa === 'COMPRADOR' ? 'bg-blue-100 text-blue-700 border border-blue-200' :
-                  'bg-gray-100 text-gray-700 border border-gray-200'
-                }`}>
+                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${c.empresa === 'INQUILINO' ? 'bg-green-100 text-green-700 border border-green-200' :
+                    c.empresa === 'PROPIETARIO' ? 'bg-purple-100 text-purple-700 border border-purple-200' :
+                      c.empresa === 'COMPRADOR' ? 'bg-blue-100 text-blue-700 border border-blue-200' :
+                        'bg-gray-100 text-gray-700 border border-gray-200'
+                  }`}>
                   {c.empresa || "-"}
                 </span>
               </div>
             </div>
-            
+
             <div className="space-y-1 mb-2">
               <div className="flex items-center text-xs">
                 <span className="text-gray-500 w-16">Email:</span>
@@ -285,7 +320,7 @@ const crearCliente = async () => {
                 </div>
               )}
             </div>
-            
+
             <div className="flex gap-2 pt-2 border-t border-gray-200">
               <button
                 onClick={() => {
@@ -386,14 +421,14 @@ const crearCliente = async () => {
             </div>
 
             <div className="flex justify-end gap-3 mt-8">
-              <button 
-                className="text-gray-600 hover:text-gray-800 px-4 py-2 font-medium transition-colors" 
+              <button
+                className="text-gray-600 hover:text-gray-800 px-4 py-2 font-medium transition-colors"
                 onClick={() => setOpenForm(false)}
               >
                 Cancelar
               </button>
-              <button 
-                className="bg-purple-600 hover:bg-purple-700 text-white px-5 py-2.5 rounded-lg font-medium shadow-md hover:shadow-lg transition-all" 
+              <button
+                className="bg-purple-600 hover:bg-purple-700 text-white px-5 py-2.5 rounded-lg font-medium shadow-md hover:shadow-lg transition-all"
                 onClick={crearCliente}
               >
                 {form.id ? "Actualizar" : "Guardar"}
