@@ -16,6 +16,7 @@ export const listarUsuarios = async (req, res) => {
         nombre: true,
         apellido: true,
         email: true,
+        dni: true,
         rol: true,
         activo: true,
         creadoEn: true
@@ -37,7 +38,7 @@ export const crearUsuario = async (req, res) => {
       return res.status(403).json({ error: "Solo el gerente puede crear usuarios" });
     }
 
-    const { nombre, apellido, email, password, rol } = req.body;
+    const { nombre, apellido, email, password, rol, dni } = req.body;
 
     if (!nombre || !apellido || !email || !password) {
       return res.status(400).json({ error: "Faltan campos requeridos" });
@@ -60,6 +61,7 @@ export const crearUsuario = async (req, res) => {
         nombre,
         apellido,
         email,
+        dni: dni || null,
         password: hashedPassword,
         rol: rol || "VENDEDOR",
         activo: true
@@ -69,6 +71,7 @@ export const crearUsuario = async (req, res) => {
         nombre: true,
         apellido: true,
         email: true,
+        dni: true,
         rol: true,
         activo: true,
         creadoEn: true
@@ -93,20 +96,22 @@ export const editarUsuario = async (req, res) => {
     }
 
     const { id } = req.params;
-    const { nombre, apellido, email } = req.body;
+    const { nombre, apellido, email, dni } = req.body;
 
     const usuario = await prisma.usuario.update({
       where: { id: Number(id) },
       data: {
         nombre,
         apellido,
-        email
+        email,
+        dni: dni !== undefined ? (dni || null) : undefined
       },
       select: {
         id: true,
         nombre: true,
         apellido: true,
         email: true,
+        dni: true,
         rol: true,
         activo: true,
         creadoEn: true
@@ -151,6 +156,7 @@ export const toggleActivo = async (req, res) => {
         nombre: true,
         apellido: true,
         email: true,
+        dni: true,
         rol: true,
         activo: true,
         creadoEn: true

@@ -18,7 +18,8 @@ export default function UsuariosPage() {
     apellido: "", 
     email: "", 
     password: "",
-    rol: "VENDEDOR" 
+    rol: "VENDEDOR",
+    dni: ""
   });
   const [passwordForm, setPasswordForm] = useState({ password: "", confirmPassword: "" });
 
@@ -56,7 +57,8 @@ export default function UsuariosPage() {
         await axios.put(`http://localhost:3000/usuarios/${form.id}`, {
           nombre: form.nombre,
           apellido: form.apellido,
-          email: form.email
+          email: form.email,
+          dni: form.dni || null
         }, {
           headers: { Authorization: `Bearer ${token}` }
         });
@@ -70,7 +72,7 @@ export default function UsuariosPage() {
       }
 
       setOpenForm(false);
-      setForm({ id: null, nombre: "", apellido: "", email: "", password: "", rol: "VENDEDOR" });
+      setForm({ id: null, nombre: "", apellido: "", email: "", password: "", rol: "VENDEDOR", dni: "" });
       fetchUsuarios();
     } catch (err) {
       console.error("Error al guardar usuario:", err);
@@ -164,7 +166,7 @@ export default function UsuariosPage() {
         {!esAdministrador && (
           <button
             onClick={() => {
-              setForm({ id: null, nombre: "", apellido: "", email: "", password: "", rol: "VENDEDOR" });
+              setForm({ id: null, nombre: "", apellido: "", email: "", password: "", rol: "VENDEDOR", dni: "" });
               setOpenForm(true);
             }}
             className="w-full sm:w-auto bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded-lg text-sm font-medium shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-1.5"
@@ -220,6 +222,7 @@ export default function UsuariosPage() {
           <thead className="bg-gradient-to-r from-purple-50 to-purple-100 border-b-2 border-purple-200">
             <tr>
               <th className="p-3 sm:p-4 font-semibold text-gray-700 text-sm">Nombre</th>
+              <th className="p-3 sm:p-4 font-semibold text-gray-700 text-sm">DNI</th>
               <th className="p-3 sm:p-4 font-semibold text-gray-700 text-sm">Email</th>
               <th className="p-3 sm:p-4 font-semibold text-gray-700 text-sm">Rol</th>
               <th className="p-3 sm:p-4 font-semibold text-gray-700 text-center text-sm">Estado</th>
@@ -238,6 +241,13 @@ export default function UsuariosPage() {
                       Desde {new Date(u.creadoEn).toLocaleDateString()}
                     </p>
                   </div>
+                </td>
+                <td className="p-3 sm:p-4 text-sm text-gray-600">
+                  {u.dni ? (
+                    <span className="font-mono">{u.dni}</span>
+                  ) : (
+                    <span className="text-gray-300 italic text-xs">Sin DNI</span>
+                  )}
                 </td>
                 <td className="p-3 sm:p-4 text-sm text-gray-600">{u.email}</td>
                 <td className="p-3 sm:p-4">
@@ -275,7 +285,8 @@ export default function UsuariosPage() {
                             apellido: u.apellido,
                             email: u.email,
                             password: "",
-                            rol: u.rol
+                            rol: u.rol,
+                            dni: u.dni || ""
                           });
                           setOpenForm(true);
                         }}
@@ -387,6 +398,26 @@ export default function UsuariosPage() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
+                  DNI <span className="text-gray-400 font-normal">(opcional)</span>
+                </label>
+                <input
+                  className="w-full border-2 border-gray-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 p-3 rounded-lg transition-all outline-none"
+                  value={form.dni}
+                  onChange={(e) => {
+                    const soloNumeros = e.target.value.replace(/\D/g, "").slice(0, 8);
+                    setForm({ ...form, dni: soloNumeros });
+                  }}
+                  placeholder="Ej: 12345678"
+                  inputMode="numeric"
+                  maxLength={8}
+                />
+                {form.dni && form.dni.length < 7 && (
+                  <p className="text-xs text-amber-500 mt-1">7 u 8 dígitos</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Rol *
                 </label>
                 <select
@@ -417,7 +448,7 @@ export default function UsuariosPage() {
               <button
                 onClick={() => {
                   setOpenForm(false);
-                  setForm({ id: null, nombre: "", apellido: "", email: "", password: "", rol: "VENDEDOR" });
+                  setForm({ id: null, nombre: "", apellido: "", email: "", password: "", rol: "VENDEDOR", dni: "" });
                 }}
                 className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2.5 rounded-lg font-medium transition-all"
               >
