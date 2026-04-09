@@ -3,6 +3,7 @@ import axios from "axios";
 import { AuthContext } from "../context/AuthContext.jsx";
 import { UserGroupIcon, CheckCircleIcon, XCircleIcon, KeyIcon } from "@heroicons/react/24/outline";
 import { useToast, useConfirm } from "../hooks/useNotifications.jsx";
+import Paginacion from "../components/Paginacion.jsx";
 
 export default function UsuariosPage() {
   const { token, usuario } = useContext(AuthContext);
@@ -17,17 +18,31 @@ export default function UsuariosPage() {
     nombre: "", 
     apellido: "", 
     email: "", 
-    password: "",
-    rol: "VENDEDOR" 
+    rol: "VENDEDOR",
+    dni: ""
   });
   const [passwordForm, setPasswordForm] = useState({ password: "", confirmPassword: "" });
 
+  // Paginación y filtros
+  const [pagina, setPagina] = useState(1);
+  const [totalPaginas, setTotalPaginas] = useState(1);
+  const [totalUsuarios, setTotalUsuarios] = useState(0);
+  const [busqueda, setBusqueda] = useState("");
+  const [filtroRol, setFiltroRol] = useState("");
+  const limit = 10;
+
   const fetchUsuarios = async () => {
     try {
-      const { data } = await axios.get("http://localhost:3000/usuarios", {
+      const params = new URLSearchParams({ page: pagina, limit });
+      if (busqueda.trim()) params.append("busqueda", busqueda.trim());
+      if (filtroRol) params.append("rol", filtroRol);
+
+      const { data } = await axios.get(`http://localhost:3000/usuarios?${params.toString()}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setUsuarios(data);
+      setUsuarios(data.data);
+      setTotalPaginas(data.meta.totalPaginas);
+      setTotalUsuarios(data.meta.total);
     } catch (error) {
       console.error("Error al cargar usuarios:", error);
     }
@@ -37,7 +52,10 @@ export default function UsuariosPage() {
     if (usuario?.rol === "GERENTE" || usuario?.rol === "ADMINISTRADOR") {
       fetchUsuarios(); 
     }
-  }, []);
+  }, [pagina, busqueda, filtroRol]);
+
+  // Resetear página al cambiar filtros
+  useEffect(() => { setPagina(1); }, [busqueda, filtroRol]);
 
   const crearOEditarUsuario = async () => {
     try {
@@ -46,17 +64,13 @@ export default function UsuariosPage() {
         return;
       }
 
-      if (!form.id && !form.password) {
-        error("La contraseña es obligatoria para nuevos usuarios");
-        return;
-      }
-
       if (form.id) {
         // EDITAR
         await axios.put(`http://localhost:3000/usuarios/${form.id}`, {
           nombre: form.nombre,
           apellido: form.apellido,
-          email: form.email
+          email: form.email,
+          dni: form.dni || null
         }, {
           headers: { Authorization: `Bearer ${token}` }
         });
@@ -70,7 +84,7 @@ export default function UsuariosPage() {
       }
 
       setOpenForm(false);
-      setForm({ id: null, nombre: "", apellido: "", email: "", password: "", rol: "VENDEDOR" });
+      setForm({ id: null, nombre: "", apellido: "", email: "", rol: "VENDEDOR", dni: "" });
       fetchUsuarios();
     } catch (err) {
       console.error("Error al guardar usuario:", err);
@@ -164,7 +178,7 @@ export default function UsuariosPage() {
         {!esAdministrador && (
           <button
             onClick={() => {
-              setForm({ id: null, nombre: "", apellido: "", email: "", password: "", rol: "VENDEDOR" });
+              setForm({ id: null, nombre: "", apellido: "", email: "", rol: "VENDEDOR", dni: "" });
               setOpenForm(true);
             }}
             className="w-full sm:w-auto bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded-lg text-sm font-medium shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-1.5"
@@ -183,7 +197,7 @@ export default function UsuariosPage() {
               <UserGroupIcon className="w-5 h-5" />
             </div>
             <div>
-              <p className="text-lg sm:text-xl font-bold text-gray-800">{usuarios.length}</p>
+              <p className="text-lg sm:text-xl font-bold text-gray-800">{totalUsuarios}</p>
               <p className="text-gray-500 text-xs font-medium">Total usuarios</p>
             </div>
           </div>
@@ -214,12 +228,36 @@ export default function UsuariosPage() {
         </div>
       </div>
 
+      {/* BARRA DE BÚSQUEDA Y FILTROS */}
+      <div className="bg-white rounded-lg shadow-sm p-3 mb-3 border border-gray-200">
+        <div className="flex flex-col sm:flex-row gap-2">
+          <input
+            type="text"
+            placeholder="Buscar por nombre, email o DNI..."
+            className="flex-1 border border-gray-300 focus:border-purple-500 focus:ring-1 focus:ring-purple-200 p-2 rounded-lg transition-all outline-none text-sm"
+            value={busqueda}
+            onChange={e => setBusqueda(e.target.value)}
+          />
+          <select
+            className="sm:w-44 border border-gray-300 focus:border-purple-500 focus:ring-1 focus:ring-purple-200 p-2 rounded-lg transition-all outline-none text-sm"
+            value={filtroRol}
+            onChange={e => setFiltroRol(e.target.value)}
+          >
+            <option value="">Todos los roles</option>
+            <option value="GERENTE">Gerente</option>
+            <option value="VENDEDOR">Vendedor</option>
+            <option value="ADMINISTRADOR">Administrador</option>
+          </select>
+        </div>
+      </div>
+
       {/* TABLA */}
       <div className="bg-white shadow-md rounded-lg overflow-x-auto border border-gray-200">
         <table className="w-full text-left min-w-[640px]">
           <thead className="bg-gradient-to-r from-purple-50 to-purple-100 border-b-2 border-purple-200">
             <tr>
               <th className="p-3 sm:p-4 font-semibold text-gray-700 text-sm">Nombre</th>
+              <th className="p-3 sm:p-4 font-semibold text-gray-700 text-sm">DNI</th>
               <th className="p-3 sm:p-4 font-semibold text-gray-700 text-sm">Email</th>
               <th className="p-3 sm:p-4 font-semibold text-gray-700 text-sm">Rol</th>
               <th className="p-3 sm:p-4 font-semibold text-gray-700 text-center text-sm">Estado</th>
@@ -238,6 +276,13 @@ export default function UsuariosPage() {
                       Desde {new Date(u.creadoEn).toLocaleDateString()}
                     </p>
                   </div>
+                </td>
+                <td className="p-3 sm:p-4 text-sm text-gray-600">
+                  {u.dni ? (
+                    <span className="font-mono">{u.dni}</span>
+                  ) : (
+                    <span className="text-gray-300 italic text-xs">Sin DNI</span>
+                  )}
                 </td>
                 <td className="p-3 sm:p-4 text-sm text-gray-600">{u.email}</td>
                 <td className="p-3 sm:p-4">
@@ -274,8 +319,8 @@ export default function UsuariosPage() {
                             nombre: u.nombre,
                             apellido: u.apellido,
                             email: u.email,
-                            password: "",
-                            rol: u.rol
+                            rol: u.rol,
+                            dni: u.dni || ""
                           });
                           setOpenForm(true);
                         }}
@@ -321,7 +366,14 @@ export default function UsuariosPage() {
         )}
       </div>
 
-      {/* MODAL CREAR/EDITAR */}
+      {/* PAGINACIÓN */}
+      <Paginacion
+        page={pagina}
+        totalPages={totalPaginas}
+        total={totalUsuarios}
+        limit={limit}
+        onPageChange={setPagina}
+      />
       {openForm && (
         <div className="fixed inset-0 bg-black/50 flex justify-center items-center backdrop-blur-sm z-50 p-4">
           <div className="bg-white p-6 sm:p-8 rounded-xl shadow-2xl w-full max-w-md border border-gray-200 max-h-[90vh] overflow-y-auto">
@@ -367,23 +419,27 @@ export default function UsuariosPage() {
                 />
               </div>
 
-              {!form.id && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Contraseña Temporal *
-                  </label>
-                  <input
-                    type="password"
-                    className="w-full border-2 border-gray-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 p-3 rounded-lg transition-all outline-none"
-                    value={form.password}
-                    onChange={(e) => setForm({ ...form, password: e.target.value })}
-                    placeholder="Mínimo 6 caracteres"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">
-                    El usuario podrá cambiarla después
-                  </p>
-                </div>
-              )}
+
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  DNI <span className="text-gray-400 font-normal">(opcional)</span>
+                </label>
+                <input
+                  className="w-full border-2 border-gray-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 p-3 rounded-lg transition-all outline-none"
+                  value={form.dni}
+                  onChange={(e) => {
+                    const soloNumeros = e.target.value.replace(/\D/g, "").slice(0, 8);
+                    setForm({ ...form, dni: soloNumeros });
+                  }}
+                  placeholder="Ej: 12345678"
+                  inputMode="numeric"
+                  maxLength={8}
+                />
+                {form.dni && form.dni.length < 7 && (
+                  <p className="text-xs text-amber-500 mt-1">7 u 8 dígitos</p>
+                )}
+              </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -417,7 +473,7 @@ export default function UsuariosPage() {
               <button
                 onClick={() => {
                   setOpenForm(false);
-                  setForm({ id: null, nombre: "", apellido: "", email: "", password: "", rol: "VENDEDOR" });
+                  setForm({ id: null, nombre: "", apellido: "", email: "", rol: "VENDEDOR", dni: "" });
                 }}
                 className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2.5 rounded-lg font-medium transition-all"
               >

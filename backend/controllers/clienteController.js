@@ -3,36 +3,48 @@ import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
 
+import { parsearPaginacion, construirRespuestaPaginada } from "../utils/paginacion.js";
+
 export const listarClientes = async (req, res) => {
   try {
     const usuario = req.usuario;
+    const { page, limit, skip, take } = parsearPaginacion(req.query);
+    const busqueda = req.query.busqueda?.trim() || "";
+    const tipo = req.query.tipo || "";
+    
+    const filtroRol = usuario.rol === "VENDEDOR" ? { usuarioId: usuario.id } : {};
+    const filtroTipo = tipo ? { empresa: tipo } : {};
+    const filtroBusqueda = busqueda
+      ? {
+          OR: [
+            { nombre: { contains: busqueda } },
+            { email: { contains: busqueda } },
+            { telefono: { contains: busqueda } }
+          ]
+        }
+      : {};
 
-    if (usuario.rol === "GERENTE" || usuario.rol === "ADMINISTRADOR") {
-      const clientes = await prisma.cliente.findMany({
-        include: {
-          usuario: {
-            select: {
-              id: true,
-              nombre: true,
-              apellido: true,
-              email: true
-            }
-          }
-        },
-        orderBy: { nombre: 'asc' }
-      });
-      return res.json(clientes);
-    }
+    const where = { ...filtroRol, ...filtroTipo, ...filtroBusqueda };
 
-    const clientes = await prisma.cliente.findMany({
-      where: { usuarioId: usuario.id },
-      orderBy: { nombre: 'asc' }
-    });
+    const [clientes, total] = await Promise.all([
+      prisma.cliente.findMany({
+        where,
+        include:
+          usuario.rol === "GERENTE" || usuario.rol === "ADMINISTRADOR"
+            ? { usuario: { select: { id: true, nombre: true, apellido: true, email: true } } }
+            : undefined,
+        orderBy: { nombre: "asc" },
+        skip,
+        take
+      }),
+      prisma.cliente.count({ where })
+    ]);
 
-    return res.json(clientes);
+    return res.json(construirRespuestaPaginada(clientes, total, page, limit));
 
   } catch (error) {
     console.error(error);
+    if (error.status) return res.status(error.status).json({ error: error.message });
     res.status(500).json({ error: "Error al obtener clientes" });
   }
 };
@@ -49,7 +61,7 @@ export const crearCliente = async (req, res) => {
         telefono,
         email,
         notas,
-        usuarioId: usuario.id 
+        usuarioId: usuario.id
       }
     });
 
@@ -107,30 +119,30 @@ export const eliminarCliente = async (req, res) => {
     const { id } = req.params;
 
     // Verificar si el cliente tiene oportunidades o tareas asociadas
-    const oportunidadesCount = await prisma.oportunidad.count({ 
-      where: { clienteId: Number(id) } 
+    const oportunidadesCount = await prisma.oportunidad.count({
+      where: { clienteId: Number(id) }
     });
-    
-    const tareasCount = await prisma.tarea.count({ 
-      where: { clienteId: Number(id) } 
+
+    const tareasCount = await prisma.tarea.count({
+      where: { clienteId: Number(id) }
     });
 
     // Eliminar todas las relaciones antes de eliminar el cliente
     if (tareasCount > 0) {
       await prisma.tarea.deleteMany({ where: { clienteId: Number(id) } });
     }
-    
+
     if (oportunidadesCount > 0) {
       await prisma.oportunidad.deleteMany({ where: { clienteId: Number(id) } });
     }
-    
+
     // Luego eliminar el cliente
     await prisma.cliente.delete({ where: { id: Number(id) } });
 
-    res.json({ 
+    res.json({
       mensaje: "Cliente eliminado exitosamente",
-      info: oportunidadesCount > 0 
-        ? `Se eliminaron ${oportunidadesCount} oportunidad(es) asociada(s)` 
+      info: oportunidadesCount > 0
+        ? `Se eliminaron ${oportunidadesCount} oportunidad(es) asociada(s)`
         : null
     });
 

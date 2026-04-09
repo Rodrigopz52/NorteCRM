@@ -1,5 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import LoginPage from "./pages/LoginPage.jsx";
+import ForgotPasswordPage from "./pages/ForgotPasswordPage.jsx";
+import ResetPasswordPage from "./pages/ResetPasswordPage.jsx";
 import ClientesPage from "./pages/ClientesPage.jsx";
 import OportunidadesPage from "./pages/OportunidadesPage.jsx";
 import ActividadesPage from "./pages/ActividadesPage.jsx";
@@ -21,6 +23,8 @@ export default function App() {
       <AuthProvider>
         <Routes>
           <Route path="/" element={<LoginPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
 
           <Route
             path="/clientes"
