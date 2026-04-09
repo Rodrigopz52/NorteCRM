@@ -2,6 +2,7 @@ import { useContext, useEffect, useState } from "react";
 import axios from "axios";
 import { AuthContext } from "../context/AuthContext.jsx";
 import { useToast, useConfirm } from "../hooks/useNotifications.jsx";
+import Paginacion from "../components/Paginacion.jsx";
 
 export default function ClientesPage() {
   const { token, usuario } = useContext(AuthContext);
@@ -265,25 +266,13 @@ export default function ClientesPage() {
       </div>
 
       {/* Controles de Paginación */}
-      <div className="flex justify-center items-center gap-4 mt-6 mb-4">
-        <button
-          disabled={pagina <= 1}
-          onClick={() => setPagina(pagina - 1)}
-          className="px-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-        >
-          Anterior
-        </button>
-        <span className="text-sm font-medium text-gray-700">
-          Página {pagina} de {totalPaginas}
-        </span>
-        <button
-          disabled={pagina >= totalPaginas}
-          onClick={() => setPagina(pagina + 1)}
-          className="px-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-        >
-          Siguiente
-        </button>
-      </div>
+      <Paginacion
+        page={pagina}
+        totalPages={totalPaginas}
+        total={totalClientes}
+        limit={limit}
+        onPageChange={setPagina}
+      />
 
       {/* Cards para móvil */}
       <div className="md:hidden space-y-2">

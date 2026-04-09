@@ -3,6 +3,7 @@ import axios from "axios";
 import { AuthContext } from "../context/AuthContext.jsx";
 import { UserGroupIcon, CheckCircleIcon, XCircleIcon, KeyIcon } from "@heroicons/react/24/outline";
 import { useToast, useConfirm } from "../hooks/useNotifications.jsx";
+import Paginacion from "../components/Paginacion.jsx";
 
 export default function UsuariosPage() {
   const { token, usuario } = useContext(AuthContext);
@@ -373,25 +374,13 @@ export default function UsuariosPage() {
       </div>
 
       {/* PAGINACIÓN */}
-      <div className="flex justify-center items-center gap-4 mt-4 mb-4">
-        <button
-          disabled={pagina <= 1}
-          onClick={() => setPagina(pagina - 1)}
-          className="px-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-        >
-          Anterior
-        </button>
-        <span className="text-sm font-medium text-gray-700">
-          Página {pagina} de {totalPaginas}
-        </span>
-        <button
-          disabled={pagina >= totalPaginas}
-          onClick={() => setPagina(pagina + 1)}
-          className="px-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-        >
-          Siguiente
-        </button>
-      </div>
+      <Paginacion
+        page={pagina}
+        totalPages={totalPaginas}
+        total={totalUsuarios}
+        limit={limit}
+        onPageChange={setPagina}
+      />
       {openForm && (
         <div className="fixed inset-0 bg-black/50 flex justify-center items-center backdrop-blur-sm z-50 p-4">
           <div className="bg-white p-6 sm:p-8 rounded-xl shadow-2xl w-full max-w-md border border-gray-200 max-h-[90vh] overflow-y-auto">
