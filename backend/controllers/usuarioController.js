@@ -1,5 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcrypt";
+import { parsearPaginacion, construirRespuestaPaginada } from "../utils/paginacion.js";
 
 const prisma = new PrismaClient();
 
@@ -10,23 +11,48 @@ export const listarUsuarios = async (req, res) => {
       return res.status(403).json({ error: "Solo el gerente o administrador pueden ver usuarios" });
     }
 
-    const usuarios = await prisma.usuario.findMany({
-      select: {
-        id: true,
-        nombre: true,
-        apellido: true,
-        email: true,
-        dni: true,
-        rol: true,
-        activo: true,
-        creadoEn: true
-      },
-      orderBy: { nombre: 'asc' }
-    });
+    const { page, limit, skip, take } = parsearPaginacion(req.query);
+    const busqueda = req.query.busqueda?.trim() || "";
+    const rol = req.query.rol || "";
 
-    res.json(usuarios);
+    const filtroRol = rol ? { rol } : {};
+    const filtroBusqueda = busqueda
+      ? {
+          OR: [
+            { nombre: { contains: busqueda } },
+            { apellido: { contains: busqueda } },
+            { email: { contains: busqueda } },
+            { dni: { contains: busqueda } }
+          ]
+        }
+      : {};
+
+    const where = { ...filtroRol, ...filtroBusqueda };
+
+    const [usuarios, total] = await Promise.all([
+      prisma.usuario.findMany({
+        where,
+        select: {
+          id: true,
+          nombre: true,
+          apellido: true,
+          email: true,
+          dni: true,
+          rol: true,
+          activo: true,
+          creadoEn: true
+        },
+        orderBy: { nombre: "asc" },
+        skip,
+        take
+      }),
+      prisma.usuario.count({ where })
+    ]);
+
+    res.json(construirRespuestaPaginada(usuarios, total, page, limit));
   } catch (error) {
     console.error(error);
+    if (error.status) return res.status(error.status).json({ error: error.message });
     res.status(500).json({ error: "Error al obtener usuarios" });
   }
 };
