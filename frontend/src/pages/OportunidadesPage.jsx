@@ -53,18 +53,30 @@ export default function OportunidadesPage() {
   };
 
   const load = async () => {
-    const { data } = await axios.get("http://localhost:3000/oportunidades", {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    setOpps(data);
+    try {
+      const params = new URLSearchParams();
+      if (filtroTipo !== "Todos") params.append("tipo", filtroTipo);
+      if (filtroEstado !== "Todos") params.append("estado", filtroEstado);
+      if (filtroCliente !== "Todos") params.append("tipoCliente", filtroCliente);
+      if (busqueda.trim()) params.append("busqueda", busqueda.trim());
 
-    const cl = await axios.get("http://localhost:3000/clientes", {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    setClientes(cl.data);
+      const { data } = await axios.get(`http://localhost:3000/oportunidades?${params.toString()}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setOpps(data.data);
+
+      // Clientes: traer todos para el selector del formulario (limit=50)
+      const cl = await axios.get("http://localhost:3000/clientes?limit=50", {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setClientes(cl.data.data);
+    } catch (err) {
+      console.error("Error al cargar datos:", err);
+    }
   };
 
-  useEffect(() => { load(); }, []);
+  // Refetch cuando cambian los filtros
+  useEffect(() => { load(); }, [filtroTipo, filtroEstado, filtroCliente, busqueda]);
 
   const crearOportunidad = async () => {
     if (!form.titulo || !form.clienteId) {
@@ -218,26 +230,7 @@ export default function OportunidadesPage() {
     load();
   };
 
-  // FILTRADO Y BÚSQUEDA
-  const oppsFiltradas = opps.filter(opp => {
-    // Filtro por tipo
-    const cumpleTipo = filtroTipo === "Todos" || opp.tipo === filtroTipo;
-    
-    // Filtro por estado
-    const cumpleEstado = filtroEstado === "Todos" || opp.estado === filtroEstado;
-    
-    // Filtro por tipo de cliente
-    const cumpleTipoCliente = filtroCliente === "Todos" || opp.cliente?.empresa === filtroCliente;
-    
-    // Búsqueda por título, dirección o cliente
-    const terminoBusqueda = busqueda.toLowerCase();
-    const cumpleBusqueda = busqueda === "" || 
-      opp.titulo.toLowerCase().includes(terminoBusqueda) ||
-      (opp.notas && opp.notas.toLowerCase().includes(terminoBusqueda)) ||
-      (opp.cliente?.nombre && opp.cliente.nombre.toLowerCase().includes(terminoBusqueda));
-    
-    return cumpleTipo && cumpleEstado && cumpleTipoCliente && cumpleBusqueda;
-  });
+  // Filtrado ahora se hace en el backend — opps ya viene filtrado
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-4 sm:p-6 overflow-x-hidden">
@@ -321,7 +314,7 @@ export default function OportunidadesPage() {
           {/* CONTADOR DE RESULTADOS */}
           <div className="lg:w-40 lg:pt-5">
             <p className="text-xs text-gray-600 text-center lg:text-left">
-              <span className="font-bold text-purple-600">{oppsFiltradas.length}</span> de {opps.length}
+              <span className="font-bold text-purple-600">{opps.length}</span> propiedad{opps.length !== 1 ? 'es' : ''}
             </p>
           </div>
         </div>
@@ -341,10 +334,16 @@ export default function OportunidadesPage() {
                   {...provided.droppableProps}
                 >
                   <h3 className="font-bold mb-2 uppercase text-xs tracking-wider text-gray-600 pb-1.5 border-b border-purple-200">
-                    {etapa} ({oppsFiltradas.filter(o => o.etapa === etapa).length})
+                    {etapa} ({opps.filter(o => o.etapa === etapa).length})
                   </h3>
 
-                  {oppsFiltradas.filter(o => o.etapa === etapa).map((o, index) => {
+                  {opps.filter(o => o.etapa === etapa).length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-8 text-center">
+                      <p className="text-gray-300 text-3xl mb-2">📭</p>
+                      <p className="text-xs text-gray-400">Sin propiedades</p>
+                    </div>
+                  ) : null}
+                  {opps.filter(o => o.etapa === etapa).map((o, index) => {
                     const actividadesPendientes = o.actividades?.filter(a => !a.completada).length || 0;
                     const actividadesVencidas = o.actividades?.filter(a => {
                       const hoy = new Date();
