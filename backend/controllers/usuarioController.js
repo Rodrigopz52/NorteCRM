@@ -1,5 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcrypt";
+import crypto from "crypto";
+import { enviarEmail } from "../utils/mailer.js";
 import { parsearPaginacion, construirRespuestaPaginada } from "../utils/paginacion.js";
 
 const prisma = new PrismaClient();
@@ -64,10 +66,10 @@ export const crearUsuario = async (req, res) => {
       return res.status(403).json({ error: "Solo el gerente puede crear usuarios" });
     }
 
-    const { nombre, apellido, email, password, rol, dni } = req.body;
+    const { nombre, apellido, email, rol, dni } = req.body;
 
-    if (!nombre || !apellido || !email || !password) {
-      return res.status(400).json({ error: "Faltan campos requeridos" });
+    if (!nombre || !apellido || !email) {
+      return res.status(400).json({ error: "Faltan campos obligatorios (nombre, apellido, email)" });
     }
 
     // Verificar que el email no exista
@@ -79,8 +81,14 @@ export const crearUsuario = async (req, res) => {
       return res.status(400).json({ error: "El email ya está registrado" });
     }
 
-    // Hash de la contraseña
-    const hashedPassword = await bcrypt.hash(password, 10);
+    // Para la primera vez, autogeneramos un password muy fuerte pero que no se usará (el usuario elegirá el suyo) 
+    const randomPassword = crypto.randomBytes(20).toString("hex");
+    const hashedPassword = await bcrypt.hash(randomPassword, 10);
+    
+    // Generamos el token de primer acceso (Welcome)
+    const resetToken = crypto.randomBytes(32).toString("hex");
+    // Le daremos más tiempo al de creación original (ej: 48 hs) 
+    const tokenExp = new Date(Date.now() + 48 * 3600000); 
 
     const usuario = await prisma.usuario.create({
       data: {
@@ -90,7 +98,9 @@ export const crearUsuario = async (req, res) => {
         dni: dni || null,
         password: hashedPassword,
         rol: rol || "VENDEDOR",
-        activo: true
+        activo: true,
+        resetPasswordToken: resetToken,
+        resetPasswordExpires: tokenExp
       },
       select: {
         id: true,
@@ -104,8 +114,27 @@ export const crearUsuario = async (req, res) => {
       }
     });
 
+    // Enviar correo de bienvenida con el enlace de creación de contraseña
+    const resetUrl = `http://localhost:5173/reset-password?token=${resetToken}`;
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <h2 style="color: #9333ea;">¡Bienvenido a NorteCRM!</h2>
+        <p>Hola <strong>${nombre}</strong>,</p>
+        <p>Se te ha invitado a unirte y trabajar en NorteCRM con el rol de <strong>${usuario.rol}</strong>.</p>
+        <p>Haz clic en el siguiente botón para establecer tu contraseña y acceder por primera vez:</p>
+        <a href="${resetUrl}" style="display: inline-block; padding: 10px 20px; background-color: #9333ea; color: white; text-decoration: none; border-radius: 5px; font-weight: bold; margin-top: 10px; margin-bottom: 20px;">
+          Activar mi cuenta y Crear Contraseña
+        </a>
+        <p style="color: #555; text-align: justify">Este enlace de activación <strong>caduca en 48 horas</strong> por motivos de seguridad.</p>
+        <hr style="border: 0; border-top: 1px solid #ddd; margin: 20px 0;">
+        <p style="text-align: center; color: #888; font-size: 12px;">El equipo de NorteCRM</p>
+      </div>
+    `;
+
+    await enviarEmail(usuario.email, "¡Bienvenido a NorteCRM! Creada tu nueva cuenta", html);
+
     res.json({ 
-      mensaje: "Usuario creado exitosamente", 
+      mensaje: "Usuario creado exitosamente. Se ha enviado un correo con instrucciones.", 
       usuario 
     });
   } catch (error) {

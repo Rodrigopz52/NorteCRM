@@ -8,19 +8,21 @@ datasource db {
 }
 
 model Usuario {
-  id            Int           @id @default(autoincrement())
-  nombre        String
-  apellido      String
-  email         String        @unique
-  dni           String?       @unique
-  password      String
-  rol           Rol
-  activo        Boolean       @default(true)
-  clientes      Cliente[]
-  oportunidades Oportunidad[]
-  tareas        Tarea[]
-  actividades   Actividad[]
-  creadoEn      DateTime      @default(now())
+  id                   Int           @id @default(autoincrement())
+  nombre               String
+  apellido             String
+  email                String        @unique
+  dni                  String?       @unique
+  password             String
+  resetPasswordToken   String?       @unique
+  resetPasswordExpires DateTime?
+  rol                  Rol
+  activo               Boolean       @default(true)
+  clientes             Cliente[]
+  oportunidades        Oportunidad[]
+  tareas               Tarea[]
+  actividades          Actividad[]
+  creadoEn             DateTime      @default(now())
 }
 
 model Cliente {
