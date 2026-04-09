@@ -23,12 +23,26 @@ export default function UsuariosPage() {
   });
   const [passwordForm, setPasswordForm] = useState({ password: "", confirmPassword: "" });
 
+  // Paginación y filtros
+  const [pagina, setPagina] = useState(1);
+  const [totalPaginas, setTotalPaginas] = useState(1);
+  const [totalUsuarios, setTotalUsuarios] = useState(0);
+  const [busqueda, setBusqueda] = useState("");
+  const [filtroRol, setFiltroRol] = useState("");
+  const limit = 10;
+
   const fetchUsuarios = async () => {
     try {
-      const { data } = await axios.get("http://localhost:3000/usuarios", {
+      const params = new URLSearchParams({ page: pagina, limit });
+      if (busqueda.trim()) params.append("busqueda", busqueda.trim());
+      if (filtroRol) params.append("rol", filtroRol);
+
+      const { data } = await axios.get(`http://localhost:3000/usuarios?${params.toString()}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setUsuarios(data);
+      setUsuarios(data.data);
+      setTotalPaginas(data.meta.totalPaginas);
+      setTotalUsuarios(data.meta.total);
     } catch (error) {
       console.error("Error al cargar usuarios:", error);
     }
@@ -38,7 +52,10 @@ export default function UsuariosPage() {
     if (usuario?.rol === "GERENTE" || usuario?.rol === "ADMINISTRADOR") {
       fetchUsuarios(); 
     }
-  }, []);
+  }, [pagina, busqueda, filtroRol]);
+
+  // Resetear página al cambiar filtros
+  useEffect(() => { setPagina(1); }, [busqueda, filtroRol]);
 
   const crearOEditarUsuario = async () => {
     try {
@@ -185,7 +202,7 @@ export default function UsuariosPage() {
               <UserGroupIcon className="w-5 h-5" />
             </div>
             <div>
-              <p className="text-lg sm:text-xl font-bold text-gray-800">{usuarios.length}</p>
+              <p className="text-lg sm:text-xl font-bold text-gray-800">{totalUsuarios}</p>
               <p className="text-gray-500 text-xs font-medium">Total usuarios</p>
             </div>
           </div>
@@ -213,6 +230,29 @@ export default function UsuariosPage() {
               <p className="text-gray-500 text-xs font-medium">Inactivos</p>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* BARRA DE BÚSQUEDA Y FILTROS */}
+      <div className="bg-white rounded-lg shadow-sm p-3 mb-3 border border-gray-200">
+        <div className="flex flex-col sm:flex-row gap-2">
+          <input
+            type="text"
+            placeholder="Buscar por nombre, email o DNI..."
+            className="flex-1 border border-gray-300 focus:border-purple-500 focus:ring-1 focus:ring-purple-200 p-2 rounded-lg transition-all outline-none text-sm"
+            value={busqueda}
+            onChange={e => setBusqueda(e.target.value)}
+          />
+          <select
+            className="sm:w-44 border border-gray-300 focus:border-purple-500 focus:ring-1 focus:ring-purple-200 p-2 rounded-lg transition-all outline-none text-sm"
+            value={filtroRol}
+            onChange={e => setFiltroRol(e.target.value)}
+          >
+            <option value="">Todos los roles</option>
+            <option value="GERENTE">Gerente</option>
+            <option value="VENDEDOR">Vendedor</option>
+            <option value="ADMINISTRADOR">Administrador</option>
+          </select>
         </div>
       </div>
 
@@ -332,7 +372,26 @@ export default function UsuariosPage() {
         )}
       </div>
 
-      {/* MODAL CREAR/EDITAR */}
+      {/* PAGINACIÓN */}
+      <div className="flex justify-center items-center gap-4 mt-4 mb-4">
+        <button
+          disabled={pagina <= 1}
+          onClick={() => setPagina(pagina - 1)}
+          className="px-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+        >
+          Anterior
+        </button>
+        <span className="text-sm font-medium text-gray-700">
+          Página {pagina} de {totalPaginas}
+        </span>
+        <button
+          disabled={pagina >= totalPaginas}
+          onClick={() => setPagina(pagina + 1)}
+          className="px-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+        >
+          Siguiente
+        </button>
+      </div>
       {openForm && (
         <div className="fixed inset-0 bg-black/50 flex justify-center items-center backdrop-blur-sm z-50 p-4">
           <div className="bg-white p-6 sm:p-8 rounded-xl shadow-2xl w-full max-w-md border border-gray-200 max-h-[90vh] overflow-y-auto">
