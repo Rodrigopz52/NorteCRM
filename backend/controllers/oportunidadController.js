@@ -1,35 +1,71 @@
 import { PrismaClient } from "@prisma/client";
+import { parsearPaginacion, construirRespuestaPaginada } from "../utils/paginacion.js";
+
 const prisma = new PrismaClient();
 
 export const listarOportunidades = async (req, res) => {
-  const usuario = req.usuario;
+  try {
+    const usuario = req.usuario;
+    const { page, limit, skip, take } = parsearPaginacion(req.query, 50); // default 50: máximo razonable para Kanban
+    const busqueda = req.query.busqueda?.trim() || "";
+    const tipo = req.query.tipo || "";
+    const estado = req.query.estado || "";
+    const etapa = req.query.etapa || "";
+    const tipoCliente = req.query.tipoCliente || "";
 
-  const opciones = (usuario.rol === "GERENTE" || usuario.rol === "ADMINISTRADOR")
-    ? {}
-    : { where: { usuarioId: usuario.id } };
-
-  const data = await prisma.oportunidad.findMany({
-    ...opciones,
-    include: { 
-      cliente: true,
-      usuario: {
-        select: {
-          id: true,
-          nombre: true,
-          apellido: true,
-          email: true
+    const filtroRol = usuario.rol === "VENDEDOR" ? { usuarioId: usuario.id } : {};
+    const filtroTipo = tipo ? { tipo } : {};
+    const filtroEstado = estado ? { estado } : {};
+    const filtroEtapa = etapa ? { etapa } : {};
+    const filtroTipoCliente = tipoCliente ? { cliente: { empresa: tipoCliente } } : {};
+    const filtroBusqueda = busqueda
+      ? {
+          OR: [
+            { titulo: { contains: busqueda } },
+            { notas: { contains: busqueda } },
+            { cliente: { nombre: { contains: busqueda } } }
+          ]
         }
-      },
-      actividades: {
-        orderBy: [
-          { completada: 'asc' },
-          { fechaVencimiento: 'asc' }
-        ]
-      }
-    }
-  });
+      : {};
 
-  res.json(data);
+    const where = {
+      ...filtroRol,
+      ...filtroTipo,
+      ...filtroEstado,
+      ...filtroEtapa,
+      ...filtroTipoCliente,
+      ...filtroBusqueda
+    };
+
+    const [oportunidades, total] = await Promise.all([
+      prisma.oportunidad.findMany({
+        where,
+        include: {
+          cliente: true,
+          usuario: {
+            select: { id: true, nombre: true, apellido: true, email: true }
+          },
+          actividades: {
+            orderBy: [
+              { completada: "asc" },
+              { fechaVencimiento: "asc" }
+            ]
+          }
+        },
+        orderBy: { creadoEn: "desc" },
+        skip,
+        take
+      }),
+      prisma.oportunidad.count({ where })
+    ]);
+
+    return res.json(construirRespuestaPaginada(oportunidades, total, page, limit));
+
+  } catch (error) {
+    console.error(error);
+    if (error.status) return res.status(error.status).json({ error: error.message });
+    res.status(500).json({ error: "Error al obtener oportunidades" });
+  }
 };
 
 // Crear oportunidad
