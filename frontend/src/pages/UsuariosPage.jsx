@@ -18,7 +18,6 @@ export default function UsuariosPage() {
     nombre: "", 
     apellido: "", 
     email: "", 
-    password: "",
     rol: "VENDEDOR",
     dni: ""
   });
@@ -65,11 +64,6 @@ export default function UsuariosPage() {
         return;
       }
 
-      if (!form.id && !form.password) {
-        error("La contraseña es obligatoria para nuevos usuarios");
-        return;
-      }
-
       if (form.id) {
         // EDITAR
         await axios.put(`http://localhost:3000/usuarios/${form.id}`, {
@@ -90,7 +84,7 @@ export default function UsuariosPage() {
       }
 
       setOpenForm(false);
-      setForm({ id: null, nombre: "", apellido: "", email: "", password: "", rol: "VENDEDOR", dni: "" });
+      setForm({ id: null, nombre: "", apellido: "", email: "", rol: "VENDEDOR", dni: "" });
       fetchUsuarios();
     } catch (err) {
       console.error("Error al guardar usuario:", err);
@@ -184,7 +178,7 @@ export default function UsuariosPage() {
         {!esAdministrador && (
           <button
             onClick={() => {
-              setForm({ id: null, nombre: "", apellido: "", email: "", password: "", rol: "VENDEDOR", dni: "" });
+              setForm({ id: null, nombre: "", apellido: "", email: "", rol: "VENDEDOR", dni: "" });
               setOpenForm(true);
             }}
             className="w-full sm:w-auto bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded-lg text-sm font-medium shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-1.5"
@@ -325,7 +319,6 @@ export default function UsuariosPage() {
                             nombre: u.nombre,
                             apellido: u.apellido,
                             email: u.email,
-                            password: "",
                             rol: u.rol,
                             dni: u.dni || ""
                           });
@@ -426,23 +419,7 @@ export default function UsuariosPage() {
                 />
               </div>
 
-              {!form.id && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Contraseña Temporal *
-                  </label>
-                  <input
-                    type="password"
-                    className="w-full border-2 border-gray-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 p-3 rounded-lg transition-all outline-none"
-                    value={form.password}
-                    onChange={(e) => setForm({ ...form, password: e.target.value })}
-                    placeholder="Mínimo 6 caracteres"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">
-                    El usuario podrá cambiarla después
-                  </p>
-                </div>
-              )}
+
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -496,7 +473,7 @@ export default function UsuariosPage() {
               <button
                 onClick={() => {
                   setOpenForm(false);
-                  setForm({ id: null, nombre: "", apellido: "", email: "", password: "", rol: "VENDEDOR", dni: "" });
+                  setForm({ id: null, nombre: "", apellido: "", email: "", rol: "VENDEDOR", dni: "" });
                 }}
                 className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2.5 rounded-lg font-medium transition-all"
               >

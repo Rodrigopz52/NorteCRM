@@ -1,4 +1,5 @@
 import { useState, useContext } from "react";
+import { Link } from "react-router-dom";
 import axios from "axios";
 import { AuthContext } from "../context/AuthContext.jsx";
 import { useToast } from "../hooks/useNotifications.jsx";
@@ -72,6 +73,11 @@ export default function LoginPage() {
                   value={password} 
                   onChange={(e) => setPassword(e.target.value)}
                 />
+              </div>
+              <div className="flex justify-end mt-2">
+                <Link to="/forgot-password" className="text-xs text-purple-600 hover:text-purple-800 font-medium transition-colors">
+                  ¿Olvidaste tu contraseña?
+                </Link>
               </div>
             </div>
           </div>
