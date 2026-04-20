@@ -1,7 +1,7 @@
 import { useContext, useEffect, useState } from "react";
 import axios from "axios";
 import { AuthContext } from "../context/AuthContext.jsx";
-import { UserGroupIcon, CheckCircleIcon, XCircleIcon, KeyIcon } from "@heroicons/react/24/outline";
+import { UserGroupIcon, CheckCircleIcon, XCircleIcon } from "@heroicons/react/24/outline";
 import { useToast, useConfirm } from "../hooks/useNotifications.jsx";
 import Paginacion from "../components/Paginacion.jsx";
 
@@ -11,8 +11,6 @@ export default function UsuariosPage() {
   const { showConfirm, ConfirmContainer } = useConfirm();
   const [usuarios, setUsuarios] = useState([]);
   const [openForm, setOpenForm] = useState(false);
-  const [openResetPassword, setOpenResetPassword] = useState(false);
-  const [selectedUser, setSelectedUser] = useState(null);
   const [form, setForm] = useState({ 
     id: null, 
     nombre: "", 
@@ -21,7 +19,6 @@ export default function UsuariosPage() {
     rol: "VENDEDOR",
     dni: ""
   });
-  const [passwordForm, setPasswordForm] = useState({ password: "", confirmPassword: "" });
 
   // Paginación y filtros
   const [pagina, setPagina] = useState(1);
@@ -111,39 +108,6 @@ export default function UsuariosPage() {
     } catch (err) {
       console.error("Error al cambiar estado:", err);
       error(err.response?.data?.error || "Error al cambiar el estado");
-    }
-  };
-
-  const resetearPassword = async () => {
-    try {
-      if (!passwordForm.password || !passwordForm.confirmPassword) {
-        error("Ambos campos son obligatorios");
-        return;
-      }
-
-      if (passwordForm.password !== passwordForm.confirmPassword) {
-        error("Las contraseñas no coinciden");
-        return;
-      }
-
-      if (passwordForm.password.length < 6) {
-        error("La contraseña debe tener al menos 6 caracteres");
-        return;
-      }
-
-      await axios.put(
-        `http://localhost:3000/usuarios/${selectedUser.id}/resetear-password`, 
-        { password: passwordForm.password },
-        { headers: { Authorization: `Bearer ${token}` }}
-      );
-
-      success(`Contraseña actualizada para ${selectedUser.nombre}`);
-      setOpenResetPassword(false);
-      setSelectedUser(null);
-      setPasswordForm({ password: "", confirmPassword: "" });
-    } catch (err) {
-      console.error("Error al resetear contraseña:", err);
-      error(err.response?.data?.error || "Error al actualizar la contraseña");
     }
   };
 
@@ -339,17 +303,6 @@ export default function UsuariosPage() {
                           {u.activo ? 'Desactivar' : 'Activar'}
                         </button>
                       )}
-
-                      <button
-                        onClick={() => {
-                          setSelectedUser(u);
-                          setOpenResetPassword(true);
-                        }}
-                        className="text-purple-600 hover:text-purple-800 font-bold hover:underline transition-colors flex items-center gap-1 text-xs sm:text-sm"
-                      >
-                        <KeyIcon className="w-3 h-3 sm:w-4 sm:h-4" />
-                        Resetear
-                      </button>
                     </div>
                   )}
                 </td>
@@ -474,67 +427,6 @@ export default function UsuariosPage() {
                 onClick={() => {
                   setOpenForm(false);
                   setForm({ id: null, nombre: "", apellido: "", email: "", rol: "VENDEDOR", dni: "" });
-                }}
-                className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2.5 rounded-lg font-medium transition-all"
-              >
-                Cancelar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL RESETEAR CONTRASEÑA */}
-      {openResetPassword && selectedUser && (
-        <div className="fixed inset-0 bg-black/50 flex justify-center items-center backdrop-blur-sm z-50 p-4">
-          <div className="bg-white p-8 rounded-xl shadow-2xl w-full max-w-md border border-gray-200">
-            <h3 className="text-2xl font-bold mb-2 text-gray-800">
-              Resetear Contraseña
-            </h3>
-            <p className="text-gray-600 mb-6">
-              Usuario: <span className="font-semibold">{selectedUser.nombre} {selectedUser.apellido}</span>
-            </p>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Nueva Contraseña *
-                </label>
-                <input
-                  type="password"
-                  className="w-full border-2 border-gray-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 p-3 rounded-lg transition-all outline-none"
-                  value={passwordForm.password}
-                  onChange={(e) => setPasswordForm({ ...passwordForm, password: e.target.value })}
-                  placeholder="Mínimo 6 caracteres"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Confirmar Contraseña *
-                </label>
-                <input
-                  type="password"
-                  className="w-full border-2 border-gray-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 p-3 rounded-lg transition-all outline-none"
-                  value={passwordForm.confirmPassword}
-                  onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
-                  placeholder="Repite la contraseña"
-                />
-              </div>
-            </div>
-
-            <div className="flex gap-3 mt-6">
-              <button
-                onClick={resetearPassword}
-                className="flex-1 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2.5 rounded-lg font-medium shadow-md hover:shadow-lg transition-all"
-              >
-                Actualizar Contraseña
-              </button>
-              <button
-                onClick={() => {
-                  setOpenResetPassword(false);
-                  setSelectedUser(null);
-                  setPasswordForm({ password: "", confirmPassword: "" });
                 }}
                 className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2.5 rounded-lg font-medium transition-all"
               >
