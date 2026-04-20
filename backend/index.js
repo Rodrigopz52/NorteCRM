@@ -15,7 +15,9 @@ app.use(express.json());
 app.use("/auth", authRoutes);
 app.use("/clientes", clienteRoutes);
 app.use("/oportunidades", oportunidadRoutes);
+app.use("/propiedades", oportunidadRoutes); // Alias
 app.use("/actividades", actividadRoutes);
+app.use("/tareas", actividadRoutes); // Alias
 app.use("/usuarios", usuarioRoutes);
 app.use("/docs", swaggerUiMiddleware, swaggerUiSetup);
 app.use("/reportes", reportesRoutes);

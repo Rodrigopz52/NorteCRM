@@ -16,8 +16,8 @@ export default function Navbar() {
           {/* Desktop Navigation */}
           <div className="hidden md:flex gap-1">
             <NavLink href="/clientes">Clientes</NavLink>
-            <NavLink href="/oportunidades">Propiedades</NavLink>
-            <NavLink href="/actividades">Tareas</NavLink>
+            <NavLink href="/propiedades">Propiedades</NavLink>
+            <NavLink href="/tareas">Tareas</NavLink>
             <NavLink href="/dashboard">Dashboard</NavLink>
             {(usuario?.rol === "GERENTE" || usuario?.rol === "ADMINISTRADOR") && (
               <NavLink href="/usuarios">Usuarios</NavLink>
@@ -59,10 +59,10 @@ export default function Navbar() {
             <MobileNavLink href="/clientes" onClick={() => setMenuOpen(false)}>
               Clientes
             </MobileNavLink>
-            <MobileNavLink href="/oportunidades" onClick={() => setMenuOpen(false)}>
+            <MobileNavLink href="/propiedades" onClick={() => setMenuOpen(false)}>
               Propiedades
             </MobileNavLink>
-            <MobileNavLink href="/actividades" onClick={() => setMenuOpen(false)}>
+            <MobileNavLink href="/tareas" onClick={() => setMenuOpen(false)}>
               Tareas
             </MobileNavLink>
             <MobileNavLink href="/dashboard" onClick={() => setMenuOpen(false)}>

@@ -11,9 +11,9 @@ yarn-error.log*
 .env.test.local
 .env.production.local
 
-# Bases de datos de desarrollo (mantener nortecrm.db en producción)
-backend/dev.db
-backend/dev.db-journal
+# Bases de datos SQLite
+backend/*.db
+backend/*.db-journal
 
 # Logs
 logs

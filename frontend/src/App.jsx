@@ -3,8 +3,8 @@ import LoginPage from "./pages/LoginPage.jsx";
 import ForgotPasswordPage from "./pages/ForgotPasswordPage.jsx";
 import ResetPasswordPage from "./pages/ResetPasswordPage.jsx";
 import ClientesPage from "./pages/ClientesPage.jsx";
-import OportunidadesPage from "./pages/OportunidadesPage.jsx";
-import ActividadesPage from "./pages/ActividadesPage.jsx";
+import PropiedadesPage from "./pages/PropiedadesPage.jsx";
+import TareasPage from "./pages/TareasPage.jsx";
 import UsuariosPage from "./pages/UsuariosPage.jsx";
 import Navbar from "./components/Navbar.jsx";
 import { useContext } from "react";
@@ -36,21 +36,23 @@ export default function App() {
             }
           />
            
+        <Route path="/oportunidades" element={<Navigate to="/propiedades" replace />} />
         <Route
-          path="/oportunidades"
+          path="/propiedades"
           element={
             <PrivateRoute>
               <Navbar />
-              <OportunidadesPage />
+              <PropiedadesPage />
             </PrivateRoute>
           }
         />
 
+        <Route path="/actividades" element={<Navigate to="/tareas" replace />} />
         <Route
-          path="/actividades"
+          path="/tareas"
           element={
             <PrivateRoute>
-              <ActividadesPage />
+              <TareasPage />
             </PrivateRoute>
           }
         />

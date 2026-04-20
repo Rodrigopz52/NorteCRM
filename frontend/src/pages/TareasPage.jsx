@@ -13,7 +13,7 @@ import {
   PlusIcon
 } from "@heroicons/react/24/outline";
 
-export default function ActividadesPage() {
+export default function TareasPage() {
   const { token, usuario } = useContext(AuthContext);
   const { success, error, ToastContainer } = useToast();
   const { showConfirm, ConfirmContainer } = useConfirm();
@@ -47,12 +47,12 @@ export default function ActividadesPage() {
 
   const load = async () => {
     try {
-      const { data } = await axios.get("http://localhost:3000/actividades", {
+      const { data } = await axios.get("http://localhost:3000/tareas", {
         headers: { Authorization: `Bearer ${token}` }
       });
       setActividades(data);
 
-      const opps = await axios.get("http://localhost:3000/oportunidades", {
+      const opps = await axios.get("http://localhost:3000/propiedades", {
         headers: { Authorization: `Bearer ${token}` }
       });
       setOportunidades(opps.data);
@@ -75,7 +75,7 @@ export default function ActividadesPage() {
       if (form.id) {
         // EDITAR
         await axios.put(
-          `http://localhost:3000/actividades/${form.id}`,
+          `http://localhost:3000/tareas/${form.id}`,
           {
             tipo: form.tipo,
             titulo: form.titulo,
@@ -89,7 +89,7 @@ export default function ActividadesPage() {
       } else {
         // CREAR
         await axios.post(
-          "http://localhost:3000/actividades",
+          "http://localhost:3000/tareas",
           form,
           { headers: { Authorization: `Bearer ${token}` } }
         );
@@ -115,7 +115,7 @@ export default function ActividadesPage() {
   const toggleCompletada = async (id, completada) => {
     try {
       await axios.put(
-        `http://localhost:3000/actividades/${id}/completar`,
+        `http://localhost:3000/tareas/${id}/completar`,
         { completada: !completada },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -135,7 +135,7 @@ export default function ActividadesPage() {
 
       if (!confirmed) return;
 
-      await axios.delete(`http://localhost:3000/actividades/${id}`, {
+      await axios.delete(`http://localhost:3000/tareas/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       

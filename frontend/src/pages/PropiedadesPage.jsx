@@ -16,7 +16,7 @@ import {
 
 const etapas = ["CONTACTO", "NEGOCIACION", "EN_ALQUILER", "EN_VENTA", "NO_CONCRETADO"];
 
-export default function OportunidadesPage() {
+export default function PropiedadesPage() {
   const { token, usuario } = useContext(AuthContext);
   const { success, error, ToastContainer } = useToast();
   const { showConfirm, ConfirmContainer } = useConfirm();
@@ -60,7 +60,7 @@ export default function OportunidadesPage() {
       if (filtroCliente !== "Todos") params.append("tipoCliente", filtroCliente);
       if (busqueda.trim()) params.append("busqueda", busqueda.trim());
 
-      const { data } = await axios.get(`http://localhost:3000/oportunidades?${params.toString()}`, {
+      const { data } = await axios.get(`http://localhost:3000/propiedades?${params.toString()}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setOpps(data.data);
@@ -88,7 +88,7 @@ export default function OportunidadesPage() {
       if (form.id) {
         // EDITAR oportunidad existente
         await axios.put(
-          `http://localhost:3000/oportunidades/${form.id}`,
+          `http://localhost:3000/propiedades/${form.id}`,
           {
             titulo: form.titulo,
             notas: form.notas || null,
@@ -103,7 +103,7 @@ export default function OportunidadesPage() {
       } else {
         // CREAR nueva oportunidad
         await axios.post(
-          "http://localhost:3000/oportunidades",
+          "http://localhost:3000/propiedades",
           {
             titulo: form.titulo,
             notas: form.notas || null,
@@ -137,7 +137,7 @@ export default function OportunidadesPage() {
 
       if (!confirmed) return;
 
-      await axios.delete(`http://localhost:3000/oportunidades/${id}`, {
+      await axios.delete(`http://localhost:3000/propiedades/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
@@ -157,7 +157,7 @@ export default function OportunidadesPage() {
 
     try {
       await axios.post(
-        "http://localhost:3000/actividades",
+        "http://localhost:3000/tareas",
         {
           ...formActividad,
           oportunidadId: selectedOpp.id
@@ -183,7 +183,7 @@ export default function OportunidadesPage() {
   const toggleActividadCompletada = async (actividadId, completada) => {
     try {
       await axios.put(
-        `http://localhost:3000/actividades/${actividadId}/completar`,
+        `http://localhost:3000/tareas/${actividadId}/completar`,
         { completada: !completada },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -203,7 +203,7 @@ export default function OportunidadesPage() {
 
       if (!confirmed) return;
 
-      await axios.delete(`http://localhost:3000/actividades/${actividadId}`, {
+      await axios.delete(`http://localhost:3000/tareas/${actividadId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
@@ -222,7 +222,7 @@ export default function OportunidadesPage() {
     const nuevaEtapa = result.destination.droppableId;
 
     await axios.put(
-      `http://localhost:3000/oportunidades/${id}/etapa`,
+      `http://localhost:3000/propiedades/${id}/etapa`,
       { etapa: nuevaEtapa },
       { headers: { Authorization: `Bearer ${token}` } }
     );
