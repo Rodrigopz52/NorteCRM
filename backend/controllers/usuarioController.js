@@ -31,25 +31,31 @@ export const listarUsuarios = async (req, res) => {
 
     const where = { ...filtroRol, ...filtroBusqueda };
 
-    const [usuarios, total] = await Promise.all([
-      prisma.usuario.findMany({
-        where,
-        select: {
-          id: true,
-          nombre: true,
-          apellido: true,
-          email: true,
-          dni: true,
-          rol: true,
-          activo: true,
-          creadoEn: true
-        },
-        orderBy: { nombre: "asc" },
-        skip,
-        take
-      }),
-      prisma.usuario.count({ where })
-    ]);
+    const todosLosUsuarios = await prisma.usuario.findMany({
+      where,
+      select: {
+        id: true,
+        nombre: true,
+        apellido: true,
+        email: true,
+        dni: true,
+        rol: true,
+        activo: true,
+        creadoEn: true
+      }
+    });
+
+    const ordenRoles = { GERENTE: 1, ADMINISTRADOR: 2, VENDEDOR: 3 };
+
+    todosLosUsuarios.sort((a, b) => {
+      if (ordenRoles[a.rol] !== ordenRoles[b.rol]) {
+        return ordenRoles[a.rol] - ordenRoles[b.rol];
+      }
+      return a.nombre.localeCompare(b.nombre);
+    });
+
+    const total = todosLosUsuarios.length;
+    const usuarios = todosLosUsuarios.slice(skip, skip + take);
 
     res.json(construirRespuestaPaginada(usuarios, total, page, limit));
   } catch (error) {
