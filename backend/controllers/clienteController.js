@@ -11,9 +11,11 @@ export const listarClientes = async (req, res) => {
     const { page, limit, skip, take } = parsearPaginacion(req.query);
     const busqueda = req.query.busqueda?.trim() || "";
     const tipo = req.query.tipo || "";
+    const estado = req.query.estado || "ACTIVOS";
     
     const filtroRol = usuario.rol === "VENDEDOR" ? { usuarioId: usuario.id } : {};
     const filtroTipo = tipo ? { empresa: tipo } : {};
+    const filtroEstado = estado === "ACTIVOS" ? { activo: true } : estado === "INACTIVOS" ? { activo: false } : {};
     const filtroBusqueda = busqueda
       ? {
           OR: [
@@ -24,9 +26,10 @@ export const listarClientes = async (req, res) => {
         }
       : {};
 
-    const where = { ...filtroRol, ...filtroTipo, ...filtroBusqueda };
+    const whereStats = { ...filtroRol, ...filtroTipo, ...filtroBusqueda };
+    const where = { ...whereStats, ...filtroEstado };
 
-    const [clientes, total] = await Promise.all([
+    const [clientes, total, totalActivos, totalInactivos] = await Promise.all([
       prisma.cliente.findMany({
         where,
         include:
@@ -37,10 +40,16 @@ export const listarClientes = async (req, res) => {
         skip,
         take
       }),
-      prisma.cliente.count({ where })
+      prisma.cliente.count({ where }),
+      prisma.cliente.count({ where: { ...whereStats, activo: true } }),
+      prisma.cliente.count({ where: { ...whereStats, activo: false } })
     ]);
 
-    return res.json(construirRespuestaPaginada(clientes, total, page, limit));
+    const baseResponse = construirRespuestaPaginada(clientes, total, page, limit);
+    baseResponse.meta.totalActivos = totalActivos;
+    baseResponse.meta.totalInactivos = totalInactivos;
+    
+    return res.json(baseResponse);
 
   } catch (error) {
     console.error(error);
@@ -108,46 +117,36 @@ export const editarCliente = async (req, res) => {
 };
 
 
-export const eliminarCliente = async (req, res) => {
+export const toggleActivoCliente = async (req, res) => {
   try {
     const usuario = req.usuario;
 
     if (usuario.rol !== "GERENTE" && usuario.rol !== "ADMINISTRADOR") {
-      return res.status(403).json({ error: "Solo el gerente o administrador pueden eliminar clientes" });
+      return res.status(403).json({ error: "Solo el gerente o administrador pueden cambiar el estado del cliente" });
     }
 
     const { id } = req.params;
 
-    // Verificar si el cliente tiene oportunidades o tareas asociadas
-    const oportunidadesCount = await prisma.oportunidad.count({
-      where: { clienteId: Number(id) }
+    const cliente = await prisma.cliente.findUnique({
+      where: { id: Number(id) }
     });
 
-    const tareasCount = await prisma.tarea.count({
-      where: { clienteId: Number(id) }
+    if (!cliente) {
+      return res.status(404).json({ error: "Cliente no encontrado" });
+    }
+
+    const actualizado = await prisma.cliente.update({
+      where: { id: Number(id) },
+      data: { activo: !cliente.activo }
     });
-
-    // Eliminar todas las relaciones antes de eliminar el cliente
-    if (tareasCount > 0) {
-      await prisma.tarea.deleteMany({ where: { clienteId: Number(id) } });
-    }
-
-    if (oportunidadesCount > 0) {
-      await prisma.oportunidad.deleteMany({ where: { clienteId: Number(id) } });
-    }
-
-    // Luego eliminar el cliente
-    await prisma.cliente.delete({ where: { id: Number(id) } });
 
     res.json({
-      mensaje: "Cliente eliminado exitosamente",
-      info: oportunidadesCount > 0
-        ? `Se eliminaron ${oportunidadesCount} oportunidad(es) asociada(s)`
-        : null
+      mensaje: `Cliente ${actualizado.activo ? 'activado' : 'desactivado'} exitosamente`,
+      cliente: actualizado
     });
 
   } catch (error) {
-    console.error("Error al eliminar cliente:", error);
-    res.status(500).json({ error: "Error al eliminar cliente: " + error.message });
+    console.error("Error al cambiar estado de cliente:", error);
+    res.status(500).json({ error: "Error al cambiar estado de cliente" });
   }
 };
