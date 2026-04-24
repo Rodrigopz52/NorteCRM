@@ -25,7 +25,10 @@ export default function UsuariosPage() {
   const [totalPaginas, setTotalPaginas] = useState(1);
   const [totalUsuarios, setTotalUsuarios] = useState(0);
   const [busqueda, setBusqueda] = useState("");
+  const [usuariosActivos, setUsuariosActivos] = useState(0);
+  const [usuariosInactivos, setUsuariosInactivos] = useState(0);
   const [filtroRol, setFiltroRol] = useState("");
+  const [filtroEstado, setFiltroEstado] = useState("ACTIVOS");
   const limit = 10;
 
   const fetchUsuarios = async () => {
@@ -33,13 +36,16 @@ export default function UsuariosPage() {
       const params = new URLSearchParams({ page: pagina, limit });
       if (busqueda.trim()) params.append("busqueda", busqueda.trim());
       if (filtroRol) params.append("rol", filtroRol);
+      if (filtroEstado) params.append("estado", filtroEstado);
 
       const { data } = await axios.get(`http://localhost:3000/usuarios?${params.toString()}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setUsuarios(data.data);
       setTotalPaginas(data.meta.totalPaginas);
-      setTotalUsuarios(data.meta.total);
+      setTotalUsuarios(data.meta.totalActivos + data.meta.totalInactivos);
+      setUsuariosActivos(data.meta.totalActivos);
+      setUsuariosInactivos(data.meta.totalInactivos);
     } catch (error) {
       console.error("Error al cargar usuarios:", error);
     }
@@ -49,10 +55,10 @@ export default function UsuariosPage() {
     if (usuario?.rol === "GERENTE" || usuario?.rol === "ADMINISTRADOR") {
       fetchUsuarios(); 
     }
-  }, [pagina, busqueda, filtroRol]);
+  }, [pagina, busqueda, filtroRol, filtroEstado]);
 
   // Resetear página al cambiar filtros
-  useEffect(() => { setPagina(1); }, [busqueda, filtroRol]);
+  useEffect(() => { setPagina(1); }, [busqueda, filtroRol, filtroEstado]);
 
   const crearOEditarUsuario = async () => {
     try {
@@ -124,9 +130,6 @@ export default function UsuariosPage() {
   }
 
   const esAdministrador = usuario?.rol === "ADMINISTRADOR";
-
-  const usuariosActivos = usuarios.filter(u => u.activo).length;
-  const usuariosInactivos = usuarios.filter(u => !u.activo).length;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-4 sm:p-6 overflow-x-hidden">
@@ -211,6 +214,15 @@ export default function UsuariosPage() {
             <option value="GERENTE">Gerente</option>
             <option value="VENDEDOR">Vendedor</option>
             <option value="ADMINISTRADOR">Administrador</option>
+          </select>
+          <select
+            className="sm:w-36 border border-gray-300 focus:border-purple-500 focus:ring-1 focus:ring-purple-200 p-2 rounded-lg transition-all outline-none text-sm"
+            value={filtroEstado}
+            onChange={e => setFiltroEstado(e.target.value)}
+          >
+            <option value="ACTIVOS">Solo Activos</option>
+            <option value="INACTIVOS">Inactivos</option>
+            <option value="TODOS">Todos</option>
           </select>
         </div>
       </div>

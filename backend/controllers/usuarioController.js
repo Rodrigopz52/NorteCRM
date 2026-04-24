@@ -16,8 +16,11 @@ export const listarUsuarios = async (req, res) => {
     const { page, limit, skip, take } = parsearPaginacion(req.query);
     const busqueda = req.query.busqueda?.trim() || "";
     const rol = req.query.rol || "";
+    const estado = req.query.estado || "ACTIVOS";
 
     const filtroRol = rol ? { rol } : {};
+    const filtroEstado = estado === "ACTIVOS" ? { activo: true } : estado === "INACTIVOS" ? { activo: false } : {};
+    
     const filtroBusqueda = busqueda
       ? {
           OR: [
@@ -29,21 +32,26 @@ export const listarUsuarios = async (req, res) => {
         }
       : {};
 
-    const where = { ...filtroRol, ...filtroBusqueda };
+    const whereStats = { ...filtroRol, ...filtroBusqueda };
+    const where = { ...filtroRol, ...filtroEstado, ...filtroBusqueda };
 
-    const todosLosUsuarios = await prisma.usuario.findMany({
-      where,
-      select: {
-        id: true,
-        nombre: true,
-        apellido: true,
-        email: true,
-        dni: true,
-        rol: true,
-        activo: true,
-        creadoEn: true
-      }
-    });
+    const [todosLosUsuarios, totalActivos, totalInactivos] = await Promise.all([
+      prisma.usuario.findMany({
+        where,
+        select: {
+          id: true,
+          nombre: true,
+          apellido: true,
+          email: true,
+          dni: true,
+          rol: true,
+          activo: true,
+          creadoEn: true
+        }
+      }),
+      prisma.usuario.count({ where: { ...whereStats, activo: true } }),
+      prisma.usuario.count({ where: { ...whereStats, activo: false } })
+    ]);
 
     const ordenRoles = { GERENTE: 1, ADMINISTRADOR: 2, VENDEDOR: 3 };
 
@@ -57,7 +65,11 @@ export const listarUsuarios = async (req, res) => {
     const total = todosLosUsuarios.length;
     const usuarios = todosLosUsuarios.slice(skip, skip + take);
 
-    res.json(construirRespuestaPaginada(usuarios, total, page, limit));
+    const baseResponse = construirRespuestaPaginada(usuarios, total, page, limit);
+    baseResponse.meta.totalActivos = totalActivos;
+    baseResponse.meta.totalInactivos = totalInactivos;
+    
+    res.json(baseResponse);
   } catch (error) {
     console.error(error);
     if (error.status) return res.status(error.status).json({ error: error.message });
