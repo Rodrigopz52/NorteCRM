@@ -32,6 +32,7 @@ model Cliente {
   telefono      String?
   email         String?
   notas         String?
+  activo        Boolean       @default(true)
   usuario       Usuario?      @relation(fields: [usuarioId], references: [id])
   usuarioId     Int?
   oportunidades Oportunidad[]
