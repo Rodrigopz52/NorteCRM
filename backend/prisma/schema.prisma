@@ -41,14 +41,22 @@ model Cliente {
 }
 
 model Oportunidad {
-  id          Int          @id @default(autoincrement())
-  titulo      String
-  notas       String?
-  tipo        String?
-  estado      String?
-  valor       Float?
-  etapa       Etapa        @default(CONTACTO)
-  fechaCierre DateTime?
+  id              Int          @id @default(autoincrement())
+  titulo          String
+  direccion       String?
+  habitaciones    Int?
+  banos           Int?
+  garages         Int?
+  metrosCuadrados Int?
+  operacion       String?      // "Venta" o "Alquiler"
+  imagenUrl       String?
+  activo          Boolean      @default(true)
+  notas           String?
+  tipo            String?      // "Casa", "Departamento", "Oficina"
+  estado          String?
+  valor           Float?
+  etapa           Etapa        @default(DISPONIBLE)
+  fechaCierre     DateTime?
   cliente     Cliente      @relation(fields: [clienteId], references: [id])
   clienteId   Int
   usuario     Usuario?     @relation(fields: [usuarioId], references: [id])
@@ -95,9 +103,8 @@ enum Rol {
 }
 
 enum Etapa {
-  CONTACTO
-  NEGOCIACION
-  EN_ALQUILER
-  EN_VENTA
-  NO_CONCRETADO
+  DISPONIBLE
+  RESERVADA
+  VENDIDA
+  ALQUILADA
 }
