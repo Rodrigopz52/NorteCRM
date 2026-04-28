@@ -88,11 +88,11 @@ export default function DashboardPage() {
             </p>
           </div>
           <div className="text-xs text-gray-500 bg-white px-2.5 py-1.5 rounded-lg shadow">
-            Rol: <span className="font-bold text-purple-600">{data?.rol}</span>
+            Rol: <span className="font-bold text-purple-600">{usuario?.rol || "GERENTE"}</span>
           </div>
         </div>
 
-        {data?.rol === "VENDEDOR" ? (
+        {usuario?.rol === "VENDEDOR" ? (
           <DashboardVendedor data={data} />
         ) : (
           <DashboardGerente data={data} />
@@ -114,23 +114,23 @@ function DashboardVendedor({ data }) {
         <StatCard
           icon={CurrencyDollarIcon}
           title="Ingreso de este mes"
-          value={`$${data.resumenMes.montoGanado.toLocaleString()}`}
-          subtitle={`${data.resumenMes.cantidadGanadas} propiedades`}
+          value={`$${(data.resumenMes?.monto || 0).toLocaleString()}`}
+          subtitle={`${data.resumenMes?.ganadas || 0} propiedades`}
           color="purple"
         />
         <StatCard
           icon={ChartBarIcon}
           title="Propiedades activas"
-          value={data.resumenMes.oportunidadesActivas}
+          value={data.resumenMes?.activas || 0}
           subtitle="En proceso"
           color="blue"
         />
         <StatCard
           icon={CalendarDaysIcon}
           title="Visitas de hoy"
-          value={data.visitasHoy}
-          subtitle={data.visitasHoy > 0 ? "Programadas" : "Sin visitas hoy"}
-          color={data.visitasHoy > 0 ? "green" : "gray"}
+          value={data.estadisticas?.visitasHoy || 0}
+          subtitle={(data.estadisticas?.visitasHoy || 0) > 0 ? "Programadas" : "Sin visitas hoy"}
+          color={(data.estadisticas?.visitasHoy || 0) > 0 ? "green" : "gray"}
         />
       </div>
 
@@ -142,7 +142,7 @@ function DashboardVendedor({ data }) {
           <h3 className="text-sm sm:text-base font-bold text-gray-800 mb-1">Mis ventas/alquileres concretados</h3>
           <div className="h-[190px]">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={data.ventasPorMes} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+              <LineChart data={data.graficoVentas || []} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="mes" style={{ fontSize: '12px' }} />
                 <YAxis 
@@ -163,10 +163,10 @@ function DashboardVendedor({ data }) {
             <PieChart>
               <Pie
                 data={[
-                  { name: 'Disponible', value: data.propiedadesPorEstado.disponible, color: '#22c55e' },
-                  { name: 'Reservada', value: data.propiedadesPorEstado.reservada, color: '#eab308' },
-                  { name: 'Alquilada', value: data.propiedadesPorEstado.alquilada, color: '#3b82f6' },
-                  { name: 'Vendida', value: data.propiedadesPorEstado.vendida, color: '#f97316' }
+                  { name: 'Disponible', value: data.estadisticasEstado?.disponible || 0, color: '#22c55e' },
+                  { name: 'Reservada', value: data.estadisticasEstado?.reservada || 0, color: '#eab308' },
+                  { name: 'Alquilada', value: data.estadisticasEstado?.alquilada || 0, color: '#3b82f6' },
+                  { name: 'Vendida', value: data.estadisticasEstado?.vendida || 0, color: '#f97316' }
                 ]}
                 cx="50%"
                 cy="38%"
@@ -177,10 +177,10 @@ function DashboardVendedor({ data }) {
                 dataKey="value"
               >
                 {[
-                  { name: 'Disponible', value: data.propiedadesPorEstado.disponible, color: '#22c55e' },
-                  { name: 'Reservada', value: data.propiedadesPorEstado.reservada, color: '#eab308' },
-                  { name: 'Alquilada', value: data.propiedadesPorEstado.alquilada, color: '#3b82f6' },
-                  { name: 'Vendida', value: data.propiedadesPorEstado.vendida, color: '#f97316' }
+                  { name: 'Disponible', value: data.estadisticasEstado?.disponible || 0, color: '#22c55e' },
+                  { name: 'Reservada', value: data.estadisticasEstado?.reservada || 0, color: '#eab308' },
+                  { name: 'Alquilada', value: data.estadisticasEstado?.alquilada || 0, color: '#3b82f6' },
+                  { name: 'Vendida', value: data.estadisticasEstado?.vendida || 0, color: '#f97316' }
                 ].map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={entry.color} />
                 ))}
@@ -205,18 +205,18 @@ function DashboardVendedor({ data }) {
             <CalendarDaysIcon className="w-4 h-4 text-purple-600" />
             <div>
               <h3 className="text-sm font-bold text-gray-800">Recordatorio</h3>
-              <p className="text-xs text-gray-600">{data.actividadesHoy.length} programadas</p>
+              <p className="text-xs text-gray-600">{(data.actividadesHoy || []).length} programadas</p>
             </div>
           </div>
         </div>
         <div className="p-2.5 space-y-1.5 max-h-36 overflow-y-auto">
-            {data.actividadesHoy.length === 0 ? (
+            {(data.actividadesHoy || []).length === 0 ? (
               <div className="text-center py-8 text-gray-500">
                 <ClockIcon className="w-12 h-12 mx-auto mb-2 opacity-30" />
                 <p>No tienes tareas programadas para hoy</p>
               </div>
             ) : (
-              data.actividadesHoy.map(act => (
+              (data.actividadesHoy || []).map(act => (
                 <ActividadCard key={act.id} actividad={act} />
               ))
             )}
@@ -224,7 +224,7 @@ function DashboardVendedor({ data }) {
       </div>
 
       {/* ALERTAS: OPORTUNIDADES ESTANCADAS */}
-      {data.oportunidadesEstancadas.length > 0 && (
+      {(data.alertas?.estancadas || []).length > 0 && (
         <div className="bg-red-50 border-2 border-red-200 rounded-lg p-3">
           <div className="flex items-start gap-2 sm:gap-3">
             <ExclamationTriangleIcon className="w-5 h-5 sm:w-6 sm:h-6 text-red-600 flex-shrink-0 mt-1" />
@@ -233,7 +233,7 @@ function DashboardVendedor({ data }) {
                 ⚠️ Tareas sin Actividad Reciente
               </h3>
               <div className="space-y-2">
-                {data.oportunidadesEstancadas.map(opp => {
+                {(data.alertas?.estancadas || []).map(opp => {
                   const diasEstancada = opp.actividades.length === 0 
                     ? "Sin actividades"
                     : `Última actividad: ${new Date(opp.actividades[0].fechaVencimiento).toLocaleDateString()}`;
@@ -274,24 +274,24 @@ function DashboardGerente({ data }) {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
         <StatCard
           icon={CurrencyDollarIcon}
-          title="Ingreso de este mes (Equipo)"
-          value={`$${data.resumenMes.montoTotal.toLocaleString()}`}
-          subtitle={`${data.resumenMes.cantidadGanadas} propiedades`}
+          title="Ingreso del equipo"
+          value={`$${(data.resumenMes?.monto || 0).toLocaleString()}`}
+          subtitle="Monto total ganado este mes"
           color="purple"
         />
         <StatCard
           icon={ChartBarIcon}
           title="Propiedades activas"
-          value={data.resumenMes.oportunidadesActivas}
+          value={data.resumenMes?.propiedadesActivas || 0}
           subtitle="Del equipo completo"
           color="blue"
         />
         <StatCard
-          icon={CalendarDaysIcon}
-          title="Visitas de la semana"
-          value={data.visitasSemana}
-          subtitle={data.visitasSemana > 0 ? "Próximos 7 días" : "Sin visitas programadas"}
-          color={data.visitasSemana > 0 ? "green" : "gray"}
+          icon={UserGroupIcon}
+          title="Vendedores y Clientes"
+          value={data.resumenMes?.vendedoresActivos || 0}
+          subtitle={`${data.resumenMes?.clientesActivos || 0} clientes registrados`}
+          color="green"
         />
       </div>
 
@@ -303,7 +303,7 @@ function DashboardGerente({ data }) {
           <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-3 sm:mb-4">Ingreso por mes</h3>
           <div className="h-[250px]">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={data.ventasPorMes} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
+              <LineChart data={data.graficoVentas || []} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="mes" style={{ fontSize: '12px' }} />
                 <YAxis 
@@ -324,10 +324,10 @@ function DashboardGerente({ data }) {
             <PieChart>
               <Pie
                 data={[
-                  { name: 'Disponible', value: data.propiedadesPorEstado.disponible, color: '#22c55e' },
-                  { name: 'Reservada', value: data.propiedadesPorEstado.reservada, color: '#eab308' },
-                  { name: 'Alquilada', value: data.propiedadesPorEstado.alquilada, color: '#3b82f6' },
-                  { name: 'Vendida', value: data.propiedadesPorEstado.vendida, color: '#f97316' }
+                  { name: 'Disponible', value: data.estadisticasEstado?.disponible || 0, color: '#22c55e' },
+                  { name: 'Reservada', value: data.estadisticasEstado?.reservada || 0, color: '#eab308' },
+                  { name: 'Alquilada', value: data.estadisticasEstado?.alquilada || 0, color: '#3b82f6' },
+                  { name: 'Vendida', value: data.estadisticasEstado?.vendida || 0, color: '#f97316' }
                 ]}
                 cx="50%"
                 cy="45%"
@@ -338,10 +338,10 @@ function DashboardGerente({ data }) {
                 dataKey="value"
               >
                 {[
-                  { name: 'Disponible', value: data.propiedadesPorEstado.disponible, color: '#22c55e' },
-                  { name: 'Reservada', value: data.propiedadesPorEstado.reservada, color: '#eab308' },
-                  { name: 'Alquilada', value: data.propiedadesPorEstado.alquilada, color: '#3b82f6' },
-                  { name: 'Vendida', value: data.propiedadesPorEstado.vendida, color: '#f97316' }
+                  { name: 'Disponible', value: data.estadisticasEstado?.disponible || 0, color: '#22c55e' },
+                  { name: 'Reservada', value: data.estadisticasEstado?.reservada || 0, color: '#eab308' },
+                  { name: 'Alquilada', value: data.estadisticasEstado?.alquilada || 0, color: '#3b82f6' },
+                  { name: 'Vendida', value: data.estadisticasEstado?.vendida || 0, color: '#f97316' }
                 ].map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={entry.color} />
                 ))}
@@ -374,13 +374,13 @@ function DashboardGerente({ data }) {
             </div>
           </div>
           <div className="p-4 sm:p-5 space-y-2 sm:space-y-3 max-h-80 overflow-y-auto">
-            {data.rankingVendedores.length === 0 ? (
+            {(data.rankingVendedores || []).length === 0 ? (
               <div className="text-center py-8 text-gray-500">
                 <TrophyIcon className="w-12 h-12 mx-auto mb-2 opacity-30" />
                 <p>No hay datos de vendedores aún</p>
               </div>
             ) : (
-              data.rankingVendedores.map((vendedor, index) => (
+              (data.rankingVendedores || []).map((vendedor, index) => (
                 <div 
                   key={vendedor.id} 
                   className={`flex items-center gap-3 p-3 rounded-lg border-2 transition-all ${
@@ -428,13 +428,13 @@ function DashboardGerente({ data }) {
             </div>
           </div>
           <div className="p-6 space-y-3 max-h-96 overflow-y-auto">
-            {data.oportunidadesEstancadas.length === 0 ? (
+            {(data.oportunidadesEstancadas || []).length === 0 ? (
               <div className="text-center py-8 text-gray-500">
                 <ExclamationTriangleIcon className="w-12 h-12 mx-auto mb-2 opacity-30" />
                 <p>No hay tareas estancadas</p>
               </div>
             ) : (
-              data.oportunidadesEstancadas.map(opp => {
+              (data.oportunidadesEstancadas || []).map(opp => {
                 const diasEstancada = opp.actividades.length === 0 
                   ? "Sin actividades"
                   : `Última: ${new Date(opp.actividades[0].fechaVencimiento).toLocaleDateString()}`;
@@ -557,11 +557,10 @@ function OportunidadCard({ oportunidad }) {
 
 function etapaColor(etapa) {
   const colores = {
-    CONTACTO: "bg-blue-100 text-blue-700 border border-blue-300",
-    PROPUESTA: "bg-yellow-100 text-yellow-700 border border-yellow-300",
-    NEGOCIACION: "bg-orange-100 text-orange-700 border border-orange-300",
-    GANADO: "bg-green-100 text-green-700 border border-green-300",
-    PERDIDO: "bg-red-100 text-red-700 border border-red-300"
+    DISPONIBLE: "bg-blue-100 text-blue-700 border border-blue-300",
+    RESERVADA: "bg-yellow-100 text-yellow-700 border border-yellow-300",
+    VENDIDA: "bg-purple-100 text-purple-700 border border-purple-300",
+    ALQUILADA: "bg-green-100 text-green-700 border border-green-300"
   };
   return colores[etapa] || "bg-gray-100 text-gray-700";
 }

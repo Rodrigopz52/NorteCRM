@@ -429,9 +429,9 @@ export default function PropiedadesPage() {
             {/* Header del Modal */}
             <div className="p-5 sm:p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
               <h3 className="text-2xl font-extrabold text-gray-900">
-                {form.id ? "Detalles de la Propiedad" : "Publicar Nueva Propiedad"}
+                {form.id ? "Detalles de la propiedad" : "Publicar nueva propiedad"}
               </h3>
-              <button
+              <button 
                 onClick={() => {
                   setOpenForm(false);
                   setShowActividades(false);
@@ -462,7 +462,7 @@ export default function PropiedadesPage() {
                       </div>
 
                       <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-1.5">Dirección Exacta</label>
+                        <label className="block text-sm font-semibold text-gray-700 mb-1.5">Dirección exacta</label>
                         <input
                           className="w-full border border-gray-200 focus:border-[#8B5CF6] focus:ring-2 focus:ring-[#8B5CF6]/20 p-2.5 rounded-lg transition-all outline-none text-sm"
                           placeholder="Ej: Av. Libertador 1234, Piso 5"
@@ -565,7 +565,7 @@ export default function PropiedadesPage() {
 
                   <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
                     <h4 className="font-bold text-gray-800 mb-3 text-sm uppercase tracking-wider">Multimedia</h4>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">URL de Portada</label>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">URL de portada</label>
                     <input
                       className="w-full border border-gray-200 focus:border-[#8B5CF6] p-2.5 rounded-lg transition-all outline-none text-sm"
                       placeholder="https://ejemplo.com/foto.jpg"
@@ -581,7 +581,7 @@ export default function PropiedadesPage() {
 
                   <div className="flex gap-3 pt-2">
                     <button onClick={guardarPropiedad} className="flex-1 bg-[#8B5CF6] hover:bg-[#7C3AED] text-white py-3 rounded-xl font-bold shadow-md transition-colors">
-                      {form.id ? "Guardar Cambios" : "Publicar Propiedad"}
+                      {form.id ? "Guardar Cambios" : "Publicar propiedad"}
                     </button>
                     {form.id && usuario?.rol === "GERENTE" && (
                       <button onClick={() => toggleActivo(form.id)} className="bg-red-50 hover:bg-red-100 text-red-600 px-6 rounded-xl font-bold border border-red-200 transition-colors">
@@ -596,7 +596,7 @@ export default function PropiedadesPage() {
                   <div className="flex flex-col h-full bg-gray-50 p-5 rounded-2xl border border-gray-100">
                     <h4 className="font-extrabold text-gray-900 text-lg mb-4 flex items-center gap-2">
                       <ClockIcon className="w-5 h-5 text-[#8B5CF6]" />
-                      Agenda y Tareas
+                      Agenda y tareas
                     </h4>
 
                     {/* FORMULARIO NUEVA TAREA */}
