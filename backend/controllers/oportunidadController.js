@@ -9,35 +9,40 @@ export const listarOportunidades = async (req, res) => {
     const { page, limit, skip, take } = parsearPaginacion(req.query, 50); // default 50: máximo razonable para Kanban
     const busqueda = req.query.busqueda?.trim() || "";
     const tipo = req.query.tipo || "";
-    const estado = req.query.estado || "";
+    const operacion = req.query.operacion || "";
     const etapa = req.query.etapa || "";
     const tipoCliente = req.query.tipoCliente || "";
+    const filtroEstadoActivo = req.query.estadoActivo || "ACTIVOS";
 
     const filtroRol = usuario.rol === "VENDEDOR" ? { usuarioId: usuario.id } : {};
     const filtroTipo = tipo ? { tipo } : {};
-    const filtroEstado = estado ? { estado } : {};
+    const filtroOperacion = operacion ? { operacion } : {};
     const filtroEtapa = etapa ? { etapa } : {};
+    const filtroActivo = filtroEstadoActivo === "ACTIVOS" ? { activo: true } : filtroEstadoActivo === "INACTIVOS" ? { activo: false } : {};
     const filtroTipoCliente = tipoCliente ? { cliente: { empresa: tipoCliente } } : {};
     const filtroBusqueda = busqueda
       ? {
           OR: [
             { titulo: { contains: busqueda } },
+            { direccion: { contains: busqueda } },
             { notas: { contains: busqueda } },
             { cliente: { nombre: { contains: busqueda } } }
           ]
         }
       : {};
 
-    const where = {
+    const whereStats = {
       ...filtroRol,
       ...filtroTipo,
-      ...filtroEstado,
+      ...filtroOperacion,
       ...filtroEtapa,
       ...filtroTipoCliente,
       ...filtroBusqueda
     };
 
-    const [oportunidades, total] = await Promise.all([
+    const where = { ...whereStats, ...filtroActivo };
+
+    const [oportunidades, total, totalActivos, totalInactivos] = await Promise.all([
       prisma.oportunidad.findMany({
         where,
         include: {
@@ -56,10 +61,16 @@ export const listarOportunidades = async (req, res) => {
         skip,
         take
       }),
-      prisma.oportunidad.count({ where })
+      prisma.oportunidad.count({ where }),
+      prisma.oportunidad.count({ where: { ...whereStats, activo: true } }),
+      prisma.oportunidad.count({ where: { ...whereStats, activo: false } })
     ]);
 
-    return res.json(construirRespuestaPaginada(oportunidades, total, page, limit));
+    const baseResponse = construirRespuestaPaginada(oportunidades, total, page, limit);
+    baseResponse.meta.totalActivos = totalActivos;
+    baseResponse.meta.totalInactivos = totalInactivos;
+
+    return res.json(baseResponse);
 
   } catch (error) {
     console.error(error);
@@ -68,19 +79,29 @@ export const listarOportunidades = async (req, res) => {
   }
 };
 
-// Crear oportunidad
+// Crear oportunidad (Propiedad)
 export const crearOportunidad = async (req, res) => {
   const usuario = req.usuario;
-  const { titulo, notas, tipo, estado, valor, etapa, clienteId } = req.body;
+  const { 
+    titulo, direccion, habitaciones, banos, garages, metrosCuadrados, 
+    operacion, imagenUrl, notas, tipo, estado, valor, etapa, clienteId 
+  } = req.body;
 
   const op = await prisma.oportunidad.create({
     data: {
       titulo,
+      direccion: direccion || null,
+      habitaciones: habitaciones ? Number(habitaciones) : null,
+      banos: banos ? Number(banos) : null,
+      garages: garages ? Number(garages) : null,
+      metrosCuadrados: metrosCuadrados ? Number(metrosCuadrados) : null,
+      operacion: operacion || null,
+      imagenUrl: imagenUrl || null,
       notas: notas || null,
       tipo: tipo || null,
       estado: estado || null,
-      valor,
-      etapa,
+      valor: valor ? Number(valor) : null,
+      etapa: etapa || "DISPONIBLE",
       clienteId,
       usuarioId: usuario.id
     }
@@ -92,7 +113,10 @@ export const crearOportunidad = async (req, res) => {
 // Editar oportunidad
 export const editarOportunidad = async (req, res) => {
   const { id } = req.params;
-  const { titulo, notas, tipo, estado, valor, clienteId } = req.body;
+  const { 
+    titulo, direccion, habitaciones, banos, garages, metrosCuadrados, 
+    operacion, imagenUrl, notas, tipo, estado, valor, clienteId, etapa 
+  } = req.body;
 
   // Obtener la oportunidad actual para verificar cambios de estado
   const oppActual = await prisma.oportunidad.findUnique({
@@ -102,13 +126,13 @@ export const editarOportunidad = async (req, res) => {
   // Determinar si debemos actualizar fechaCierre
   let fechaCierre = oppActual.fechaCierre;
   
-  if (estado && estado !== oppActual.estado) {
-    // Si el estado cambió a Alquilada o Vendida y no tiene fechaCierre
-    if ((estado === "Alquilada" || estado === "Vendida") && !oppActual.fechaCierre) {
+  if (etapa && etapa !== oppActual.etapa) {
+    // Si la etapa cambió a Alquilada o Vendida y no tiene fechaCierre
+    if ((etapa === "ALQUILADA" || etapa === "VENDIDA") && !oppActual.fechaCierre) {
       fechaCierre = new Date();
     }
-    // Si vuelve a otro estado (no Alquilada ni Vendida), resetear fechaCierre
-    else if (estado !== "Alquilada" && estado !== "Vendida") {
+    // Si vuelve a otro estado, resetear fechaCierre
+    else if (etapa !== "ALQUILADA" && etapa !== "VENDIDA") {
       fechaCierre = null;
     }
   }
@@ -116,12 +140,20 @@ export const editarOportunidad = async (req, res) => {
   const op = await prisma.oportunidad.update({
     where: { id: Number(id) },
     data: { 
-      titulo, 
+      titulo,
+      direccion: direccion || null,
+      habitaciones: habitaciones ? Number(habitaciones) : null,
+      banos: banos ? Number(banos) : null,
+      garages: garages ? Number(garages) : null,
+      metrosCuadrados: metrosCuadrados ? Number(metrosCuadrados) : null,
+      operacion: operacion || null,
+      imagenUrl: imagenUrl || null,
       notas: notas || null, 
       tipo: tipo || null, 
       estado: estado || null, 
-      valor, 
+      valor: valor ? Number(valor) : null, 
       clienteId,
+      etapa: etapa || oppActual.etapa,
       fechaCierre
     }
   });
@@ -129,15 +161,29 @@ export const editarOportunidad = async (req, res) => {
   res.json(op);
 };
 
-// Eliminar oportunidad
-export const eliminarOportunidad = async (req, res) => {
-  const { id } = req.params;
+export const toggleActivoOportunidad = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const oppActual = await prisma.oportunidad.findUnique({
+      where: { id: Number(id) }
+    });
 
-  await prisma.oportunidad.delete({
-    where: { id: Number(id) }
-  });
+    if (!oppActual) return res.status(404).json({ error: "Propiedad no encontrada" });
 
-  res.json({ mensaje: "Oportunidad eliminada" });
+    const actualizado = await prisma.oportunidad.update({
+      where: { id: Number(id) },
+      data: { activo: !oppActual.activo }
+    });
+
+    res.json({
+      mensaje: `Propiedad ${actualizado.activo ? 'activada' : 'desactivada'} exitosamente`,
+      oportunidad: actualizado
+    });
+  } catch (error) {
+    console.error("Error al cambiar estado:", error);
+    res.status(500).json({ error: "Error al cambiar estado de propiedad" });
+  }
 };
 
 export const cambiarEtapa = async (req, res) => {
