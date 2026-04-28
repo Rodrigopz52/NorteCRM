@@ -11,6 +11,7 @@ export default function ClientesPage() {
 
   const [clientes, setClientes] = useState([]);
   const [filtroTipo, setFiltroTipo] = useState("Todos");
+  const [filtroEstado, setFiltroEstado] = useState("ACTIVOS");
   const [busqueda, setBusqueda] = useState("");
   const [openForm, setOpenForm] = useState(false);
   const [form, setForm] = useState({ nombre: "", empresa: "", telefono: "", email: "", notas: "" });
@@ -19,12 +20,15 @@ export default function ClientesPage() {
   const [pagina, setPagina] = useState(1);
   const [totalPaginas, setTotalPaginas] = useState(1);
   const [totalClientes, setTotalClientes] = useState(0);
+  const [clientesActivos, setClientesActivos] = useState(0);
+  const [clientesInactivos, setClientesInactivos] = useState(0);
   const limit = 10;
 
   const fetchClientes = async () => {
     try {
       const params = new URLSearchParams({ page: pagina, limit });
       if (filtroTipo !== "Todos") params.append("tipo", filtroTipo);
+      if (filtroEstado) params.append("estado", filtroEstado);
       if (busqueda.trim()) params.append("busqueda", busqueda.trim());
 
       const { data } = await axios.get(`http://localhost:3000/clientes?${params.toString()}`, {
@@ -32,7 +36,9 @@ export default function ClientesPage() {
       });
       setClientes(data.data);
       setTotalPaginas(data.meta.totalPaginas);
-      setTotalClientes(data.meta.total);
+      setTotalClientes(data.meta.totalActivos + data.meta.totalInactivos);
+      setClientesActivos(data.meta.totalActivos);
+      setClientesInactivos(data.meta.totalInactivos);
     } catch (err) {
       console.error("Error al cargar clientes:", err);
     }
@@ -40,12 +46,12 @@ export default function ClientesPage() {
 
   useEffect(() => {
     fetchClientes();
-  }, [pagina, filtroTipo, busqueda]); // Refetch automático al cambiar params
+  }, [pagina, filtroTipo, filtroEstado, busqueda]); // Refetch automático al cambiar params
 
   // Si cambia el filtro o la búsqueda, volver a la página 1
   useEffect(() => {
     setPagina(1);
-  }, [filtroTipo, busqueda]);
+  }, [filtroTipo, filtroEstado, busqueda]);
 
   const crearCliente = async () => {
     try {
@@ -94,44 +100,27 @@ export default function ClientesPage() {
     }
   };
 
-  const eliminar = async (id) => {
+  const toggleActivo = async (id, activoActual) => {
     try {
-      const { data: oportunidades } = await axios.get("http://localhost:3000/oportunidades", {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-
-      const oportunidadesDelCliente = oportunidades.filter(op => op.clienteId === id);
-
-      let title = "¿Seguro que deseas eliminar este cliente?";
-      let message = "Esta acción no se puede deshacer.";
-
-      if (oportunidadesDelCliente.length > 0) {
-        title = "⚠️ Cliente con oportunidades asociadas";
-        message = `Este cliente tiene ${oportunidadesDelCliente.length} oportunidad(es) asociada(s).\n\nAl eliminar el cliente, también se eliminarán todas sus oportunidades.\n\n¿Deseas continuar?`;
-      }
-
       const confirmed = await showConfirm({
-        title,
-        message,
-        type: "danger"
+        title: `¿Seguro que deseas ${activoActual ? 'desactivar' : 'activar'} este cliente?`,
+        message: activoActual 
+          ? "El cliente no se eliminará físicamente, pero se ocultará de las listas principales."
+          : "El cliente volverá a estar visible en el listado activo.",
+        type: activoActual ? "warning" : "info"
       });
 
       if (!confirmed) return;
 
-      const response = await axios.delete(`http://localhost:3000/clientes/${id}`, {
+      const response = await axios.put(`http://localhost:3000/clientes/${id}/toggle-activo`, {}, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
-      if (response.data.info) {
-        success(`${response.data.mensaje} - ${response.data.info}`);
-      } else {
-        success(response.data.mensaje);
-      }
-
+      success(response.data.mensaje);
       fetchClientes();
     } catch (err) {
-      console.error("Error al eliminar cliente:", err);
-      error(err.response?.data?.error || "Error al eliminar el cliente");
+      console.error("Error al cambiar estado:", err);
+      error(err.response?.data?.error || "Error al cambiar el estado del cliente");
     }
   };
 
@@ -168,10 +157,17 @@ export default function ClientesPage() {
                   {tipo === "INQUILINO" ? "🏠 Inquilino" : tipo === "PROPIETARIO" ? "🏘️ Propietario" : tipo === "COMPRADOR" ? "💰 Comprador" : "Todos"}
                 </button>
               ))}
-              <span className="flex items-center text-xs text-gray-500 px-2">
-                ({totalClientes})
-              </span>
             </div>
+            
+            <select
+              className="border border-gray-300 focus:border-purple-500 focus:ring-1 focus:ring-purple-200 p-1.5 rounded-lg transition-all outline-none text-xs"
+              value={filtroEstado}
+              onChange={e => setFiltroEstado(e.target.value)}
+            >
+              <option value="ACTIVOS">Solo Activos ({clientesActivos})</option>
+              <option value="INACTIVOS">Inactivos ({clientesInactivos})</option>
+              <option value="TODOS">Todos ({totalClientes})</option>
+            </select>
           </div>
 
           {/* Buscador */}
@@ -206,6 +202,7 @@ export default function ClientesPage() {
               <th className="px-3 py-2 text-left text-xs font-bold text-purple-900 uppercase tracking-wider">Tipo</th>
               <th className="px-3 py-2 text-left text-xs font-bold text-purple-900 uppercase tracking-wider">Email</th>
               <th className="px-3 py-2 text-left text-xs font-bold text-purple-900 uppercase tracking-wider">Teléfono</th>
+              <th className="px-3 py-2 text-center text-xs font-bold text-purple-900 uppercase tracking-wider">Estado</th>
               {usuario?.rol === "GERENTE" && (
                 <th className="px-3 py-2 text-left text-xs font-bold text-purple-900 uppercase tracking-wider">Agente</th>
               )}
@@ -214,7 +211,7 @@ export default function ClientesPage() {
           </thead>
           <tbody className="divide-y divide-gray-200">
             {clientes.length > 0 ? clientes.map(c => (
-              <tr key={c.id} className="hover:bg-purple-50/50 transition-colors">
+              <tr key={c.id} className={`transition-colors ${c.activo ? 'hover:bg-purple-50/50' : 'bg-gray-50 opacity-60'}`}>
                 <td className="px-3 py-2 text-sm text-gray-800 font-medium">{c.nombre}</td>
                 <td className="px-3 py-2">
                   <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${c.empresa === 'INQUILINO' ? 'bg-green-100 text-green-700 border border-green-200' :
@@ -227,6 +224,17 @@ export default function ClientesPage() {
                 </td>
                 <td className="px-3 py-2 text-sm text-gray-600">{c.email || "-"}</td>
                 <td className="px-3 py-2 text-sm text-gray-600">{c.telefono || "-"}</td>
+                <td className="px-3 py-2 text-center">
+                  {c.activo ? (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-green-100 text-green-800">
+                      Activo
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-red-100 text-red-800">
+                      Inactivo
+                    </span>
+                  )}
+                </td>
                 {usuario?.rol === "GERENTE" && (
                   <td className="px-3 py-2">
                     <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-purple-100 text-purple-700 border border-purple-200">
@@ -246,10 +254,12 @@ export default function ClientesPage() {
                   </button>
                   {usuario?.rol === "GERENTE" && (
                     <button
-                      onClick={() => eliminar(c.id)}
-                      className="text-red-600 hover:text-red-800 font-bold hover:underline transition-colors text-xs"
+                      onClick={() => toggleActivo(c.id, c.activo)}
+                      className={`font-bold hover:underline transition-colors text-xs ${
+                        c.activo ? 'text-red-600 hover:text-red-800' : 'text-green-600 hover:text-green-800'
+                      }`}
                     >
-                      Eliminar
+                      {c.activo ? 'Desactivar' : 'Activar'}
                     </button>
                   )}
                 </td>
@@ -300,6 +310,12 @@ export default function ClientesPage() {
                 <span className="text-gray-500 w-16">Teléfono:</span>
                 <span className="text-gray-800">{c.telefono || "-"}</span>
               </div>
+              <div className="flex items-center text-xs">
+                <span className="text-gray-500 w-16">Estado:</span>
+                <span className={`font-semibold ${c.activo ? 'text-green-600' : 'text-red-600'}`}>
+                  {c.activo ? 'Activo' : 'Inactivo'}
+                </span>
+              </div>
               {usuario?.rol === "GERENTE" && (
                 <div className="flex items-center text-xs">
                   <span className="text-gray-500 w-16">Agente:</span>
@@ -322,10 +338,12 @@ export default function ClientesPage() {
               </button>
               {usuario?.rol === "GERENTE" && (
                 <button
-                  onClick={() => eliminar(c.id)}
-                  className="flex-1 bg-red-600 hover:bg-red-700 text-white py-1.5 rounded-lg font-medium text-xs transition-colors"
+                  onClick={() => toggleActivo(c.id, c.activo)}
+                  className={`flex-1 text-white py-1.5 rounded-lg font-medium text-xs transition-colors ${
+                    c.activo ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'
+                  }`}
                 >
-                  Eliminar
+                  {c.activo ? 'Desactivar' : 'Activar'}
                 </button>
               )}
             </div>
