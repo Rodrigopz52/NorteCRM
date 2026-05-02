@@ -384,19 +384,19 @@ export default function PropiedadesPage() {
                     <div className="grid grid-cols-2 gap-y-3 gap-x-4 text-[13px] text-gray-600 font-medium mb-5 mt-auto">
                       <div className="flex items-center gap-2">
                         <span className="text-lg opacity-80">🛏️</span>
-                        <span className="truncate">{p.habitaciones || "-"} hab.</span>
+                        <span className="truncate">{p.habitaciones ?? 0} hab.</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <span className="text-lg opacity-80">🚿</span>
-                        <span className="truncate">{p.banos || "-"} baños</span>
+                        <span className="truncate">{p.banos ?? 0} baños</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <span className="text-lg opacity-80">📐</span>
-                        <span className="truncate">{p.metrosCuadrados || "-"} m²</span>
+                        <span className="truncate">{p.metrosCuadrados ?? 0} m²</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <span className="text-lg opacity-80">🚗</span>
-                        <span className="truncate">{p.garages || "-"} garages</span>
+                        <span className="truncate">{p.garages ?? 0} garages</span>
                       </div>
                     </div>
 
