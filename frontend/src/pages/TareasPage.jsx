@@ -21,8 +21,7 @@ export default function TareasPage() {
   const [actividades, setActividades] = useState([]);
   const [oportunidades, setOportunidades] = useState([]);
   const [openForm, setOpenForm] = useState(false);
-  const [filtro, setFiltro] = useState("TODAS"); // TODAS, PENDIENTES, COMPLETADAS, VENCIDAS
-  const [mostrarCanceladas, setMostrarCanceladas] = useState(false);
+  const [filtro, setFiltro] = useState("TODAS"); // TODAS, PENDIENTES, COMPLETADAS, VENCIDAS, CANCELADAS
   const [form, setForm] = useState({
     id: null,
     tipo: "LLAMADA",
@@ -48,7 +47,7 @@ export default function TareasPage() {
 
   const load = async () => {
     try {
-      const { data } = await axios.get(`http://localhost:3000/tareas?estadoActivo=${mostrarCanceladas ? 'TODOS' : 'ACTIVOS'}`, {
+      const { data } = await axios.get("http://localhost:3000/tareas?estadoActivo=TODOS", {
         headers: { Authorization: `Bearer ${token}` }
       });
       setActividades(data);
@@ -65,7 +64,7 @@ export default function TareasPage() {
 
   useEffect(() => {
     load();
-  }, [mostrarCanceladas]);
+  }, []);
 
   const guardarActividad = async () => {
     if (!form.titulo || !form.oportunidadId || !form.fechaVencimiento) {
@@ -154,6 +153,11 @@ export default function TareasPage() {
     const vencimiento = new Date(act.fechaVencimiento);
     const vencida = vencimiento < hoy && !act.completada;
 
+    if (filtro === "CANCELADAS") return !act.activo;
+    
+    // Para los demás filtros, solo tareas activas
+    if (!act.activo) return false;
+
     if (filtro === "PENDIENTES") return !act.completada;
     if (filtro === "COMPLETADAS") return act.completada;
     if (filtro === "VENCIDAS") return vencida;
@@ -161,14 +165,16 @@ export default function TareasPage() {
   });
 
   const contadores = {
-    total: actividades.length,
-    pendientes: actividades.filter(a => !a.completada).length,
-    completadas: actividades.filter(a => a.completada).length,
+    total: actividades.filter(a => a.activo).length,
+    pendientes: actividades.filter(a => a.activo && !a.completada).length,
+    completadas: actividades.filter(a => a.activo && a.completada).length,
     vencidas: actividades.filter(a => {
+      if (!a.activo) return false;
       const hoy = new Date();
       const vencimiento = new Date(a.fechaVencimiento);
       return vencimiento < hoy && !a.completada;
-    }).length
+    }).length,
+    canceladas: actividades.filter(a => !a.activo).length
   };
 
   return (
@@ -183,12 +189,6 @@ export default function TareasPage() {
           </div>
           <div className="flex gap-2">
             <button
-              onClick={() => setMostrarCanceladas(!mostrarCanceladas)}
-              className="text-gray-600 hover:text-gray-800 text-sm font-medium transition-colors bg-white px-3 py-1.5 rounded-lg border border-gray-200"
-            >
-              {mostrarCanceladas ? "Ocultar canceladas" : "Mostrar canceladas"}
-            </button>
-            <button
               onClick={() => setOpenForm(true)}
               className="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded-lg text-sm font-medium shadow-md hover:shadow-lg transition-all flex items-center gap-1.5"
             >
@@ -199,7 +199,7 @@ export default function TareasPage() {
         </div>
 
         {/* FILTROS Y CONTADORES */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-3">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-2 mb-3">
           <button
             onClick={() => setFiltro("TODAS")}
             className={`p-2 rounded-lg border transition-all ${
@@ -246,6 +246,18 @@ export default function TareasPage() {
           >
             <p className="text-lg font-bold text-red-600">{contadores.vencidas}</p>
             <p className="text-xs text-gray-600">Vencidas</p>
+          </button>
+
+          <button
+            onClick={() => setFiltro("CANCELADAS")}
+            className={`p-2 rounded-lg border transition-all ${
+              filtro === "CANCELADAS"
+                ? "bg-gray-100 border-gray-500"
+                : "bg-white border-gray-200 hover:border-gray-400"
+            }`}
+          >
+            <p className="text-lg font-bold text-gray-500">{contadores.canceladas}</p>
+            <p className="text-xs text-gray-500">Canceladas</p>
           </button>
         </div>
 
