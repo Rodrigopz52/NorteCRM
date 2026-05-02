@@ -51,6 +51,7 @@ export const listarOportunidades = async (req, res) => {
             select: { id: true, nombre: true, apellido: true, email: true }
           },
           actividades: {
+            where: { activo: true },
             orderBy: [
               { completada: "asc" },
               { fechaVencimiento: "asc" }

@@ -92,6 +92,7 @@ model Actividad {
   oportunidadId      Int
   usuario            Usuario      @relation(fields: [usuarioId], references: [id])
   usuarioId          Int
+  activo             Boolean      @default(true)
   creadoEn           DateTime     @default(now())
   actualizadoEn      DateTime     @updatedAt
 }

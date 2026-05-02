@@ -5,8 +5,15 @@ const prisma = new PrismaClient();
 export const obtenerActividades = async (req, res) => {
   try {
     const { rol, id: usuarioId } = req.usuario;
+    const estadoActivo = req.query.estadoActivo || "ACTIVOS"; // "ACTIVOS", "INACTIVOS", "TODOS"
 
-    const where = rol === "VENDEDOR" ? { usuarioId } : {};
+    let where = rol === "VENDEDOR" ? { usuarioId } : {};
+    
+    if (estadoActivo === "ACTIVOS") {
+      where.activo = true;
+    } else if (estadoActivo === "INACTIVOS") {
+      where.activo = false;
+    }
 
     const actividades = await prisma.actividad.findMany({
       where,
@@ -208,11 +215,12 @@ export const eliminarActividad = async (req, res) => {
       return res.status(403).json({ error: "No puedes eliminar esta actividad" });
     }
 
-    await prisma.actividad.delete({
-      where: { id: Number(id) }
+    await prisma.actividad.update({
+      where: { id: Number(id) },
+      data: { activo: false }
     });
 
-    res.json({ mensaje: "Actividad eliminada correctamente" });
+    res.json({ mensaje: "Actividad cancelada (borrado lógico) correctamente" });
   } catch (error) {
     console.error("Error al eliminar actividad:", error);
     res.status(500).json({ error: "Error al eliminar actividad" });

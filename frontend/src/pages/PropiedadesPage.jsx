@@ -181,23 +181,26 @@ export default function PropiedadesPage() {
     }
   };
 
-  const eliminarActividad = async (actividadId) => {
+  const cancelarActividad = async (actividadId) => {
     try {
       const confirmed = await showConfirm({
-        title: "¿Eliminar tarea?", message: "No se puede deshacer.", type: "danger"
+        title: "¿Cancelar tarea?", message: "Pasará a inactiva y no se listará.", type: "danger"
       });
       if (!confirmed) return;
 
       await axios.delete(`http://localhost:3000/tareas/${actividadId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      success("Tarea eliminada");
+      success("Tarea cancelada");
       fetchPropiedades();
-      const { data } = await axios.get(`http://localhost:3000/propiedades?estadoActivo=ACTIVOS&limit=100`, { headers: { Authorization: `Bearer ${token}` } });
+      
+      const { data } = await axios.get(`http://localhost:3000/propiedades?estadoActivo=ACTIVOS&limit=100`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
       const actualizada = data.data.find(p => p.id === selectedOpp.id);
       if(actualizada) setSelectedOpp(actualizada);
     } catch (err) {
-      error("Error al eliminar");
+      error("Error al cancelar");
     }
   };
 
@@ -661,7 +664,7 @@ export default function PropiedadesPage() {
                                   </div>
                                 </div>
                               </div>
-                              <button onClick={() => eliminarActividad(act.id)} className="text-gray-400 hover:text-red-500 p-1">✕</button>
+                              <button onClick={() => cancelarActividad(act.id)} className="text-gray-400 hover:text-red-500 p-1" title="Cancelar tarea">✕</button>
                             </div>
                           </div>
                         ))

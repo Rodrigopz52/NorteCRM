@@ -22,6 +22,7 @@ export default function TareasPage() {
   const [oportunidades, setOportunidades] = useState([]);
   const [openForm, setOpenForm] = useState(false);
   const [filtro, setFiltro] = useState("TODAS"); // TODAS, PENDIENTES, COMPLETADAS, VENCIDAS
+  const [mostrarCanceladas, setMostrarCanceladas] = useState(false);
   const [form, setForm] = useState({
     id: null,
     tipo: "LLAMADA",
@@ -47,7 +48,7 @@ export default function TareasPage() {
 
   const load = async () => {
     try {
-      const { data } = await axios.get("http://localhost:3000/tareas", {
+      const { data } = await axios.get(`http://localhost:3000/tareas?estadoActivo=${mostrarCanceladas ? 'TODOS' : 'ACTIVOS'}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setActividades(data);
@@ -64,7 +65,7 @@ export default function TareasPage() {
 
   useEffect(() => {
     load();
-  }, []);
+  }, [mostrarCanceladas]);
 
   const guardarActividad = async () => {
     if (!form.titulo || !form.oportunidadId || !form.fechaVencimiento) {
@@ -126,11 +127,11 @@ export default function TareasPage() {
     }
   };
 
-  const eliminarActividad = async (id) => {
+  const cancelarActividad = async (id) => {
     try {
       const confirmed = await showConfirm({
-        title: "¿Seguro que deseas eliminar esta actividad?",
-        message: "Esta acción no se puede deshacer.",
+        title: "¿Seguro que deseas cancelar esta tarea?",
+        message: "Pasará a estar inactiva y dejará de ser contabilizada.",
         type: "danger"
       });
 
@@ -140,11 +141,11 @@ export default function TareasPage() {
         headers: { Authorization: `Bearer ${token}` }
       });
       
-      success("Actividad eliminada correctamente");
+      success("Tarea cancelada correctamente");
       load();
     } catch (err) {
-      console.error("Error al eliminar actividad:", err);
-      error(err.response?.data?.error || "Error al eliminar la actividad");
+      console.error("Error al cancelar actividad:", err);
+      error(err.response?.data?.error || "Error al cancelar la actividad");
     }
   };
 
@@ -180,13 +181,21 @@ export default function TareasPage() {
           <div>
             <h2 className="text-xl sm:text-2xl font-bold text-gray-800">Tareas</h2>
           </div>
-          <button
-            onClick={() => setOpenForm(true)}
-            className="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded-lg text-sm font-medium shadow-md hover:shadow-lg transition-all flex items-center gap-1.5"
-          >
-            <PlusIcon className="w-4 h-4" />
-            Nueva tarea
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setMostrarCanceladas(!mostrarCanceladas)}
+              className="text-gray-600 hover:text-gray-800 text-sm font-medium transition-colors bg-white px-3 py-1.5 rounded-lg border border-gray-200"
+            >
+              {mostrarCanceladas ? "Ocultar canceladas" : "Mostrar canceladas"}
+            </button>
+            <button
+              onClick={() => setOpenForm(true)}
+              className="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded-lg text-sm font-medium shadow-md hover:shadow-lg transition-all flex items-center gap-1.5"
+            >
+              <PlusIcon className="w-4 h-4" />
+              Nueva tarea
+            </button>
+          </div>
         </div>
 
         {/* FILTROS Y CONTADORES */}
@@ -284,8 +293,8 @@ export default function TareasPage() {
                               <IconoTipo className="w-3 h-3" />
                               {act.tipo}
                             </span>
-                            <h3 className={`font-semibold text-sm ${act.completada ? "line-through text-gray-500" : "text-gray-800"}`}>
-                              {act.titulo}
+                            <h3 className={`font-semibold text-sm ${act.completada ? "line-through text-gray-500" : "text-gray-800"} ${!act.activo ? "text-gray-400" : ""}`}>
+                              {act.titulo} {!act.activo && <span className="ml-2 text-xs text-red-500 font-bold">(Cancelada)</span>}
                             </h3>
                             {act.descripcion && (
                               <span className="text-gray-400 text-xs" title="Tiene descripción">
@@ -311,12 +320,14 @@ export default function TareasPage() {
                             >
                               Editar
                             </button>
-                            <button
-                              onClick={() => eliminarActividad(act.id)}
-                              className="text-red-500 hover:text-red-700 text-xs font-bold"
-                            >
-                              Eliminar
-                            </button>
+                            {act.activo && (
+                              <button
+                                onClick={() => cancelarActividad(act.id)}
+                                className="text-red-500 hover:text-red-700 text-xs font-bold"
+                              >
+                                Cancelar
+                              </button>
+                            )}
                           </div>
                         </div>
 
