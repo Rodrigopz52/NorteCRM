@@ -80,6 +80,11 @@ export default function PropiedadesPage() {
       return;
     }
 
+    if (Number(form.habitaciones) < 0 || Number(form.banos) < 0 || Number(form.garages) < 0 || Number(form.metrosCuadrados) < 0 || Number(form.valor) < 0) {
+      error("Las características físicas y el valor no pueden ser negativos");
+      return;
+    }
+
     try {
       const payload = {
         titulo: form.titulo,
@@ -481,6 +486,7 @@ export default function PropiedadesPage() {
                             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-bold">$</span>
                             <input
                               type="number"
+                              min="0"
                               className="w-full border border-gray-200 focus:border-[#8B5CF6] focus:ring-2 focus:ring-[#8B5CF6]/20 p-2.5 pl-7 rounded-lg transition-all outline-none text-sm"
                               placeholder="250000"
                               value={form.valor}
@@ -549,19 +555,19 @@ export default function PropiedadesPage() {
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                       <div>
                         <label className="block text-xs font-semibold text-gray-700 mb-1 text-center">🛏️ Habitaciones</label>
-                        <input type="number" className="w-full border border-gray-200 p-2 rounded-lg text-center outline-none focus:border-[#8B5CF6]" value={form.habitaciones} onChange={e=>setForm({...form, habitaciones: e.target.value})} />
+                        <input type="number" min="0" className="w-full border border-gray-200 p-2 rounded-lg text-center outline-none focus:border-[#8B5CF6]" value={form.habitaciones} onChange={e=>setForm({...form, habitaciones: e.target.value})} />
                       </div>
                       <div>
                         <label className="block text-xs font-semibold text-gray-700 mb-1 text-center">🚿 Baños</label>
-                        <input type="number" className="w-full border border-gray-200 p-2 rounded-lg text-center outline-none focus:border-[#8B5CF6]" value={form.banos} onChange={e=>setForm({...form, banos: e.target.value})} />
+                        <input type="number" min="0" className="w-full border border-gray-200 p-2 rounded-lg text-center outline-none focus:border-[#8B5CF6]" value={form.banos} onChange={e=>setForm({...form, banos: e.target.value})} />
                       </div>
                       <div>
                         <label className="block text-xs font-semibold text-gray-700 mb-1 text-center">🚗 Garages</label>
-                        <input type="number" className="w-full border border-gray-200 p-2 rounded-lg text-center outline-none focus:border-[#8B5CF6]" value={form.garages} onChange={e=>setForm({...form, garages: e.target.value})} />
+                        <input type="number" min="0" className="w-full border border-gray-200 p-2 rounded-lg text-center outline-none focus:border-[#8B5CF6]" value={form.garages} onChange={e=>setForm({...form, garages: e.target.value})} />
                       </div>
                       <div>
                         <label className="block text-xs font-semibold text-gray-700 mb-1 text-center">📐 Metros (m²)</label>
-                        <input type="number" className="w-full border border-gray-200 p-2 rounded-lg text-center outline-none focus:border-[#8B5CF6]" value={form.metrosCuadrados} onChange={e=>setForm({...form, metrosCuadrados: e.target.value})} />
+                        <input type="number" min="0" className="w-full border border-gray-200 p-2 rounded-lg text-center outline-none focus:border-[#8B5CF6]" value={form.metrosCuadrados} onChange={e=>setForm({...form, metrosCuadrados: e.target.value})} />
                       </div>
                     </div>
                   </div>
