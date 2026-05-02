@@ -52,10 +52,11 @@ export default function TareasPage() {
       });
       setActividades(data);
 
-      const opps = await axios.get("http://localhost:3000/propiedades", {
+      const opps = await axios.get("http://localhost:3000/propiedades?limit=100", {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setOportunidades(opps.data);
+      // Extraemos .data de la respuesta paginada
+      setOportunidades(opps.data.data || opps.data);
     } catch (error) {
       console.error("Error al cargar actividades:", error);
     }
