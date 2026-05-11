@@ -186,14 +186,14 @@ export default function TareasPage() {
         <div className="flex justify-between items-center mb-3">
           <div>
             <h2 className="text-xl sm:text-2xl font-bold text-gray-800">Tareas</h2>
+            <p className="text-sm text-gray-500 font-medium mt-1">Organiza tu agenda y seguimiento de ventas</p>
           </div>
           <div className="flex gap-2">
             <button
               onClick={() => setOpenForm(true)}
-              className="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded-lg text-sm font-medium shadow-md hover:shadow-lg transition-all flex items-center gap-1.5"
+              className="w-full sm:w-auto bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded-lg text-sm font-medium shadow-md hover:shadow-lg transition-all"
             >
-              <PlusIcon className="w-4 h-4" />
-              Nueva tarea
+              + Nueva tarea
             </button>
           </div>
         </div>

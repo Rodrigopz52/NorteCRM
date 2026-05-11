@@ -137,8 +137,8 @@ export default function UsuariosPage() {
       {/* HEADER */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-3">
         <div>
-          <h2 className="text-xl sm:text-2xl font-bold text-gray-800">Gestión de usuarios</h2>
-          <p className="text-xs sm:text-sm text-gray-600 mt-0.5">
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-800">Usuarios</h2>
+          <p className="text-sm text-gray-500 font-medium mt-1">
             {esAdministrador ? "Vista de usuarios del sistema (solo lectura)" : "Administra vendedores y usuarios del sistema"}
           </p>
         </div>
@@ -148,9 +148,8 @@ export default function UsuariosPage() {
               setForm({ id: null, nombre: "", apellido: "", email: "", rol: "VENDEDOR", dni: "" });
               setOpenForm(true);
             }}
-            className="w-full sm:w-auto bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded-lg text-sm font-medium shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-1.5"
+            className="w-full sm:w-auto bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded-lg text-sm font-medium shadow-md hover:shadow-lg transition-all"
           >
-            <UserGroupIcon className="w-4 h-4" />
             + Nuevo usuario
           </button>
         )}
@@ -197,33 +196,41 @@ export default function UsuariosPage() {
 
       {/* BARRA DE BÚSQUEDA Y FILTROS */}
       <div className="bg-white rounded-lg shadow-sm p-3 mb-3 border border-gray-200">
-        <div className="flex flex-col sm:flex-row gap-2">
-          <input
-            type="text"
-            placeholder="Buscar por nombre, email o DNI..."
-            className="flex-1 border border-gray-300 focus:border-purple-500 focus:ring-1 focus:ring-purple-200 p-2 rounded-lg transition-all outline-none text-sm"
-            value={busqueda}
-            onChange={e => setBusqueda(e.target.value)}
-          />
-          <select
-            className="sm:w-44 border border-gray-300 focus:border-purple-500 focus:ring-1 focus:ring-purple-200 p-2 rounded-lg transition-all outline-none text-sm"
-            value={filtroRol}
-            onChange={e => setFiltroRol(e.target.value)}
-          >
-            <option value="">Todos los roles</option>
-            <option value="GERENTE">Gerente</option>
-            <option value="VENDEDOR">Vendedor</option>
-            <option value="ADMINISTRADOR">Administrador</option>
-          </select>
-          <select
-            className="sm:w-36 border border-gray-300 focus:border-purple-500 focus:ring-1 focus:ring-purple-200 p-2 rounded-lg transition-all outline-none text-sm"
-            value={filtroEstado}
-            onChange={e => setFiltroEstado(e.target.value)}
-          >
-            <option value="ACTIVOS">Solo Activos</option>
-            <option value="INACTIVOS">Inactivos</option>
-            <option value="TODOS">Todos</option>
-          </select>
+        <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-2">
+          {/* Filtros */}
+          <div className="flex flex-col sm:flex-row gap-2">
+            <select
+              className="sm:w-44 border border-gray-300 focus:border-purple-500 focus:ring-1 focus:ring-purple-200 p-2 rounded-lg transition-all outline-none text-sm"
+              value={filtroRol}
+              onChange={e => setFiltroRol(e.target.value)}
+            >
+              <option value="">Todos los roles</option>
+              <option value="GERENTE">Gerente</option>
+              <option value="VENDEDOR">Vendedor</option>
+              <option value="ADMINISTRADOR">Administrador</option>
+            </select>
+            <select
+              className="sm:w-36 border border-gray-300 focus:border-purple-500 focus:ring-1 focus:ring-purple-200 p-2 rounded-lg transition-all outline-none text-sm"
+              value={filtroEstado}
+              onChange={e => setFiltroEstado(e.target.value)}
+            >
+              <option value="ACTIVOS">Activos</option>
+              <option value="INACTIVOS">Inactivos</option>
+              <option value="TODOS">Todos</option>
+            </select>
+          </div>
+          {/* Buscador */}
+          <div className="flex items-center gap-2 lg:ml-auto w-full lg:w-auto">
+            <div className="relative flex-1 lg:flex-initial">
+              <input
+                type="text"
+                placeholder="Buscar por nombre, email o DNI..."
+                className="w-full lg:w-72 border border-gray-300 focus:border-purple-500 focus:ring-1 focus:ring-purple-200 p-2 rounded-lg transition-all outline-none text-sm"
+                value={busqueda}
+                onChange={e => setBusqueda(e.target.value)}
+              />
+            </div>
+          </div>
         </div>
       </div>
 
@@ -433,7 +440,7 @@ export default function UsuariosPage() {
                 onClick={crearOEditarUsuario}
                 className="flex-1 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2.5 rounded-lg font-medium shadow-md hover:shadow-lg transition-all"
               >
-                {form.id ? "Actualizar" : "Crear Usuario"}
+                {form.id ? "Actualizar" : "Guardar"}
               </button>
               <button
                 onClick={() => {

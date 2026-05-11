@@ -210,13 +210,13 @@ export default function PropiedadesPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8F9FE] p-4 sm:p-6 lg:px-8 font-sans">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-4 sm:p-6 overflow-x-hidden">
       
       {/* ENCABEZADO */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-3">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">Propiedades</h1>
-          <p className="text-sm text-gray-500 font-medium mt-1">{totalPropiedades} propiedades en total</p>
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-800">Propiedades</h2>
+          <p className="text-sm text-gray-500 font-medium mt-1">{totalPropiedades} inmuebles en cartera</p>
         </div>
         <button
           onClick={() => {
@@ -227,56 +227,63 @@ export default function PropiedadesPage() {
             });
             setOpenForm(true);
           }}
-          className="w-full sm:w-auto bg-[#8B5CF6] hover:bg-[#7C3AED] text-white px-5 py-2.5 rounded-xl text-sm font-bold shadow-[0_4px_14px_0_rgba(139,92,246,0.39)] hover:shadow-[0_6px_20px_rgba(139,92,246,0.23)] hover:-translate-y-0.5 transition-all duration-200"
+          className="w-full sm:w-auto bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded-lg text-sm font-medium shadow-md hover:shadow-lg transition-all"
         >
           + Nueva propiedad
         </button>
       </div>
 
       {/* FILTROS Y BÚSQUEDA */}
-      <div className="flex flex-col lg:flex-row gap-3 mb-8">
-        <select
-          value={filtroTipo}
-          onChange={(e) => setFiltroTipo(e.target.value)}
-          className="lg:w-48 bg-white border border-gray-200 focus:border-[#8B5CF6] focus:ring-2 focus:ring-[#8B5CF6]/20 p-2.5 rounded-xl transition-all outline-none text-sm font-medium text-gray-700 shadow-sm hover:border-gray-300 cursor-pointer"
-        >
-          <option value="Todos">Todos los tipos</option>
-          <option value="Casa">Casa</option>
-          <option value="Dpto">Departamento</option>
-          <option value="Terreno">Terreno</option>
-          <option value="Oficina">Oficina</option>
-        </select>
+      <div className="bg-white rounded-lg shadow-sm p-3 mb-6 border border-gray-200">
+        <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-2">
+          {/* Filtros */}
+          <div className="flex flex-col sm:flex-row gap-2">
+            <select
+              value={filtroTipo}
+              onChange={(e) => setFiltroTipo(e.target.value)}
+              className="lg:w-40 border border-gray-300 focus:border-purple-500 focus:ring-1 focus:ring-purple-200 p-2 rounded-lg transition-all outline-none text-sm"
+            >
+              <option value="Todos">Todos los tipos</option>
+              <option value="Casa">Casa</option>
+              <option value="Dpto">Departamento</option>
+              <option value="Terreno">Terreno</option>
+              <option value="Oficina">Oficina</option>
+            </select>
 
-        <select
-          value={filtroEtapa}
-          onChange={(e) => setFiltroEtapa(e.target.value)}
-          className="lg:w-48 bg-white border border-gray-200 focus:border-[#8B5CF6] focus:ring-2 focus:ring-[#8B5CF6]/20 p-2.5 rounded-xl transition-all outline-none text-sm font-medium text-gray-700 shadow-sm hover:border-gray-300 cursor-pointer"
-        >
-          <option value="Todos">Todos los estados</option>
-          <option value="DISPONIBLE">Disponible</option>
-          <option value="RESERVADA">Reservada</option>
-          <option value="VENDIDA">Vendida</option>
-          <option value="ALQUILADA">Alquilada</option>
-        </select>
+            <select
+              value={filtroEtapa}
+              onChange={(e) => setFiltroEtapa(e.target.value)}
+              className="lg:w-40 border border-gray-300 focus:border-purple-500 focus:ring-1 focus:ring-purple-200 p-2 rounded-lg transition-all outline-none text-sm"
+            >
+              <option value="Todos">Todos los estados</option>
+              <option value="DISPONIBLE">Disponible</option>
+              <option value="RESERVADA">Reservada</option>
+              <option value="VENDIDA">Vendida</option>
+              <option value="ALQUILADA">Alquilada</option>
+            </select>
 
-        <select
-          value={filtroOperacion}
-          onChange={(e) => setFiltroOperacion(e.target.value)}
-          className="lg:w-48 bg-white border border-gray-200 focus:border-[#8B5CF6] focus:ring-2 focus:ring-[#8B5CF6]/20 p-2.5 rounded-xl transition-all outline-none text-sm font-medium text-gray-700 shadow-sm hover:border-gray-300 cursor-pointer"
-        >
-          <option value="Todos">Operación</option>
-          <option value="Venta">Venta</option>
-          <option value="Alquiler">Alquiler</option>
-        </select>
-
-        <div className="relative flex-1">
-          <input
-            type="text"
-            placeholder="🔍 Buscar propiedades..."
-            value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
-            className="w-full bg-white border border-gray-200 focus:border-[#8B5CF6] focus:ring-2 focus:ring-[#8B5CF6]/20 py-2.5 pl-10 pr-4 rounded-xl transition-all outline-none text-sm font-medium shadow-sm hover:border-gray-300 placeholder-gray-400"
-          />
+            <select
+              value={filtroOperacion}
+              onChange={(e) => setFiltroOperacion(e.target.value)}
+              className="lg:w-36 border border-gray-300 focus:border-purple-500 focus:ring-1 focus:ring-purple-200 p-2 rounded-lg transition-all outline-none text-sm"
+            >
+              <option value="Todos">Operación</option>
+              <option value="Venta">Venta</option>
+              <option value="Alquiler">Alquiler</option>
+            </select>
+          </div>
+          {/* Buscador */}
+          <div className="flex items-center gap-2 lg:ml-auto w-full lg:w-auto">
+            <div className="relative flex-1 lg:flex-initial">
+              <input
+                type="text"
+                placeholder="Buscar por título, dirección, ID..."
+                value={busqueda}
+                onChange={(e) => setBusqueda(e.target.value)}
+                className="w-full lg:w-72 border border-gray-300 focus:border-purple-500 focus:ring-1 focus:ring-purple-200 p-2 rounded-lg transition-all outline-none text-sm"
+              />
+            </div>
+          </div>
         </div>
       </div>
 
@@ -437,7 +444,7 @@ export default function PropiedadesPage() {
             {/* Header del Modal */}
             <div className="p-5 sm:p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
               <h3 className="text-2xl font-extrabold text-gray-900">
-                {form.id ? "Detalles de la propiedad" : "Publicar nueva propiedad"}
+                {form.id ? "Editar propiedad" : "Nueva propiedad"}
               </h3>
               <button 
                 onClick={() => {
@@ -589,8 +596,8 @@ export default function PropiedadesPage() {
                   </div>
 
                   <div className="flex gap-3 pt-2">
-                    <button onClick={guardarPropiedad} className="flex-1 bg-[#8B5CF6] hover:bg-[#7C3AED] text-white py-3 rounded-xl font-bold shadow-md transition-colors">
-                      {form.id ? "Guardar Cambios" : "Publicar propiedad"}
+                    <button onClick={guardarPropiedad} className="flex-1 bg-purple-600 hover:bg-purple-700 text-white py-2.5 rounded-lg font-medium shadow-md transition-all">
+                      {form.id ? "Actualizar" : "Guardar"}
                     </button>
                     {form.id && usuario?.rol === "GERENTE" && (
                       <button onClick={() => toggleActivo(form.id)} className="bg-red-50 hover:bg-red-100 text-red-600 px-6 rounded-xl font-bold border border-red-200 transition-colors">

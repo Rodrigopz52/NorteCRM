@@ -129,7 +129,10 @@ export default function ClientesPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-4 sm:p-6 overflow-x-hidden">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-3">
-        <h2 className="text-xl sm:text-2xl font-bold text-gray-800">Clientes</h2>
+        <div>
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-800">Clientes</h2>
+          <p className="text-sm text-gray-500 font-medium mt-1">Gestión de inquilinos, compradores y propietarios</p>
+        </div>
         <button
           onClick={() => setOpenForm(true)}
           className="w-full sm:w-auto bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded-lg text-sm font-medium shadow-md hover:shadow-lg transition-all"
@@ -160,13 +163,13 @@ export default function ClientesPage() {
             </div>
             
             <select
-              className="border border-gray-300 focus:border-purple-500 focus:ring-1 focus:ring-purple-200 p-1.5 rounded-lg transition-all outline-none text-xs"
+              className="sm:ml-2 border border-gray-300 focus:border-purple-500 focus:ring-1 focus:ring-purple-200 p-2 rounded-lg transition-all outline-none text-sm"
               value={filtroEstado}
               onChange={e => setFiltroEstado(e.target.value)}
             >
-              <option value="ACTIVOS">Solo Activos ({clientesActivos})</option>
-              <option value="INACTIVOS">Inactivos ({clientesInactivos})</option>
-              <option value="TODOS">Todos ({totalClientes})</option>
+              <option value="ACTIVOS">Solo Activos</option>
+              <option value="INACTIVOS">Inactivos</option>
+              <option value="TODOS">Todos</option>
             </select>
           </div>
 

@@ -83,7 +83,7 @@ export default function DashboardPage() {
             <h2 className="text-xl sm:text-2xl font-bold text-gray-800">
               ¡Hola, {usuario?.nombre}! 👋
             </h2>
-            <p className="text-xs sm:text-sm text-gray-600 mt-0.5">
+            <p className="text-sm text-gray-500 font-medium mt-1">
               {new Date().toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
             </p>
           </div>
