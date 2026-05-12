@@ -19,7 +19,7 @@ export const listarUsuarios = async (req, res) => {
     const estado = req.query.estado || "ACTIVOS";
 
     const filtroRol = rol ? { rol } : {};
-    const filtroEstado = estado === "ACTIVOS" ? { activo: true } : estado === "INACTIVOS" ? { activo: false } : {};
+    const filtroEstado = estado === "INACTIVOS" ? { activo: false } : { activo: true };
     
     const filtroBusqueda = busqueda
       ? {
@@ -35,7 +35,7 @@ export const listarUsuarios = async (req, res) => {
     const whereStats = { ...filtroRol, ...filtroBusqueda };
     const where = { ...filtroRol, ...filtroEstado, ...filtroBusqueda };
 
-    const [todosLosUsuarios, totalActivos, totalInactivos] = await Promise.all([
+    const [todosLosUsuarios, totalActivos, totalInactivos, totalClientes, totalPropiedades, totalTareas] = await Promise.all([
       prisma.usuario.findMany({
         where,
         select: {
@@ -46,11 +46,21 @@ export const listarUsuarios = async (req, res) => {
           dni: true,
           rol: true,
           activo: true,
-          creadoEn: true
+          creadoEn: true,
+          _count: {
+            select: {
+              clientes: true,
+              oportunidades: true,
+              actividades: true
+            }
+          }
         }
       }),
       prisma.usuario.count({ where: { ...whereStats, activo: true } }),
-      prisma.usuario.count({ where: { ...whereStats, activo: false } })
+      prisma.usuario.count({ where: { ...whereStats, activo: false } }),
+      prisma.cliente.count({ where: { activo: true } }),
+      prisma.oportunidad.count({ where: { activo: true } }),
+      prisma.actividad.count({ where: { activo: true } })
     ]);
 
     const ordenRoles = { GERENTE: 1, ADMINISTRADOR: 2, VENDEDOR: 3 };
@@ -68,6 +78,11 @@ export const listarUsuarios = async (req, res) => {
     const baseResponse = construirRespuestaPaginada(usuarios, total, page, limit);
     baseResponse.meta.totalActivos = totalActivos;
     baseResponse.meta.totalInactivos = totalInactivos;
+    baseResponse.meta.metricasGlobales = {
+      totalClientes,
+      totalPropiedades,
+      totalTareas
+    };
     
     res.json(baseResponse);
   } catch (error) {

@@ -28,7 +28,8 @@ export default function UsuariosPage() {
   const [usuariosActivos, setUsuariosActivos] = useState(0);
   const [usuariosInactivos, setUsuariosInactivos] = useState(0);
   const [filtroRol, setFiltroRol] = useState("");
-  const [filtroEstado, setFiltroEstado] = useState("ACTIVOS");
+  const [filtroEstado, setFiltroEstado] = useState("TODOS");
+  const [metricasGlobales, setMetricasGlobales] = useState({ totalClientes: 0, totalPropiedades: 0, totalTareas: 0 });
   const limit = 10;
 
   const fetchUsuarios = async () => {
@@ -46,6 +47,9 @@ export default function UsuariosPage() {
       setTotalUsuarios(data.meta.totalActivos + data.meta.totalInactivos);
       setUsuariosActivos(data.meta.totalActivos);
       setUsuariosInactivos(data.meta.totalInactivos);
+      if (data.meta.metricasGlobales) {
+        setMetricasGlobales(data.meta.metricasGlobales);
+      }
     } catch (error) {
       console.error("Error al cargar usuarios:", error);
     }
@@ -155,43 +159,56 @@ export default function UsuariosPage() {
         )}
       </div>
 
-      {/* RESUMEN */}
+      {/* RESUMEN Y FILTROS */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 mb-3">
-        <div className="bg-white p-2 sm:p-3 rounded-lg shadow-md border border-gray-200">
-          <div className="flex items-center gap-2">
-            <div className="p-2 rounded-lg bg-purple-50 text-purple-600">
-              <UserGroupIcon className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="text-lg sm:text-xl font-bold text-gray-800">{totalUsuarios}</p>
-              <p className="text-gray-500 text-xs font-medium">Total usuarios</p>
-            </div>
+        <button
+          onClick={() => {
+            setFiltroRol("");
+            setBusqueda("");
+            setFiltroEstado("TODOS");
+          }}
+          className={`p-2 sm:p-3 rounded-lg shadow-sm border text-left flex items-center gap-2 transition-all ${
+            filtroEstado === "TODOS" ? "bg-purple-50 border-purple-500" : "bg-white border-gray-200 hover:border-purple-400 hover:shadow-md"
+          }`}
+        >
+          <div className="p-2 rounded-lg bg-purple-50 text-purple-600 flex-shrink-0">
+            <UserGroupIcon className="w-5 h-5" />
           </div>
-        </div>
+          <div>
+            <p className={`text-lg sm:text-xl font-bold ${filtroEstado === "TODOS" ? "text-purple-800" : "text-gray-800"}`}>{totalUsuarios}</p>
+            <p className={`text-xs font-medium ${filtroEstado === "TODOS" ? "text-purple-700" : "text-gray-500"}`}>Total usuarios</p>
+          </div>
+        </button>
 
-        <div className="bg-white p-2 sm:p-3 rounded-lg shadow-md border border-gray-200">
-          <div className="flex items-center gap-2">
-            <div className="p-2 rounded-lg bg-green-50 text-green-600">
-              <CheckCircleIcon className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="text-lg sm:text-xl font-bold text-gray-800">{usuariosActivos}</p>
-              <p className="text-gray-500 text-xs font-medium">Activos</p>
-            </div>
+        <button
+          onClick={() => setFiltroEstado("ACTIVOS")}
+          className={`p-2 sm:p-3 rounded-lg shadow-sm border text-left flex items-center gap-2 transition-all ${
+            filtroEstado === "ACTIVOS" ? "bg-green-50 border-green-500" : "bg-white border-gray-200 hover:border-green-400 hover:shadow-md"
+          }`}
+        >
+          <div className="p-2 rounded-lg bg-green-50 text-green-600 flex-shrink-0">
+            <CheckCircleIcon className="w-5 h-5" />
           </div>
-        </div>
+          <div>
+            <p className={`text-lg sm:text-xl font-bold ${filtroEstado === "ACTIVOS" ? "text-green-800" : "text-gray-800"}`}>{usuariosActivos}</p>
+            <p className={`text-xs font-medium ${filtroEstado === "ACTIVOS" ? "text-green-700" : "text-gray-500"}`}>Activos</p>
+          </div>
+        </button>
 
-        <div className="bg-white p-2 sm:p-3 rounded-lg shadow-md border border-gray-200">
-          <div className="flex items-center gap-2">
-            <div className="p-2 rounded-lg bg-red-50 text-red-600">
-              <XCircleIcon className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="text-lg sm:text-xl font-bold text-gray-800">{usuariosInactivos}</p>
-              <p className="text-gray-500 text-xs font-medium">Inactivos</p>
-            </div>
+        <button
+          onClick={() => setFiltroEstado("INACTIVOS")}
+          className={`p-2 sm:p-3 rounded-lg shadow-sm border text-left flex items-center gap-2 transition-all ${
+            filtroEstado === "INACTIVOS" ? "bg-red-50 border-red-500" : "bg-white border-gray-200 hover:border-red-400 hover:shadow-md"
+          }`}
+        >
+          <div className="p-2 rounded-lg bg-red-50 text-red-600 flex-shrink-0">
+            <XCircleIcon className="w-5 h-5" />
           </div>
-        </div>
+          <div>
+            <p className={`text-lg sm:text-xl font-bold ${filtroEstado === "INACTIVOS" ? "text-red-800" : "text-gray-800"}`}>{usuariosInactivos}</p>
+            <p className={`text-xs font-medium ${filtroEstado === "INACTIVOS" ? "text-red-700" : "text-gray-500"}`}>Inactivos</p>
+          </div>
+        </button>
       </div>
 
       {/* BARRA DE BÚSQUEDA Y FILTROS */}
@@ -214,9 +231,9 @@ export default function UsuariosPage() {
               value={filtroEstado}
               onChange={e => setFiltroEstado(e.target.value)}
             >
+              <option value="TODOS">Todos</option>
               <option value="ACTIVOS">Activos</option>
               <option value="INACTIVOS">Inactivos</option>
-              <option value="TODOS">Todos</option>
             </select>
           </div>
           {/* Buscador */}
@@ -234,104 +251,145 @@ export default function UsuariosPage() {
         </div>
       </div>
 
-      {/* TABLA */}
-      <div className="bg-white shadow-md rounded-lg overflow-x-auto border border-gray-200">
-        <table className="w-full text-left min-w-[640px]">
-          <thead className="bg-gradient-to-r from-purple-50 to-purple-100 border-b-2 border-purple-200">
-            <tr>
-              <th className="p-3 sm:p-4 font-semibold text-gray-700 text-sm">Nombre</th>
-              <th className="p-3 sm:p-4 font-semibold text-gray-700 text-sm">DNI</th>
-              <th className="p-3 sm:p-4 font-semibold text-gray-700 text-sm">Email</th>
-              <th className="p-3 sm:p-4 font-semibold text-gray-700 text-sm">Rol</th>
-              <th className="p-3 sm:p-4 font-semibold text-gray-700 text-center text-sm">Estado</th>
-              <th className="p-3 sm:p-4 font-semibold text-gray-700 text-sm">Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            {usuarios.map(u => (
-              <tr key={u.id} className={`border-b border-gray-100 transition-colors ${
-                u.activo ? 'hover:bg-purple-50' : 'bg-gray-50 opacity-60'
-              }`}>
-                <td className="p-3 sm:p-4">
-                  <div>
-                    <p className="font-medium text-sm sm:text-base text-gray-800">{u.nombre} {u.apellido}</p>
-                    <p className="text-xs text-gray-500">
-                      Desde {new Date(u.creadoEn).toLocaleDateString()}
-                    </p>
-                  </div>
-                </td>
-                <td className="p-3 sm:p-4 text-sm text-gray-600">
-                  {u.dni ? (
-                    <span className="font-mono">{u.dni}</span>
-                  ) : (
-                    <span className="text-gray-300 italic text-xs">Sin DNI</span>
-                  )}
-                </td>
-                <td className="p-3 sm:p-4 text-sm text-gray-600">{u.email}</td>
-                <td className="p-3 sm:p-4">
-                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold ${
+      {/* LISTA DE USUARIOS (GRID MASONRY/ITEMS-START) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mb-6 items-start">
+        {usuarios.map(u => (
+          <div key={u.id} className={`bg-white rounded-xl shadow-sm border p-5 flex flex-col hover:shadow-md transition-shadow ${!u.activo ? 'opacity-70 grayscale-[30%]' : 'border-gray-200'}`}>
+            
+            {/* Header: Avatar, Info, Status */}
+            <div className="flex gap-4 items-start mb-4">
+              {/* Avatar con iniciales */}
+              <div className="w-12 h-12 rounded-full bg-purple-600 flex items-center justify-center text-white font-bold text-lg flex-shrink-0">
+                {u.nombre.charAt(0)}{u.apellido.charAt(0)}
+              </div>
+              
+              {/* Nombre y DNI */}
+              <div className="flex-1 min-w-0">
+                <h3 className="font-bold text-gray-900 text-lg leading-tight truncate">{u.nombre} {u.apellido}</h3>
+                <p className="text-gray-500 text-sm mt-0.5">DNI: {u.dni || "Sin DNI"}</p>
+                
+                {/* Badges de Rol y Estado */}
+                <div className="flex flex-wrap items-center gap-2 mt-2">
+                  <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-bold ${
                     u.rol === "GERENTE" 
-                      ? "bg-yellow-100 text-yellow-800" 
+                      ? "bg-purple-100 text-purple-700" 
                       : u.rol === "ADMINISTRADOR"
-                      ? "bg-purple-100 text-purple-800"
-                      : "bg-blue-100 text-blue-800"
+                      ? "bg-blue-100 text-blue-700"
+                      : "bg-green-50 text-green-700 border border-green-200"
                   }`}>
                     {u.rol}
                   </span>
-                </td>
-                <td className="p-3 sm:p-4 text-center">
-                  {u.activo ? (
-                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-green-100 text-green-800">
-                      ✅ Activo
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-red-100 text-red-800">
-                      ❌ Inactivo
-                    </span>
-                  )}
-                </td>
-                <td className="p-3 sm:p-4">
-                  {esAdministrador ? (
-                    <span className="text-gray-400 text-xs sm:text-sm italic">Solo lectura</span>
-                  ) : (
-                    <div className="flex flex-col sm:flex-row gap-2">
-                      <button
-                        onClick={() => {
-                          setForm({
-                            id: u.id,
-                            nombre: u.nombre,
-                            apellido: u.apellido,
-                            email: u.email,
-                            rol: u.rol,
-                            dni: u.dni || ""
-                          });
-                          setOpenForm(true);
-                        }}
-                        className="text-blue-600 hover:text-blue-800 font-bold hover:underline transition-colors text-xs sm:text-sm"
-                      >
-                        Editar
-                      </button>
+                  
+                  <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-bold ${
+                    u.activo ? 'bg-green-50 text-green-600 border border-green-200' : 'bg-gray-100 text-gray-600 border border-gray-200'
+                  }`}>
+                    {u.activo ? 'Activo' : 'Inactivo'}
+                  </span>
+                </div>
+              </div>
+            </div>
 
-                      {u.id !== usuario.id && (
-                        <button
-                          onClick={() => toggleActivo(u.id)}
-                          className={`font-bold hover:underline transition-colors text-xs sm:text-sm ${
-                            u.activo ? 'text-red-600 hover:text-red-800' : 'text-green-600 hover:text-green-800'
-                          }`}
-                        >
-                          {u.activo ? 'Desactivar' : 'Activar'}
-                        </button>
-                      )}
-                    </div>
+            {/* Datos de contacto */}
+            <div className="space-y-2 mb-4">
+              <div className="flex items-center gap-2 text-sm text-gray-600">
+                <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+                <span className="truncate">{u.email}</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm text-gray-600">
+                <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
+                <span className="truncate">{u.telefono || "+54 11 0000-0000"}</span>
+              </div>
+            </div>
+
+            {/* Tarjeta de rendimiento / Métricas globales */}
+            {u.rol === "VENDEDOR" ? (
+              <div className="bg-gray-50 rounded-lg p-3 mb-4 border border-gray-100">
+                <p className="text-xs font-bold text-gray-500 mb-2">Rendimiento indiv.</p>
+                <div className="grid grid-cols-3 gap-2">
+                  <div>
+                    <p className="text-[10px] sm:text-xs text-gray-500 uppercase tracking-wide">Clientes</p>
+                    <p className="font-bold text-gray-800">{u._count?.clientes || 0}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] sm:text-xs text-gray-500 uppercase tracking-wide">Propiedades</p>
+                    <p className="font-bold text-gray-800">{u._count?.oportunidades || 0}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] sm:text-xs text-gray-500 uppercase tracking-wide">Tareas asig.</p>
+                    <p className="font-bold text-green-600">{u._count?.actividades || 0}</p>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="bg-gray-50 rounded-lg p-3 mb-4 border border-gray-100">
+                <p className="text-xs font-bold text-gray-500 mb-2">Métricas globales CRM</p>
+                <div className="grid grid-cols-3 gap-2">
+                  <div>
+                    <p className="text-[10px] sm:text-xs text-gray-500 uppercase tracking-wide">Clientes</p>
+                    <p className="font-bold text-gray-800">{metricasGlobales.totalClientes}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] sm:text-xs text-gray-500 uppercase tracking-wide">Propiedades</p>
+                    <p className="font-bold text-gray-800">{metricasGlobales.totalPropiedades}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] sm:text-xs text-gray-500 uppercase tracking-wide">Tareas activ.</p>
+                    <p className="font-bold text-green-600">{metricasGlobales.totalTareas}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Botones de acción */}
+            <div className="mt-auto pt-4 border-t border-gray-100 flex items-center justify-between">
+              {esAdministrador ? (
+                <span className="text-gray-400 text-xs italic">Vista de solo lectura</span>
+              ) : (
+                <div className="flex flex-wrap gap-4 w-full justify-between sm:justify-start">
+                  {u.rol === "VENDEDOR" && (
+                    <button
+                      onClick={() => alert("Métricas detalladas próximamente...")}
+                      className="flex items-center gap-1 text-blue-600 hover:text-blue-800 text-sm font-semibold transition-colors"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                      Ver métricas
+                    </button>
                   )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                  <button
+                    onClick={() => {
+                      setForm({
+                        id: u.id,
+                        nombre: u.nombre,
+                        apellido: u.apellido,
+                        email: u.email,
+                        rol: u.rol,
+                        dni: u.dni || ""
+                      });
+                      setOpenForm(true);
+                    }}
+                    className="flex items-center gap-1 text-gray-600 hover:text-gray-900 text-sm font-semibold transition-colors"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                    Editar
+                  </button>
+                  {u.id !== usuario.id && (
+                    <button
+                      onClick={() => toggleActivo(u.id)}
+                      className={`flex items-center gap-1 text-sm font-semibold transition-colors ${
+                        u.activo ? 'text-red-600 hover:text-red-800 ml-auto sm:ml-0' : 'text-green-600 hover:text-green-800 ml-auto sm:ml-0'
+                      }`}
+                    >
+                      {u.activo ? 'Desactivar' : 'Activar'}
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        ))}
 
         {usuarios.length === 0 && (
-          <div className="text-center py-12 text-gray-500">
+          <div className="col-span-full text-center py-12 text-gray-500 bg-white rounded-xl border border-gray-200">
             <UserGroupIcon className="w-16 h-16 mx-auto mb-4 opacity-30" />
             <p className="text-lg">No hay usuarios registrados</p>
           </div>

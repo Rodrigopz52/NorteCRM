@@ -167,7 +167,7 @@ export default function ClientesPage() {
               value={filtroEstado}
               onChange={e => setFiltroEstado(e.target.value)}
             >
-              <option value="ACTIVOS">Solo Activos</option>
+              <option value="ACTIVOS">Activos</option>
               <option value="INACTIVOS">Inactivos</option>
               <option value="TODOS">Todos</option>
             </select>
