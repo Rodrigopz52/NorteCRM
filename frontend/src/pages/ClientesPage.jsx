@@ -14,7 +14,7 @@ export default function ClientesPage() {
   const [filtroEstado, setFiltroEstado] = useState("ACTIVOS");
   const [busqueda, setBusqueda] = useState("");
   const [openForm, setOpenForm] = useState(false);
-  const [form, setForm] = useState({ nombre: "", empresa: "", telefono: "", email: "", notas: "" });
+  const [form, setForm] = useState({ nombre: "", empresa: "", telefono: "", email: "", notas: "", temperatura: "FRIO", interes: "", usuarioId: "" });
 
   // Paginación
   const [pagina, setPagina] = useState(1);
@@ -215,7 +215,12 @@ export default function ClientesPage() {
           <tbody className="divide-y divide-gray-200">
             {clientes.length > 0 ? clientes.map(c => (
               <tr key={c.id} className={`transition-colors ${c.activo ? 'hover:bg-purple-50/50' : 'bg-gray-50 opacity-60'}`}>
-                <td className="px-3 py-2 text-sm text-gray-800 font-medium">{c.nombre}</td>
+                <td className="px-3 py-2 text-sm text-gray-800 font-medium flex items-center gap-2">
+                  <span title={c.temperatura === 'CALIENTE' ? 'Caliente' : c.temperatura === 'TIBIO' ? 'Tibio' : 'Frío'}>
+                    {c.temperatura === 'CALIENTE' ? '🔥' : c.temperatura === 'TIBIO' ? '☀️' : '❄️'}
+                  </span>
+                  {c.nombre}
+                </td>
                 <td className="px-3 py-2">
                   <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${c.empresa === 'INQUILINO' ? 'bg-green-100 text-green-700 border border-green-200' :
                       c.empresa === 'PROPIETARIO' ? 'bg-purple-100 text-purple-700 border border-purple-200' :
@@ -293,7 +298,12 @@ export default function ClientesPage() {
           <div key={c.id} className="bg-white rounded-lg shadow-md border border-gray-200 p-3">
             <div className="flex justify-between items-start mb-2">
               <div className="flex-1">
-                <h3 className="text-sm font-bold text-gray-800 mb-1">{c.nombre}</h3>
+                <h3 className="text-sm font-bold text-gray-800 mb-1 flex items-center gap-1">
+                  <span title={c.temperatura === 'CALIENTE' ? 'Caliente' : c.temperatura === 'TIBIO' ? 'Tibio' : 'Frío'}>
+                    {c.temperatura === 'CALIENTE' ? '🔥' : c.temperatura === 'TIBIO' ? '☀️' : '❄️'}
+                  </span>
+                  {c.nombre}
+                </h3>
                 <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${c.empresa === 'INQUILINO' ? 'bg-green-100 text-green-700 border border-green-200' :
                     c.empresa === 'PROPIETARIO' ? 'bg-purple-100 text-purple-700 border border-purple-200' :
                       c.empresa === 'COMPRADOR' ? 'bg-blue-100 text-blue-700 border border-blue-200' :
@@ -388,6 +398,21 @@ export default function ClientesPage() {
                   <option value="INQUILINO">🏠 Inquilino</option>
                   <option value="PROPIETARIO">🏘️ Propietario</option>
                   <option value="COMPRADOR">💰 Comprador</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Temperatura
+                </label>
+                <select
+                  className="w-full border-2 border-gray-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 p-3 rounded-lg transition-all outline-none"
+                  value={form.temperatura}
+                  onChange={e => setForm({ ...form, temperatura: e.target.value })}
+                >
+                  <option value="FRIO">❄️ Frío (Sin contacto reciente)</option>
+                  <option value="TIBIO">☀️ Tibio (En proceso)</option>
+                  <option value="CALIENTE">🔥 Caliente (Negociación avanzada)</option>
                 </select>
               </div>
 

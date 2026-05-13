@@ -61,7 +61,7 @@ export const listarClientes = async (req, res) => {
 export const crearCliente = async (req, res) => {
   try {
     const usuario = req.usuario;
-    const { nombre, empresa, telefono, email, notas } = req.body;
+    const { nombre, empresa, telefono, email, notas, temperatura, interes, usuarioId } = req.body;
 
     const cliente = await prisma.cliente.create({
       data: {
@@ -70,7 +70,9 @@ export const crearCliente = async (req, res) => {
         telefono,
         email,
         notas,
-        usuarioId: usuario.id
+        temperatura: temperatura || "FRIO",
+        interes,
+        usuarioId: usuarioId ? Number(usuarioId) : usuario.id
       }
     });
 
@@ -86,7 +88,7 @@ export const editarCliente = async (req, res) => {
   try {
     const usuario = req.usuario;
     const { id } = req.params;
-    const { nombre, empresa, telefono, email, notas } = req.body;
+    const { nombre, empresa, telefono, email, notas, temperatura, interes, usuarioId } = req.body;
 
     const cliente = await prisma.cliente.findUnique({ where: { id: Number(id) } });
 
@@ -104,7 +106,10 @@ export const editarCliente = async (req, res) => {
         empresa,
         telefono,
         email,
-        notas
+        notas,
+        temperatura,
+        interes,
+        ...(usuarioId ? { usuarioId: Number(usuarioId) } : {})
       }
     });
 
