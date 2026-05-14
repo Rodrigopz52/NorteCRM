@@ -2,6 +2,7 @@ import { useContext, useEffect, useState } from "react";
 import axios from "axios";
 import { AuthContext } from "../context/AuthContext.jsx";
 import { useToast, useConfirm } from "../hooks/useNotifications.jsx";
+import { PhoneIcon, EnvelopeIcon, ChatBubbleLeftEllipsisIcon } from "@heroicons/react/24/outline";
 import Paginacion from "../components/Paginacion.jsx";
 
 export default function ClientesPage() {
@@ -251,25 +252,56 @@ export default function ClientesPage() {
                   </td>
                 )}
                 <td className="px-3 py-2">
-                  <button
-                    onClick={() => {
-                      setForm(c);
-                      setOpenForm(true);
-                    }}
-                    className="text-blue-600 hover:text-blue-800 font-bold hover:underline mr-3 transition-colors text-xs"
-                  >
-                    Editar
-                  </button>
-                  {usuario?.rol === "GERENTE" && (
+                  <div className="flex items-center gap-3">
+                    {/* Acciones Rápidas */}
+                    <div className="flex items-center gap-2 mr-2">
+                      {c.telefono ? (
+                        <>
+                          <a href={`tel:${c.telefono}`} title="Llamar" className="text-gray-400 hover:text-green-600 transition-colors">
+                            <PhoneIcon className="w-4 h-4" />
+                          </a>
+                          <a href={`https://wa.me/${c.telefono.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" title="WhatsApp" className="text-gray-400 hover:text-green-500 transition-colors">
+                            <ChatBubbleLeftEllipsisIcon className="w-4 h-4" />
+                          </a>
+                        </>
+                      ) : (
+                        <>
+                          <span className="text-gray-200"><PhoneIcon className="w-4 h-4" /></span>
+                          <span className="text-gray-200"><ChatBubbleLeftEllipsisIcon className="w-4 h-4" /></span>
+                        </>
+                      )}
+                      {c.email ? (
+                        <a href={`mailto:${c.email}`} title="Enviar Email" className="text-gray-400 hover:text-blue-500 transition-colors">
+                          <EnvelopeIcon className="w-4 h-4" />
+                        </a>
+                      ) : (
+                        <span className="text-gray-200"><EnvelopeIcon className="w-4 h-4" /></span>
+                      )}
+                    </div>
+                    
+                    <div className="w-px h-4 bg-gray-300"></div>
+
+                    {/* Acciones del Sistema */}
                     <button
-                      onClick={() => toggleActivo(c.id, c.activo)}
-                      className={`font-bold hover:underline transition-colors text-xs ${
-                        c.activo ? 'text-red-600 hover:text-red-800' : 'text-green-600 hover:text-green-800'
-                      }`}
+                      onClick={() => {
+                        setForm(c);
+                        setOpenForm(true);
+                      }}
+                      className="text-blue-600 hover:text-blue-800 font-bold hover:underline transition-colors text-xs ml-1"
                     >
-                      {c.activo ? 'Desactivar' : 'Activar'}
+                      Editar
                     </button>
-                  )}
+                    {usuario?.rol === "GERENTE" && (
+                      <button
+                        onClick={() => toggleActivo(c.id, c.activo)}
+                        className={`font-bold hover:underline transition-colors text-xs ${
+                          c.activo ? 'text-red-600 hover:text-red-800' : 'text-green-600 hover:text-green-800'
+                        }`}
+                      >
+                        {c.activo ? 'Desactivar' : 'Activar'}
+                      </button>
+                    )}
+                  </div>
                 </td>
               </tr>
             )) : (
@@ -339,21 +371,46 @@ export default function ClientesPage() {
               )}
             </div>
 
-            <div className="flex gap-2 pt-2 border-t border-gray-200">
+            <div className="flex gap-2 pt-2 border-t border-gray-200 items-center">
+              <div className="flex items-center gap-3 mr-auto pl-1">
+                {c.telefono ? (
+                  <>
+                    <a href={`tel:${c.telefono}`} title="Llamar" className="text-gray-400 hover:text-green-600 transition-colors">
+                      <PhoneIcon className="w-5 h-5" />
+                    </a>
+                    <a href={`https://wa.me/${c.telefono.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" title="WhatsApp" className="text-gray-400 hover:text-green-500 transition-colors">
+                      <ChatBubbleLeftEllipsisIcon className="w-5 h-5" />
+                    </a>
+                  </>
+                ) : (
+                  <>
+                    <span className="text-gray-200"><PhoneIcon className="w-5 h-5" /></span>
+                    <span className="text-gray-200"><ChatBubbleLeftEllipsisIcon className="w-5 h-5" /></span>
+                  </>
+                )}
+                {c.email ? (
+                  <a href={`mailto:${c.email}`} title="Enviar Email" className="text-gray-400 hover:text-blue-500 transition-colors">
+                    <EnvelopeIcon className="w-5 h-5" />
+                  </a>
+                ) : (
+                  <span className="text-gray-200"><EnvelopeIcon className="w-5 h-5" /></span>
+                )}
+              </div>
+              
               <button
                 onClick={() => {
                   setForm(c);
                   setOpenForm(true);
                 }}
-                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-1.5 rounded-lg font-medium text-xs transition-colors"
+                className="bg-blue-600 hover:bg-blue-700 text-white py-1.5 px-4 rounded-lg font-medium text-xs transition-colors"
               >
                 Editar
               </button>
               {usuario?.rol === "GERENTE" && (
                 <button
                   onClick={() => toggleActivo(c.id, c.activo)}
-                  className={`flex-1 text-white py-1.5 rounded-lg font-medium text-xs transition-colors ${
-                    c.activo ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'
+                  className={`py-1.5 px-4 rounded-lg font-medium text-xs transition-colors ${
+                    c.activo ? 'bg-red-100 text-red-700 hover:bg-red-200' : 'bg-green-100 text-green-700 hover:bg-green-200'
                   }`}
                 >
                   {c.activo ? 'Desactivar' : 'Activar'}
