@@ -30,6 +30,7 @@ model Cliente {
   nombre        String
   empresa       String?
   telefono      String?
+  dni           String?
   email         String?
   notas         String?
   activo        Boolean       @default(true)

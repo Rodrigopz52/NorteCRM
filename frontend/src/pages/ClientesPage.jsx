@@ -15,7 +15,7 @@ export default function ClientesPage() {
   const [filtroEstado, setFiltroEstado] = useState("ACTIVOS");
   const [busqueda, setBusqueda] = useState("");
   const [openForm, setOpenForm] = useState(false);
-  const [form, setForm] = useState({ nombre: "", empresa: "", telefono: "", email: "", notas: "", temperatura: "FRIO", interes: "", usuarioId: "" });
+  const [form, setForm] = useState({ id: null, nombre: "", empresa: "", telefono: "", dni: "", email: "", notas: "", temperatura: "FRIO", interes: "", usuarioId: "" });
 
   // Paginación
   const [pagina, setPagina] = useState(1);
@@ -23,7 +23,7 @@ export default function ClientesPage() {
   const [totalClientes, setTotalClientes] = useState(0);
   const [clientesActivos, setClientesActivos] = useState(0);
   const [clientesInactivos, setClientesInactivos] = useState(0);
-  const limit = 10;
+  const limit = 6;
 
   const fetchClientes = async () => {
     try {
@@ -197,229 +197,141 @@ export default function ClientesPage() {
         </div>
       </div>
 
-      {/* Tabla para desktop */}
-      <div className="hidden md:block bg-white rounded-lg shadow-md overflow-hidden border border-gray-200">
-        <table className="w-full">
-          <thead className="bg-gradient-to-r from-purple-50 to-purple-100 border-b border-purple-200">
-            <tr>
-              <th className="px-3 py-2 text-left text-xs font-bold text-purple-900 uppercase tracking-wider">Nombre</th>
-              <th className="px-3 py-2 text-left text-xs font-bold text-purple-900 uppercase tracking-wider">Tipo</th>
-              <th className="px-3 py-2 text-left text-xs font-bold text-purple-900 uppercase tracking-wider">Email</th>
-              <th className="px-3 py-2 text-left text-xs font-bold text-purple-900 uppercase tracking-wider">Teléfono</th>
-              <th className="px-3 py-2 text-center text-xs font-bold text-purple-900 uppercase tracking-wider">Estado</th>
-              {usuario?.rol === "GERENTE" && (
-                <th className="px-3 py-2 text-left text-xs font-bold text-purple-900 uppercase tracking-wider">Agente</th>
-              )}
-              <th className="px-3 py-2 text-left text-xs font-bold text-purple-900 uppercase tracking-wider">Acciones</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200">
-            {clientes.length > 0 ? clientes.map(c => (
-              <tr key={c.id} className={`transition-colors ${c.activo ? 'hover:bg-purple-50/50' : 'bg-gray-50 opacity-60'}`}>
-                <td className="px-3 py-2 text-sm text-gray-800 font-medium flex items-center gap-2">
-                  <span title={c.temperatura === 'CALIENTE' ? 'Caliente' : c.temperatura === 'TIBIO' ? 'Tibio' : 'Frío'}>
+      {/* Grilla 2 Columnas - Tarjetas Horizontales */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+        {clientes.length > 0 ? (
+          clientes.map(c => (
+            <div 
+              key={c.id} 
+              className={`bg-white rounded-xl shadow-sm border ${c.activo ? 'border-gray-200 hover:shadow-md hover:border-purple-300' : 'border-gray-200 bg-gray-50 opacity-75'} p-4 transition-all flex flex-col sm:flex-row gap-4`}
+            >
+              {/* Lado Izquierdo: Info & Contacto */}
+              <div className="flex-1 flex flex-col">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-lg" title={c.temperatura === 'CALIENTE' ? 'Caliente' : c.temperatura === 'TIBIO' ? 'Tibio' : 'Frío'}>
                     {c.temperatura === 'CALIENTE' ? '🔥' : c.temperatura === 'TIBIO' ? '☀️' : '❄️'}
                   </span>
-                  {c.nombre}
-                </td>
-                <td className="px-3 py-2">
-                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${c.empresa === 'INQUILINO' ? 'bg-green-100 text-green-700 border border-green-200' :
-                      c.empresa === 'PROPIETARIO' ? 'bg-purple-100 text-purple-700 border border-purple-200' :
-                        c.empresa === 'COMPRADOR' ? 'bg-blue-100 text-blue-700 border border-blue-200' :
-                          'bg-gray-100 text-gray-700 border border-gray-200'
-                    }`}>
-                    {c.empresa || "-"}
+                  <h3 className="text-base font-bold text-gray-800 line-clamp-1">{c.nombre}</h3>
+                </div>
+                <div className="flex items-center gap-2 mb-3">
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                    c.empresa === 'INQUILINO' ? 'bg-green-100 text-green-700 border border-green-200' :
+                    c.empresa === 'PROPIETARIO' ? 'bg-purple-100 text-purple-700 border border-purple-200' :
+                    c.empresa === 'COMPRADOR' ? 'bg-blue-100 text-blue-700 border border-blue-200' :
+                    'bg-gray-100 text-gray-700 border border-gray-200'
+                  }`}>
+                    {c.empresa || "Sin tipo"}
                   </span>
-                </td>
-                <td className="px-3 py-2 text-sm text-gray-600">{c.email || "-"}</td>
-                <td className="px-3 py-2 text-sm text-gray-600">{c.telefono || "-"}</td>
-                <td className="px-3 py-2 text-center">
-                  {c.activo ? (
-                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-green-100 text-green-800">
-                      Activo
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-red-100 text-red-800">
+                  {!c.activo && (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-100 text-red-800 uppercase">
                       Inactivo
                     </span>
                   )}
-                </td>
-                {usuario?.rol === "GERENTE" && (
-                  <td className="px-3 py-2">
-                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-purple-100 text-purple-700 border border-purple-200">
-                      {c.usuario?.nombre || "Sin asignar"}
-                    </span>
-                  </td>
-                )}
-                <td className="px-3 py-2">
-                  <div className="flex items-center gap-3">
-                    {/* Acciones Rápidas */}
-                    <div className="flex items-center gap-2 mr-2">
-                      {c.telefono ? (
-                        <>
-                          <a href={`tel:${c.telefono}`} title="Llamar" className="text-gray-400 hover:text-green-600 transition-colors">
-                            <PhoneIcon className="w-4 h-4" />
-                          </a>
-                          <a href={`https://wa.me/${c.telefono.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" title="WhatsApp" className="text-gray-400 hover:text-green-500 transition-colors">
-                            <ChatBubbleLeftEllipsisIcon className="w-4 h-4" />
-                          </a>
-                        </>
-                      ) : (
-                        <>
-                          <span className="text-gray-200"><PhoneIcon className="w-4 h-4" /></span>
-                          <span className="text-gray-200"><ChatBubbleLeftEllipsisIcon className="w-4 h-4" /></span>
-                        </>
-                      )}
-                      {c.email ? (
-                        <a href={`mailto:${c.email}`} title="Enviar Email" className="text-gray-400 hover:text-blue-500 transition-colors">
-                          <EnvelopeIcon className="w-4 h-4" />
-                        </a>
-                      ) : (
-                        <span className="text-gray-200"><EnvelopeIcon className="w-4 h-4" /></span>
-                      )}
-                    </div>
-                    
-                    <div className="w-px h-4 bg-gray-300"></div>
+                </div>
 
-                    {/* Acciones del Sistema */}
+                <div className="text-sm text-gray-700 font-medium space-y-2 mt-auto bg-gray-50/50 p-2.5 rounded-lg border border-gray-100">
+                  {c.dni && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-gray-400 bg-gray-200 px-1.5 rounded">DNI</span>
+                      <span>{c.dni}</span>
+                    </div>
+                  )}
+                  <div className="flex items-center gap-2">
+                    <PhoneIcon className="w-4 h-4 text-purple-500" />
+                    {c.telefono || <span className="italic text-gray-400 text-xs font-normal">Sin teléfono</span>}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <EnvelopeIcon className="w-4 h-4 text-purple-500" />
+                    <span className="truncate">{c.email || <span className="italic text-gray-400 text-xs font-normal">Sin email</span>}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Lado Derecho: Interés, Tarea & Acciones */}
+              <div className="flex-1 flex flex-col border-t sm:border-t-0 sm:border-l border-gray-100 pt-3 sm:pt-0 sm:pl-4">
+                <div className="flex-1">
+                  {c.interes && (
+                    <div className="text-xs text-gray-700 mb-2">
+                      <span className="font-bold text-gray-400 text-[9px] uppercase tracking-wider block mb-0.5">Busca</span>
+                      <span className="line-clamp-2" title={c.interes}>{c.interes}</span>
+                    </div>
+                  )}
+                  {/* Placeholder Tarea */}
+                  <div className="inline-flex items-start gap-1.5 mt-1 text-[10px] bg-orange-50 text-orange-700 border border-orange-100 px-2 py-1.5 rounded font-medium">
+                    <span className="mt-0.5">⏱️</span>
+                    <span>Pendiente: Llamar mañana</span>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between mt-3 pt-2 border-t border-gray-50">
+                  <div className="flex items-center gap-2">
+                    {c.telefono ? (
+                      <>
+                        <a href={`tel:${c.telefono}`} title="Llamar" className="text-gray-500 hover:text-green-600 transition-colors p-1.5 bg-gray-100 hover:bg-green-100 rounded-lg">
+                          <PhoneIcon className="w-5 h-5" />
+                        </a>
+                        <a href={`https://wa.me/${c.telefono.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" title="WhatsApp" className="text-gray-500 hover:text-green-600 transition-colors p-1.5 bg-gray-100 hover:bg-green-100 rounded-lg">
+                          <ChatBubbleLeftEllipsisIcon className="w-5 h-5" />
+                        </a>
+                      </>
+                    ) : (
+                      <>
+                        <span className="text-gray-300 p-1.5 bg-gray-50 rounded-lg"><PhoneIcon className="w-5 h-5" /></span>
+                        <span className="text-gray-300 p-1.5 bg-gray-50 rounded-lg"><ChatBubbleLeftEllipsisIcon className="w-5 h-5" /></span>
+                      </>
+                    )}
+                    {c.email ? (
+                      <a href={`mailto:${c.email}`} title="Enviar Email" className="text-gray-500 hover:text-blue-600 transition-colors p-1.5 bg-gray-100 hover:bg-blue-100 rounded-lg ml-1">
+                        <EnvelopeIcon className="w-5 h-5" />
+                      </a>
+                    ) : (
+                      <span className="text-gray-300 p-1.5 bg-gray-50 rounded-lg ml-1"><EnvelopeIcon className="w-5 h-5" /></span>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-2">
                     <button
                       onClick={() => {
                         setForm(c);
                         setOpenForm(true);
                       }}
-                      className="text-blue-600 hover:text-blue-800 font-bold hover:underline transition-colors text-xs ml-1"
+                      className="text-blue-600 hover:bg-blue-50 px-2 py-1 rounded font-bold transition-colors text-xs"
                     >
                       Editar
                     </button>
                     {usuario?.rol === "GERENTE" && (
                       <button
                         onClick={() => toggleActivo(c.id, c.activo)}
-                        className={`font-bold hover:underline transition-colors text-xs ${
-                          c.activo ? 'text-red-600 hover:text-red-800' : 'text-green-600 hover:text-green-800'
+                        className={`font-bold transition-colors text-xs px-2 py-1 rounded ${
+                          c.activo ? 'text-gray-400 hover:text-red-600 hover:bg-red-50' : 'text-gray-400 hover:text-green-600 hover:bg-green-50'
                         }`}
+                        title={c.activo ? 'Desactivar cliente' : 'Activar cliente'}
                       >
-                        {c.activo ? 'Desactivar' : 'Activar'}
+                        {c.activo ? 'Baja' : 'Alta'}
                       </button>
                     )}
                   </div>
-                </td>
-              </tr>
-            )) : (
-              <tr>
-                <td colSpan="6" className="px-3 py-4 text-center text-sm text-gray-500">
-                  No se encontraron clientes
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+                </div>
+              </div>
+            </div>
+          ))
+        ) : (
+          <div className="col-span-full text-center py-12 bg-white rounded-xl border border-gray-200 shadow-sm">
+            <p className="text-gray-500 font-medium">No se encontraron clientes</p>
+          </div>
+        )}
       </div>
 
       {/* Controles de Paginación */}
-      <Paginacion
-        page={pagina}
-        totalPages={totalPaginas}
-        total={totalClientes}
-        limit={limit}
-        onPageChange={setPagina}
-      />
-
-      {/* Cards para móvil */}
-      <div className="md:hidden space-y-2">
-        {clientes.map(c => (
-          <div key={c.id} className="bg-white rounded-lg shadow-md border border-gray-200 p-3">
-            <div className="flex justify-between items-start mb-2">
-              <div className="flex-1">
-                <h3 className="text-sm font-bold text-gray-800 mb-1 flex items-center gap-1">
-                  <span title={c.temperatura === 'CALIENTE' ? 'Caliente' : c.temperatura === 'TIBIO' ? 'Tibio' : 'Frío'}>
-                    {c.temperatura === 'CALIENTE' ? '🔥' : c.temperatura === 'TIBIO' ? '☀️' : '❄️'}
-                  </span>
-                  {c.nombre}
-                </h3>
-                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${c.empresa === 'INQUILINO' ? 'bg-green-100 text-green-700 border border-green-200' :
-                    c.empresa === 'PROPIETARIO' ? 'bg-purple-100 text-purple-700 border border-purple-200' :
-                      c.empresa === 'COMPRADOR' ? 'bg-blue-100 text-blue-700 border border-blue-200' :
-                        'bg-gray-100 text-gray-700 border border-gray-200'
-                  }`}>
-                  {c.empresa || "-"}
-                </span>
-              </div>
-            </div>
-
-            <div className="space-y-1 mb-2">
-              <div className="flex items-center text-xs">
-                <span className="text-gray-500 w-16">Email:</span>
-                <span className="text-gray-800 truncate">{c.email || "-"}</span>
-              </div>
-              <div className="flex items-center text-xs">
-                <span className="text-gray-500 w-16">Teléfono:</span>
-                <span className="text-gray-800">{c.telefono || "-"}</span>
-              </div>
-              <div className="flex items-center text-xs">
-                <span className="text-gray-500 w-16">Estado:</span>
-                <span className={`font-semibold ${c.activo ? 'text-green-600' : 'text-red-600'}`}>
-                  {c.activo ? 'Activo' : 'Inactivo'}
-                </span>
-              </div>
-              {usuario?.rol === "GERENTE" && (
-                <div className="flex items-center text-xs">
-                  <span className="text-gray-500 w-16">Agente:</span>
-                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-purple-100 text-purple-700 border border-purple-200">
-                    {c.usuario?.nombre || "Sin asignar"}
-                  </span>
-                </div>
-              )}
-            </div>
-
-            <div className="flex gap-2 pt-2 border-t border-gray-200 items-center">
-              <div className="flex items-center gap-3 mr-auto pl-1">
-                {c.telefono ? (
-                  <>
-                    <a href={`tel:${c.telefono}`} title="Llamar" className="text-gray-400 hover:text-green-600 transition-colors">
-                      <PhoneIcon className="w-5 h-5" />
-                    </a>
-                    <a href={`https://wa.me/${c.telefono.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" title="WhatsApp" className="text-gray-400 hover:text-green-500 transition-colors">
-                      <ChatBubbleLeftEllipsisIcon className="w-5 h-5" />
-                    </a>
-                  </>
-                ) : (
-                  <>
-                    <span className="text-gray-200"><PhoneIcon className="w-5 h-5" /></span>
-                    <span className="text-gray-200"><ChatBubbleLeftEllipsisIcon className="w-5 h-5" /></span>
-                  </>
-                )}
-                {c.email ? (
-                  <a href={`mailto:${c.email}`} title="Enviar Email" className="text-gray-400 hover:text-blue-500 transition-colors">
-                    <EnvelopeIcon className="w-5 h-5" />
-                  </a>
-                ) : (
-                  <span className="text-gray-200"><EnvelopeIcon className="w-5 h-5" /></span>
-                )}
-              </div>
-              
-              <button
-                onClick={() => {
-                  setForm(c);
-                  setOpenForm(true);
-                }}
-                className="bg-blue-600 hover:bg-blue-700 text-white py-1.5 px-4 rounded-lg font-medium text-xs transition-colors"
-              >
-                Editar
-              </button>
-              {usuario?.rol === "GERENTE" && (
-                <button
-                  onClick={() => toggleActivo(c.id, c.activo)}
-                  className={`py-1.5 px-4 rounded-lg font-medium text-xs transition-colors ${
-                    c.activo ? 'bg-red-100 text-red-700 hover:bg-red-200' : 'bg-green-100 text-green-700 hover:bg-green-200'
-                  }`}
-                >
-                  {c.activo ? 'Desactivar' : 'Activar'}
-                </button>
-              )}
-            </div>
-          </div>
-        ))}
-      </div>
+      {clientes.length > 0 && (
+        <Paginacion
+          page={pagina}
+          totalPages={totalPaginas}
+          total={totalClientes}
+          limit={limit}
+          onPageChange={setPagina}
+        />
+      )}
 
       {openForm && (
         <div className="fixed inset-0 bg-black/50 flex justify-center items-center backdrop-blur-sm z-50 p-4">
@@ -475,7 +387,9 @@ export default function ClientesPage() {
 
               {[
                 { field: "telefono", label: "Teléfono", type: "tel", maxLength: 11, pattern: "\\d*" },
+                { field: "dni", label: "DNI/Documento", type: "text", maxLength: 8, pattern: "\\d*" },
                 { field: "email", label: "Email", type: "text" },
+                { field: "interes", label: "Interés en... (Ej: Casa Moderna)", type: "text" },
                 { field: "notas", label: "Notas", type: "textarea" }
               ].map(({ field, label, type, maxLength, pattern }) => (
                 <div key={field}>
