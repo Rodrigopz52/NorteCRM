@@ -23,6 +23,7 @@ export const obtenerActividades = async (req, res) => {
             cliente: true
           }
         },
+        cliente: true,
         usuario: {
           select: {
             nombre: true,
@@ -47,20 +48,31 @@ export const obtenerActividades = async (req, res) => {
 // Crear actividad
 export const crearActividad = async (req, res) => {
   try {
-    const { tipo, titulo, descripcion, fechaVencimiento, oportunidadId } = req.body;
+    const { tipo, titulo, descripcion, fechaVencimiento, oportunidadId, clienteId } = req.body;
     const { id: usuarioId, rol } = req.usuario;
 
-    // Verificar que la oportunidad existe y pertenece al usuario (si es vendedor)
-    const oportunidad = await prisma.oportunidad.findUnique({
-      where: { id: Number(oportunidadId) }
-    });
-
-    if (!oportunidad) {
-      return res.status(404).json({ error: "Oportunidad no encontrada" });
+    if (!oportunidadId && !clienteId) {
+      return res.status(400).json({ error: "Debe proporcionar una oportunidad o un cliente para la actividad" });
     }
 
-    if (rol === "VENDEDOR" && oportunidad.usuarioId !== usuarioId) {
-      return res.status(403).json({ error: "No tienes permiso para esta oportunidad" });
+    let clienteIdFinal = clienteId ? Number(clienteId) : null;
+
+    if (oportunidadId) {
+      const oportunidad = await prisma.oportunidad.findUnique({ where: { id: Number(oportunidadId) } });
+      if (!oportunidad) return res.status(404).json({ error: "Oportunidad no encontrada" });
+      if (rol === "VENDEDOR" && oportunidad.usuarioId !== usuarioId) {
+        return res.status(403).json({ error: "No tienes permiso para esta oportunidad" });
+      }
+      // Auto-asignar el cliente de la oportunidad a la actividad
+      clienteIdFinal = oportunidad.clienteId;
+    }
+
+    if (clienteIdFinal && !oportunidadId) {
+      const cliente = await prisma.cliente.findUnique({ where: { id: clienteIdFinal } });
+      if (!cliente) return res.status(404).json({ error: "Cliente no encontrado" });
+      if (rol === "VENDEDOR" && cliente.usuarioId !== usuarioId) {
+        return res.status(403).json({ error: "No tienes permiso para este cliente" });
+      }
     }
 
     const actividad = await prisma.actividad.create({
@@ -69,19 +81,17 @@ export const crearActividad = async (req, res) => {
         titulo,
         descripcion,
         fechaVencimiento: new Date(fechaVencimiento),
-        oportunidadId: Number(oportunidadId),
+        oportunidadId: oportunidadId ? Number(oportunidadId) : null,
+        clienteId: clienteIdFinal,
         usuarioId
       },
       include: {
-        oportunidad: {
-          include: {
-            cliente: true
-          }
-        }
+        oportunidad: { include: { cliente: true } },
+        cliente: true
       }
     });
 
-    res.status(201).json(actividad);
+    res.status(201).json({ mensaje: "Actividad creada", actividad });
   } catch (error) {
     console.error("Error al crear actividad:", error);
     res.status(500).json({ error: "Error al crear actividad: " + error.message });

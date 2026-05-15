@@ -364,7 +364,10 @@ export default function TareasPage() {
                           <span>•</span>
 
                           <span>
-                            {act.oportunidad?.titulo} - Cliente: {act.oportunidad?.cliente?.nombre}
+                            {act.oportunidad 
+                              ? `${act.oportunidad.titulo} - Cliente: ${act.oportunidad.cliente?.nombre || 'Desconocido'}`
+                              : `Cliente: ${act.cliente?.nombre || 'Desconocido'}`
+                            }
                             {usuario?.rol === "GERENTE" && (
                               <span className="ml-3">
                                 Asesor: <span className="text-purple-600 font-semibold">{act.usuario?.nombre} {act.usuario?.apellido}</span>

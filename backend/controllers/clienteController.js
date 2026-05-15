@@ -12,18 +12,18 @@ export const listarClientes = async (req, res) => {
     const busqueda = req.query.busqueda?.trim() || "";
     const tipo = req.query.tipo || "";
     const estado = req.query.estado || "ACTIVOS";
-    
+
     const filtroRol = usuario.rol === "VENDEDOR" ? { usuarioId: usuario.id } : {};
     const filtroTipo = tipo ? { empresa: tipo } : {};
     const filtroEstado = estado === "ACTIVOS" ? { activo: true } : estado === "INACTIVOS" ? { activo: false } : {};
     const filtroBusqueda = busqueda
       ? {
-          OR: [
-            { nombre: { contains: busqueda } },
-            { email: { contains: busqueda } },
-            { telefono: { contains: busqueda } }
-          ]
-        }
+        OR: [
+          { nombre: { contains: busqueda } },
+          { email: { contains: busqueda } },
+          { telefono: { contains: busqueda } }
+        ]
+      }
       : {};
 
     const whereStats = { ...filtroRol, ...filtroTipo, ...filtroBusqueda };
@@ -32,10 +32,16 @@ export const listarClientes = async (req, res) => {
     const [clientes, total, totalActivos, totalInactivos] = await Promise.all([
       prisma.cliente.findMany({
         where,
-        include:
-          usuario.rol === "GERENTE" || usuario.rol === "ADMINISTRADOR"
+        include: {
+          actividades: {
+            where: { completada: false },
+            orderBy: { fechaVencimiento: 'asc' },
+            take: 1
+          },
+          ...(usuario.rol === "GERENTE" || usuario.rol === "ADMINISTRADOR"
             ? { usuario: { select: { id: true, nombre: true, apellido: true, email: true } } }
-            : undefined,
+            : {})
+        },
         orderBy: { nombre: "asc" },
         skip,
         take
@@ -48,7 +54,7 @@ export const listarClientes = async (req, res) => {
     const baseResponse = construirRespuestaPaginada(clientes, total, page, limit);
     baseResponse.meta.totalActivos = totalActivos;
     baseResponse.meta.totalInactivos = totalInactivos;
-    
+
     return res.json(baseResponse);
 
   } catch (error) {

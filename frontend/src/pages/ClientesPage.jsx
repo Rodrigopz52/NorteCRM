@@ -16,6 +16,7 @@ export default function ClientesPage() {
   const [busqueda, setBusqueda] = useState("");
   const [openForm, setOpenForm] = useState(false);
   const [form, setForm] = useState({ id: null, nombre: "", empresa: "", telefono: "", dni: "", email: "", notas: "", temperatura: "FRIO", interes: "", usuarioId: "" });
+  const [tareaModal, setTareaModal] = useState({ open: false, clienteId: null, descripcion: "", fechaLimite: "" });
 
   // Paginación
   const [pagina, setPagina] = useState(1);
@@ -105,7 +106,7 @@ export default function ClientesPage() {
     try {
       const confirmed = await showConfirm({
         title: `¿Seguro que deseas ${activoActual ? 'desactivar' : 'activar'} este cliente?`,
-        message: activoActual 
+        message: activoActual
           ? "El cliente no se eliminará físicamente, pero se ocultará de las listas principales."
           : "El cliente volverá a estar visible en el listado activo.",
         type: activoActual ? "warning" : "info"
@@ -122,6 +123,43 @@ export default function ClientesPage() {
     } catch (err) {
       console.error("Error al cambiar estado:", err);
       error(err.response?.data?.error || "Error al cambiar el estado del cliente");
+    }
+  };
+
+  const guardarActividad = async () => {
+    if (!tareaModal.descripcion.trim()) {
+      error("La descripción de la tarea es obligatoria");
+      return;
+    }
+    try {
+      await axios.post("http://localhost:3000/actividades", {
+        tipo: "TAREA",
+        titulo: tareaModal.descripcion,
+        descripcion: tareaModal.descripcion,
+        fechaVencimiento: tareaModal.fechaLimite || new Date().toISOString(),
+        clienteId: tareaModal.clienteId
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      success("Tarea guardada");
+      setTareaModal({ open: false, clienteId: null, descripcion: "", fechaLimite: "" });
+      fetchClientes();
+    } catch (err) {
+      error("Error al guardar tarea");
+    }
+  };
+
+  const completarActividad = async (actividadId) => {
+    try {
+      await axios.put(`http://localhost:3000/actividades/${actividadId}/completar`, {
+        completada: true
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      success("Tarea completada 🎉");
+      fetchClientes();
+    } catch (err) {
+      error("Error al completar la tarea");
     }
   };
 
@@ -154,15 +192,15 @@ export default function ClientesPage() {
                   key={tipo}
                   onClick={() => setFiltroTipo(tipo)}
                   className={`px-2.5 py-1.5 rounded-lg font-medium text-xs transition-all ${filtroTipo === tipo
-                      ? "bg-purple-600 text-white shadow-md"
-                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    ? "bg-purple-600 text-white shadow-md"
+                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                     }`}
                 >
                   {tipo === "INQUILINO" ? "🏠 Inquilino" : tipo === "PROPIETARIO" ? "🏘️ Propietario" : tipo === "COMPRADOR" ? "💰 Comprador" : "Todos"}
                 </button>
               ))}
             </div>
-            
+
             <select
               className="sm:ml-2 border border-gray-300 focus:border-purple-500 focus:ring-1 focus:ring-purple-200 p-2 rounded-lg transition-all outline-none text-sm"
               value={filtroEstado}
@@ -201,8 +239,8 @@ export default function ClientesPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
         {clientes.length > 0 ? (
           clientes.map(c => (
-            <div 
-              key={c.id} 
+            <div
+              key={c.id}
               className={`bg-white rounded-xl shadow-sm border ${c.activo ? 'border-gray-200 hover:shadow-md hover:border-purple-300' : 'border-gray-200 bg-gray-50 opacity-75'} p-4 transition-all flex flex-col sm:flex-row gap-4`}
             >
               {/* Lado Izquierdo: Info & Contacto */}
@@ -214,12 +252,11 @@ export default function ClientesPage() {
                   <h3 className="text-base font-bold text-gray-800 line-clamp-1">{c.nombre}</h3>
                 </div>
                 <div className="flex items-center gap-2 mb-3">
-                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                    c.empresa === 'INQUILINO' ? 'bg-green-100 text-green-700 border border-green-200' :
-                    c.empresa === 'PROPIETARIO' ? 'bg-purple-100 text-purple-700 border border-purple-200' :
-                    c.empresa === 'COMPRADOR' ? 'bg-blue-100 text-blue-700 border border-blue-200' :
-                    'bg-gray-100 text-gray-700 border border-gray-200'
-                  }`}>
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${c.empresa === 'INQUILINO' ? 'bg-green-100 text-green-700 border border-green-200' :
+                      c.empresa === 'PROPIETARIO' ? 'bg-purple-100 text-purple-700 border border-purple-200' :
+                        c.empresa === 'COMPRADOR' ? 'bg-blue-100 text-blue-700 border border-blue-200' :
+                          'bg-gray-100 text-gray-700 border border-gray-200'
+                    }`}>
                     {c.empresa || "Sin tipo"}
                   </span>
                   {!c.activo && (
@@ -256,11 +293,27 @@ export default function ClientesPage() {
                       <span className="line-clamp-2" title={c.interes}>{c.interes}</span>
                     </div>
                   )}
-                  {/* Placeholder Tarea */}
-                  <div className="inline-flex items-start gap-1.5 mt-1 text-[10px] bg-orange-50 text-orange-700 border border-orange-100 px-2 py-1.5 rounded font-medium">
-                    <span className="mt-0.5">⏱️</span>
-                    <span>Pendiente: Llamar mañana</span>
-                  </div>
+                  {/* Tareas / Actividades */}
+                  {c.actividades && c.actividades.length > 0 ? (
+                    <div 
+                      onClick={() => completarActividad(c.actividades[0].id)}
+                      className="inline-flex items-start gap-1.5 mt-1 text-[10px] bg-orange-50 text-orange-700 border border-orange-100 px-2 py-1.5 rounded font-medium cursor-pointer hover:bg-orange-100 transition-colors"
+                      title="Haz clic para marcar como completada"
+                    >
+                      <span className="mt-0.5">⏱️</span>
+                      <span className="line-clamp-2">
+                        Pendiente: {c.actividades[0].titulo}
+                        {c.actividades[0].fechaVencimiento && ` - Vence: ${new Date(c.actividades[0].fechaVencimiento).toLocaleDateString()}`}
+                      </span>
+                    </div>
+                  ) : (
+                    <button 
+                      onClick={() => setTareaModal({ open: true, clienteId: c.id, descripcion: "", fechaLimite: "" })}
+                      className="inline-flex items-center gap-1 mt-1 text-[10px] text-gray-500 hover:text-purple-600 bg-gray-50 hover:bg-purple-50 px-2 py-1 rounded border border-dashed border-gray-300 hover:border-purple-300 transition-colors"
+                    >
+                      <span>+</span> Añadir tarea
+                    </button>
+                  )}
                 </div>
 
                 <div className="flex items-center justify-between mt-3 pt-2 border-t border-gray-50">
@@ -302,9 +355,8 @@ export default function ClientesPage() {
                     {usuario?.rol === "GERENTE" && (
                       <button
                         onClick={() => toggleActivo(c.id, c.activo)}
-                        className={`font-bold transition-colors text-xs px-2 py-1 rounded ${
-                          c.activo ? 'text-gray-400 hover:text-red-600 hover:bg-red-50' : 'text-gray-400 hover:text-green-600 hover:bg-green-50'
-                        }`}
+                        className={`font-bold transition-colors text-xs px-2 py-1 rounded ${c.activo ? 'text-gray-400 hover:text-red-600 hover:bg-red-50' : 'text-gray-400 hover:text-green-600 hover:bg-green-50'
+                          }`}
                         title={c.activo ? 'Desactivar cliente' : 'Activar cliente'}
                       >
                         {c.activo ? 'Baja' : 'Alta'}
@@ -438,6 +490,52 @@ export default function ClientesPage() {
                 onClick={crearCliente}
               >
                 {form.id ? "Actualizar" : "Guardar"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Nueva Tarea (Actividad) */}
+      {tareaModal.open && (
+        <div className="fixed inset-0 bg-black/50 flex justify-center items-center backdrop-blur-sm z-50 p-4">
+          <div className="bg-white p-6 rounded-xl shadow-2xl w-full max-w-sm border border-gray-200">
+            <h3 className="text-xl font-bold mb-4 text-gray-800">Nueva Tarea</h3>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-1">Descripción</label>
+                <textarea
+                  value={tareaModal.descripcion}
+                  onChange={e => setTareaModal({ ...tareaModal, descripcion: e.target.value })}
+                  className="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all"
+                  placeholder="Ej: Llamar para coordinar visita..."
+                  rows="3"
+                ></textarea>
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-1">Fecha Límite (Opcional)</label>
+                <input
+                  type="date"
+                  value={tareaModal.fechaLimite}
+                  onChange={e => setTareaModal({ ...tareaModal, fechaLimite: e.target.value })}
+                  className="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                onClick={() => setTareaModal({ open: false, clienteId: null, descripcion: "", fechaLimite: "" })}
+                className="px-4 py-2 text-gray-600 font-semibold hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={guardarActividad}
+                className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-5 rounded-lg shadow-md hover:shadow-lg transition-all"
+              >
+                Guardar Tarea
               </button>
             </div>
           </div>
