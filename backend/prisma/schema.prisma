@@ -90,6 +90,8 @@ model Actividad {
   titulo             String
   descripcion        String?
   fechaVencimiento   DateTime
+  estado             String       @default("PENDIENTE") // "PENDIENTE", "EN_PROCESO", "COMPLETADA"
+  prioridad          String       @default("MEDIA")     // "ALTA", "MEDIA", "BAJA"
   completada         Boolean      @default(false)
   fechaCompletada    DateTime?
   oportunidad        Oportunidad? @relation(fields: [oportunidadId], references: [id], onDelete: Cascade)

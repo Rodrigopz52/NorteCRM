@@ -48,7 +48,7 @@ export const obtenerActividades = async (req, res) => {
 // Crear actividad
 export const crearActividad = async (req, res) => {
   try {
-    const { tipo, titulo, descripcion, fechaVencimiento, oportunidadId, clienteId } = req.body;
+    const { tipo, titulo, descripcion, fechaVencimiento, oportunidadId, clienteId, prioridad, estado } = req.body;
     const { id: usuarioId, rol } = req.usuario;
 
     if (!oportunidadId && !clienteId) {
@@ -83,6 +83,8 @@ export const crearActividad = async (req, res) => {
         fechaVencimiento: new Date(fechaVencimiento),
         oportunidadId: oportunidadId ? Number(oportunidadId) : null,
         clienteId: clienteIdFinal,
+        prioridad: prioridad || "MEDIA",
+        estado: estado || "PENDIENTE",
         usuarioId
       },
       include: {
@@ -102,7 +104,7 @@ export const crearActividad = async (req, res) => {
 export const editarActividad = async (req, res) => {
   try {
     const { id } = req.params;
-    const { tipo, titulo, descripcion, fechaVencimiento, oportunidadId } = req.body;
+    const { tipo, titulo, descripcion, fechaVencimiento, oportunidadId, clienteId, prioridad, estado } = req.body;
     const { id: usuarioId, rol } = req.usuario;
 
     const actividad = await prisma.actividad.findUnique({
@@ -140,7 +142,10 @@ export const editarActividad = async (req, res) => {
         titulo,
         descripcion,
         fechaVencimiento: new Date(fechaVencimiento),
-        oportunidadId: Number(oportunidadId)
+        ...(oportunidadId !== undefined && { oportunidadId: oportunidadId ? Number(oportunidadId) : null }),
+        ...(clienteId !== undefined && { clienteId: clienteId ? Number(clienteId) : null }),
+        ...(prioridad && { prioridad }),
+        ...(estado && { estado })
       },
       include: {
         oportunidad: {
@@ -189,6 +194,7 @@ export const completarActividad = async (req, res) => {
       where: { id: Number(id) },
       data: {
         completada,
+        estado: completada ? "COMPLETADA" : "PENDIENTE",
         fechaCompletada: completada ? new Date() : null
       },
       include: {
