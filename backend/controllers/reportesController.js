@@ -255,7 +255,7 @@ export const dashboardPersonalizado = async (req, res) => {
       });
 
     } else {
-      // DASHBOARD GERENTE
+      // DASHBOARD GERENTE (legacy - mantener compatibilidad)
       const metricasGrales = await prisma.$transaction([
         prisma.oportunidad.count({ where: { activo: true } }),
         prisma.cliente.count({ where: { activo: true } }),
@@ -272,7 +272,6 @@ export const dashboardPersonalizado = async (req, res) => {
 
       const [totalPropiedades, totalClientes, totalVendedores, montoMesObj] = metricasGrales;
 
-      // PROPIEDADES POR ESTADO (Global)
       const propiedadesPorEstadoGlobal = await prisma.oportunidad.groupBy({
         by: ['etapa'],
         _count: { id: true },
@@ -286,7 +285,6 @@ export const dashboardPersonalizado = async (req, res) => {
         vendida: propiedadesPorEstadoGlobal.find(e => e.etapa === 'VENDIDA')?._count.id || 0
       };
 
-      // VENDEDORES TOP DEL MES
       const vendedores = await prisma.usuario.findMany({
         where: { activo: true, rol: "VENDEDOR" },
         include: {
@@ -307,7 +305,6 @@ export const dashboardPersonalizado = async (req, res) => {
         monto: v.oportunidades.reduce((sum, op) => sum + (op.valor || 0), 0)
       })).sort((a, b) => b.monto - a.monto).slice(0, 5);
 
-      // VENTAS DE LA EMPRESA POR MES (últimos 6 meses)
       const ventasEmpresaPorMes = [];
       for (let i = 5; i >= 0; i--) {
         const mes = new Date(hoy.getFullYear(), hoy.getMonth() - i, 1);
@@ -345,5 +342,351 @@ export const dashboardPersonalizado = async (req, res) => {
   } catch (error) {
     console.error("Error en dashboard personalizado:", error);
     res.status(500).json({ error: "Error al cargar el dashboard" });
+  }
+};
+
+// ============================================================
+// NUEVO: Dashboard Gerencial con filtros de período
+// ============================================================
+export const dashboardGerencial = async (req, res) => {
+  if (req.usuario.rol !== "GERENTE" && req.usuario.rol !== "ADMINISTRADOR") {
+    return res.status(403).json({ error: "Acceso denegado" });
+  }
+
+  try {
+    const { periodo = "mes", compararAnterior = "true" } = req.query;
+    const ahora = new Date();
+
+    // Calcular rangos de fechas
+    const calcularRango = (p, offset = 0) => {
+      const hoy = new Date(ahora);
+      let desde, hasta;
+
+      if (p === "semana") {
+        const diaSemana = hoy.getDay(); // 0=Dom, 1=Lun...
+        const lunes = new Date(hoy);
+        lunes.setDate(hoy.getDate() - ((diaSemana + 6) % 7) + offset * 7);
+        lunes.setHours(0, 0, 0, 0);
+        const domingo = new Date(lunes);
+        domingo.setDate(lunes.getDate() + 6);
+        domingo.setHours(23, 59, 59, 999);
+        desde = lunes;
+        hasta = domingo;
+      } else if (p === "trimestre") {
+        const mesActual = hoy.getMonth();
+        const inicioTrimestre = Math.floor(mesActual / 3) * 3 + offset * 3;
+        const anio = hoy.getFullYear() + (inicioTrimestre < 0 ? -1 : inicioTrimestre > 11 ? 1 : 0);
+        const mesNorm = ((inicioTrimestre % 12) + 12) % 12;
+        desde = new Date(anio, mesNorm, 1, 0, 0, 0, 0);
+        hasta = new Date(anio, mesNorm + 3, 0, 23, 59, 59, 999);
+      } else if (p === "anio") {
+        const anio = hoy.getFullYear() + offset;
+        desde = new Date(anio, 0, 1, 0, 0, 0, 0);
+        hasta = new Date(anio, 11, 31, 23, 59, 59, 999);
+      } else {
+        // mes (default)
+        const anio = hoy.getFullYear();
+        const mes = hoy.getMonth() + offset;
+        const anioReal = anio + Math.floor(mes / 12);
+        const mesReal = ((mes % 12) + 12) % 12;
+        desde = new Date(anioReal, mesReal, 1, 0, 0, 0, 0);
+        hasta = new Date(anioReal, mesReal + 1, 0, 23, 59, 59, 999);
+      }
+
+      return { desde, hasta };
+    };
+
+    const { desde, hasta } = calcularRango(periodo, 0);
+    const { desde: desdeAnt, hasta: hastaAnt } = calcularRango(periodo, -1);
+
+    const hoyInicio = new Date(ahora);
+    hoyInicio.setHours(0, 0, 0, 0);
+    const hoyFin = new Date(ahora);
+    hoyFin.setHours(23, 59, 59, 999);
+
+    // ── KPIs ACTUALES ──────────────────────────────────────────
+    const [opsCerradasAct, opsAnteriores, totalLeads] = await Promise.all([
+      prisma.oportunidad.findMany({
+        where: { activo: true, etapa: { in: ["VENDIDA", "ALQUILADA"] }, fechaCierre: { gte: desde, lte: hasta } },
+        select: { valor: true, fechaCierre: true, creadoEn: true }
+      }),
+      prisma.oportunidad.findMany({
+        where: { activo: true, etapa: { in: ["VENDIDA", "ALQUILADA"] }, fechaCierre: { gte: desdeAnt, lte: hastaAnt } },
+        select: { valor: true, fechaCierre: true, creadoEn: true }
+      }),
+      prisma.cliente.count({ where: { activo: true, creadoEn: { gte: desde, lte: hasta } } })
+    ]);
+
+    const ingresosAct = opsCerradasAct.reduce((s, o) => s + (o.valor || 0), 0);
+    const ingresosAnt = opsAnteriores.reduce((s, o) => s + (o.valor || 0), 0);
+    const variacionIngresos = ingresosAnt > 0 ? ((ingresosAct - ingresosAnt) / ingresosAnt) * 100 : 0;
+
+    // Props disponibles
+    const propsDisponiblesAct = await prisma.oportunidad.count({ where: { activo: true, etapa: "DISPONIBLE" } });
+    const propsDisponiblesAnt = await prisma.oportunidad.count({
+      where: { activo: true, etapa: "DISPONIBLE", creadoEn: { lte: hastaAnt } }
+    });
+    const variacionProps = propsDisponiblesAnt > 0 ? ((propsDisponiblesAct - propsDisponiblesAnt) / propsDisponiblesAnt) * 100 : 0;
+
+    // Tasa de conversión
+    const leadsAnt = await prisma.cliente.count({ where: { activo: true, creadoEn: { gte: desdeAnt, lte: hastaAnt } } });
+    const tasaAct = totalLeads > 0 ? (opsCerradasAct.length / totalLeads) * 100 : 0;
+    const tasaAnt = leadsAnt > 0 ? (opsAnteriores.length / leadsAnt) * 100 : 0;
+    const variacionTasa = tasaAnt > 0 ? ((tasaAct - tasaAnt) / tasaAnt) * 100 : 0;
+
+    // Días promedio a cierre
+    const calcDiasPromedio = (ops) => {
+      const opsConFecha = ops.filter(o => o.fechaCierre && o.creadoEn);
+      if (opsConFecha.length === 0) return 0;
+      const total = opsConFecha.reduce((s, o) => {
+        return s + (new Date(o.fechaCierre) - new Date(o.creadoEn)) / (1000 * 60 * 60 * 24);
+      }, 0);
+      return Math.round(total / opsConFecha.length);
+    };
+    const diasAct = calcDiasPromedio(opsCerradasAct);
+    const diasAnt = calcDiasPromedio(opsAnteriores);
+    const variacionDias = diasAnt > 0 ? ((diasAct - diasAnt) / diasAnt) * 100 : 0;
+
+    // ── GRÁFICO DE INGRESOS (últimos 6 períodos) ──────────────
+    const graficoPuntos = 6;
+    const graficoIngresos = [];
+    for (let i = graficoPuntos - 1; i >= 0; i--) {
+      const { desde: d1, hasta: h1 } = calcularRango(periodo, -i);
+      const { desde: d2, hasta: h2 } = calcularRango(periodo, -(i + graficoPuntos));
+
+      const [ventasAct, ventasAnt] = await Promise.all([
+        prisma.oportunidad.findMany({
+          where: { activo: true, etapa: { in: ["VENDIDA", "ALQUILADA"] }, fechaCierre: { gte: d1, lte: h1 } },
+          select: { valor: true }
+        }),
+        prisma.oportunidad.findMany({
+          where: { activo: true, etapa: { in: ["VENDIDA", "ALQUILADA"] }, fechaCierre: { gte: d2, lte: h2 } },
+          select: { valor: true }
+        })
+      ]);
+
+      let label;
+      if (periodo === "semana") label = i === 0 ? "Esta sem." : `Sem -${i}`;
+      else if (periodo === "trimestre") label = i === 0 ? "Este trim." : `Trim -${i}`;
+      else if (periodo === "anio") label = d1.getFullYear().toString();
+      else label = d1.toLocaleDateString('es-ES', { month: 'short' });
+
+      graficoIngresos.push({
+        label,
+        actual: ventasAct.reduce((s, o) => s + (o.valor || 0), 0),
+        anterior: ventasAnt.reduce((s, o) => s + (o.valor || 0), 0)
+      });
+    }
+
+    // ── PROPIEDADES POR ESTADO ────────────────────────────────
+    const estadosGrupos = await prisma.oportunidad.groupBy({
+      by: ['etapa'],
+      _count: { id: true },
+      where: { activo: true }
+    });
+    const propiedadesPorEstado = {
+      disponible: estadosGrupos.find(e => e.etapa === 'DISPONIBLE')?._count.id || 0,
+      reservada: estadosGrupos.find(e => e.etapa === 'RESERVADA')?._count.id || 0,
+      vendida: estadosGrupos.find(e => e.etapa === 'VENDIDA')?._count.id || 0,
+      alquilada: estadosGrupos.find(e => e.etapa === 'ALQUILADA')?._count.id || 0,
+      total: 0
+    };
+    propiedadesPorEstado.total = propiedadesPorEstado.disponible + propiedadesPorEstado.reservada + propiedadesPorEstado.vendida + propiedadesPorEstado.alquilada;
+
+    // ── EMBUDO DE VENTAS ──────────────────────────────────────
+    const etapasEmbudo = ["LEAD", "CONTACTADO", "VISITA", "NEGOCIACION", "CERRADO"];
+    const embudoGrupos = await prisma.cliente.groupBy({
+      by: ['etapaLead'],
+      _count: { id: true },
+      where: { activo: true }
+    });
+
+    const embudoMap = {};
+    etapasEmbudo.forEach(e => {
+      embudoMap[e] = embudoGrupos.find(g => g.etapaLead === e)?._count.id || 0;
+    });
+
+    // Acumulativo: cada etapa incluye todos los de etapas posteriores
+    const leads = etapasEmbudo.reduce((s, e) => s + embudoMap[e], 0);
+    const contactados = embudoMap.CONTACTADO + embudoMap.VISITA + embudoMap.NEGOCIACION + embudoMap.CERRADO;
+    const visitas = embudoMap.VISITA + embudoMap.NEGOCIACION + embudoMap.CERRADO;
+    const reservas = embudoMap.NEGOCIACION + embudoMap.CERRADO;
+    const cerradas = embudoMap.CERRADO;
+
+    const pct = (a, b) => b > 0 ? Math.round((a / b) * 100) : 0;
+
+    const embudo = [
+      { etapa: "Leads", cantidad: leads, porcentaje: 100, conversion: null },
+      { etapa: "Contactados", cantidad: contactados, porcentaje: pct(contactados, leads), conversion: pct(contactados, leads) },
+      { etapa: "Visitas", cantidad: visitas, porcentaje: pct(visitas, leads), conversion: pct(visitas, contactados) },
+      { etapa: "En negociación", cantidad: reservas, porcentaje: pct(reservas, leads), conversion: pct(reservas, visitas) },
+      { etapa: "Cerradas", cantidad: cerradas, porcentaje: pct(cerradas, leads), conversion: pct(cerradas, reservas) }
+    ];
+
+    // ── VISITAS DE HOY ────────────────────────────────────────
+    const visitasHoyRaw = await prisma.actividad.findMany({
+      where: {
+        tipo: "REUNION",
+        completada: false,
+        activo: true,
+        fechaVencimiento: { gte: hoyInicio, lte: hoyFin }
+      },
+      include: {
+        oportunidad: { include: { cliente: true } },
+        cliente: true,
+        usuario: { select: { nombre: true, apellido: true } }
+      },
+      orderBy: { fechaVencimiento: 'asc' },
+      take: 8
+    });
+
+    const visitasHoy = visitasHoyRaw.map(v => ({
+      id: v.id,
+      hora: new Date(v.fechaVencimiento).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }),
+      cliente: v.cliente?.nombre || v.oportunidad?.cliente?.nombre || 'Sin cliente',
+      propiedad: v.oportunidad?.titulo || v.titulo,
+      asesor: `${v.usuario.nombre} ${v.usuario.apellido}`,
+      asesorIniciales: `${v.usuario.nombre[0]}${v.usuario.apellido[0]}`.toUpperCase()
+    }));
+
+    // ── RANKING DE ASESORES (con meta histórica) ──────────────
+    const vendedores = await prisma.usuario.findMany({
+      where: { activo: true, rol: "VENDEDOR" },
+      select: { id: true, nombre: true, apellido: true }
+    });
+
+    const rankingAsesores = await Promise.all(vendedores.map(async (v) => {
+      // Ventas en el período actual
+      const ventasPeriodo = await prisma.oportunidad.findMany({
+        where: {
+          usuarioId: v.id,
+          activo: true,
+          etapa: { in: ["VENDIDA", "ALQUILADA"] },
+          fechaCierre: { gte: desde, lte: hasta }
+        },
+        select: { valor: true }
+      });
+      const montoPeriodo = ventasPeriodo.reduce((s, o) => s + (o.valor || 0), 0);
+      const cantidadPeriodo = ventasPeriodo.length;
+
+      // Meta = promedio mensual histórico (últimos 6 meses, excluyendo período actual)
+      let sumaMeses = 0;
+      let mesesConDatos = 0;
+      for (let i = 1; i <= 6; i++) {
+        const { desde: dHist, hasta: hHist } = calcularRango("mes", -i);
+        const ventasMes = await prisma.oportunidad.findMany({
+          where: {
+            usuarioId: v.id,
+            activo: true,
+            etapa: { in: ["VENDIDA", "ALQUILADA"] },
+            fechaCierre: { gte: dHist, lte: hHist }
+          },
+          select: { valor: true }
+        });
+        const montoMes = ventasMes.reduce((s, o) => s + (o.valor || 0), 0);
+        if (montoMes > 0) {
+          sumaMeses += montoMes;
+          mesesConDatos++;
+        }
+      }
+      const meta = mesesConDatos > 0 ? sumaMeses / mesesConDatos : 0;
+      const metaPorcentaje = meta > 0 ? Math.min(Math.round((montoPeriodo / meta) * 100), 200) : 0;
+
+      return {
+        id: v.id,
+        nombre: `${v.nombre} ${v.apellido}`,
+        propiedades: cantidadPeriodo,
+        monto: montoPeriodo,
+        meta: Math.round(meta),
+        metaPorcentaje
+      };
+    }));
+
+    rankingAsesores.sort((a, b) => b.monto - a.monto);
+
+    // ── TAREAS VENCIDAS ───────────────────────────────────────
+    const tareasVencidasRaw = await prisma.actividad.findMany({
+      where: {
+        completada: false,
+        activo: true,
+        fechaVencimiento: { lt: hoyInicio }
+      },
+      include: {
+        usuario: { select: { nombre: true, apellido: true } },
+        oportunidad: { include: { cliente: true } },
+        cliente: true
+      },
+      orderBy: { fechaVencimiento: 'asc' },
+      take: 5
+    });
+
+    const tareasVencidas = tareasVencidasRaw.map(t => {
+      const diasVencida = Math.floor((ahora - new Date(t.fechaVencimiento)) / (1000 * 60 * 60 * 24));
+      return {
+        id: t.id,
+        titulo: t.titulo,
+        diasVencida,
+        asesor: `${t.usuario.nombre} ${t.usuario.apellido}`,
+        asesorIniciales: `${t.usuario.nombre[0]}${t.usuario.apellido[0]}`.toUpperCase(),
+        cliente: t.cliente?.nombre || t.oportunidad?.cliente?.nombre || null
+      };
+    });
+
+    // ── INSIGHTS AUTOMÁTICOS ──────────────────────────────────
+    const insights = [];
+    if (Math.abs(variacionIngresos) >= 5) {
+      insights.push({
+        tipo: variacionIngresos > 0 ? "success" : "warning",
+        mensaje: variacionIngresos > 0
+          ? `Las ventas subieron un ${Math.abs(variacionIngresos).toFixed(1)}% respecto al período anterior`
+          : `Las ventas bajaron un ${Math.abs(variacionIngresos).toFixed(1)}% respecto al período anterior`
+      });
+    }
+    if (Math.abs(variacionTasa) >= 5) {
+      insights.push({
+        tipo: variacionTasa > 0 ? "success" : "warning",
+        mensaje: variacionTasa > 0
+          ? `La tasa de conversión mejoró un ${Math.abs(variacionTasa).toFixed(1)}%`
+          : `La tasa de conversión cayó un ${Math.abs(variacionTasa).toFixed(1)}%`
+      });
+    }
+    if (tareasVencidas.length >= 3) {
+      insights.push({
+        tipo: "warning",
+        mensaje: `${tareasVencidas.length} tareas llevan más de un día sin completarse`
+      });
+    }
+
+    // ── ETIQUETA DEL PERÍODO ──────────────────────────────────
+    const labelPeriodo = periodo === "semana" ? "Esta semana"
+      : periodo === "trimestre" ? "Este trimestre"
+      : periodo === "anio" ? `Año ${ahora.getFullYear()}`
+      : `${desde.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })}`;
+
+    return res.json({
+      periodo: {
+        tipo: periodo,
+        desde: desde.toISOString(),
+        hasta: hasta.toISOString(),
+        label: labelPeriodo
+      },
+      kpis: {
+        ingresos: { actual: ingresosAct, anterior: ingresosAnt, variacion: parseFloat(variacionIngresos.toFixed(1)) },
+        propiedadesDisponibles: { actual: propsDisponiblesAct, anterior: propsDisponiblesAnt, variacion: parseFloat(variacionProps.toFixed(1)) },
+        tasaConversion: { actual: parseFloat(tasaAct.toFixed(1)), anterior: parseFloat(tasaAnt.toFixed(1)), variacion: parseFloat(variacionTasa.toFixed(1)) },
+        diasPromedioCierre: { actual: diasAct, anterior: diasAnt, variacion: parseFloat(variacionDias.toFixed(1)) }
+      },
+      graficoIngresos,
+      propiedadesPorEstado,
+      embudo,
+      visitasHoy,
+      rankingAsesores,
+      tareasVencidas,
+      insights
+    });
+
+  } catch (error) {
+    console.error("Error en dashboard gerencial:", error);
+    res.status(500).json({ error: "Error al cargar el dashboard gerencial" });
   }
 };

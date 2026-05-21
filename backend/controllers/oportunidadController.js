@@ -159,6 +159,28 @@ export const editarOportunidad = async (req, res) => {
     }
   });
 
+  // AUTO-AVANCE DEL EMBUDO cuando cambia la etapa de la propiedad
+  if (etapa && etapa !== oppActual.etapa && op.clienteId) {
+    let nuevaEtapaLead = null;
+    if (etapa === "RESERVADA") nuevaEtapaLead = "NEGOCIACION";
+    else if (etapa === "VENDIDA" || etapa === "ALQUILADA") nuevaEtapaLead = "CERRADO";
+
+    if (nuevaEtapaLead) {
+      const clienteActual = await prisma.cliente.findUnique({
+        where: { id: op.clienteId },
+        select: { etapaLead: true }
+      });
+      // Solo avanza, nunca retrocede
+      const orden = ["LEAD", "CONTACTADO", "VISITA", "NEGOCIACION", "CERRADO"];
+      if (clienteActual && orden.indexOf(nuevaEtapaLead) > orden.indexOf(clienteActual.etapaLead)) {
+        await prisma.cliente.update({
+          where: { id: op.clienteId },
+          data: { etapaLead: nuevaEtapaLead }
+        });
+      }
+    }
+  }
+
   res.json(op);
 };
 

@@ -36,6 +36,7 @@ model Cliente {
   activo        Boolean       @default(true)
   temperatura   String        @default("FRIO") // "CALIENTE", "TIBIO", "FRIO"
   interes       String?       // Ej: "Casa en Yerba Buena"
+  etapaLead     String        @default("LEAD") // "LEAD", "CONTACTADO", "VISITA", "NEGOCIACION", "CERRADO"
   usuario       Usuario?      @relation(fields: [usuarioId], references: [id])
   usuarioId     Int?
   oportunidades Oportunidad[]
@@ -43,6 +44,7 @@ model Cliente {
   actividades   Actividad[]
   creadoEn      DateTime      @default(now())
 }
+
 
 model Oportunidad {
   id              Int          @id @default(autoincrement())

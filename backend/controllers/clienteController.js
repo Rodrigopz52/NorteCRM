@@ -67,7 +67,12 @@ export const listarClientes = async (req, res) => {
 export const crearCliente = async (req, res) => {
   try {
     const usuario = req.usuario;
-    const { nombre, empresa, telefono, dni, email, notas, temperatura, interes, usuarioId } = req.body;
+    const { nombre, empresa, telefono, dni, email, notas, temperatura, interes, usuarioId, etapaLead } = req.body;
+
+    const etapasValidas = ["LEAD", "CONTACTADO", "VISITA", "NEGOCIACION", "CERRADO"];
+    if (etapaLead && !etapasValidas.includes(etapaLead)) {
+      return res.status(400).json({ error: "Etapa de lead inválida" });
+    }
 
     const cliente = await prisma.cliente.create({
       data: {
@@ -79,6 +84,7 @@ export const crearCliente = async (req, res) => {
         notas,
         temperatura: temperatura || "FRIO",
         interes,
+        etapaLead: etapaLead || "LEAD",
         usuarioId: usuarioId ? Number(usuarioId) : usuario.id
       }
     });
@@ -95,7 +101,7 @@ export const editarCliente = async (req, res) => {
   try {
     const usuario = req.usuario;
     const { id } = req.params;
-    const { nombre, empresa, telefono, dni, email, notas, temperatura, interes, usuarioId } = req.body;
+    const { nombre, empresa, telefono, dni, email, notas, temperatura, interes, usuarioId, etapaLead } = req.body;
 
     const cliente = await prisma.cliente.findUnique({ where: { id: Number(id) } });
 
@@ -104,6 +110,11 @@ export const editarCliente = async (req, res) => {
     // El gerente y administrador pueden editar cualquier cliente, el vendedor solo sus propios clientes
     if (usuario.rol === "VENDEDOR" && cliente.usuarioId !== usuario.id) {
       return res.status(403).json({ error: "No tienes permiso para editar este cliente" });
+    }
+
+    const etapasValidas = ["LEAD", "CONTACTADO", "VISITA", "NEGOCIACION", "CERRADO"];
+    if (etapaLead && !etapasValidas.includes(etapaLead)) {
+      return res.status(400).json({ error: "Etapa de lead inválida" });
     }
 
     const actualizado = await prisma.cliente.update({
@@ -117,6 +128,7 @@ export const editarCliente = async (req, res) => {
         notas,
         temperatura,
         interes,
+        ...(etapaLead && { etapaLead }),
         ...(usuarioId ? { usuarioId: Number(usuarioId) } : {})
       }
     });

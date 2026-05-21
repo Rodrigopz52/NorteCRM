@@ -93,6 +93,34 @@ export const crearActividad = async (req, res) => {
       }
     });
 
+    // AUTO-AVANCE DEL EMBUDO DE VENTAS
+    if (clienteIdFinal) {
+      const clienteActual = await prisma.cliente.findUnique({
+        where: { id: clienteIdFinal },
+        select: { etapaLead: true }
+      });
+
+      if (clienteActual) {
+        let nuevaEtapa = null;
+
+        // LLAMADA o EMAIL + cliente en LEAD → pasar a CONTACTADO
+        if ((tipo === "LLAMADA" || tipo === "EMAIL") && clienteActual.etapaLead === "LEAD") {
+          nuevaEtapa = "CONTACTADO";
+        }
+        // REUNION + cliente en CONTACTADO → pasar a VISITA
+        else if (tipo === "REUNION" && clienteActual.etapaLead === "CONTACTADO") {
+          nuevaEtapa = "VISITA";
+        }
+
+        if (nuevaEtapa) {
+          await prisma.cliente.update({
+            where: { id: clienteIdFinal },
+            data: { etapaLead: nuevaEtapa }
+          });
+        }
+      }
+    }
+
     res.status(201).json({ mensaje: "Actividad creada", actividad });
   } catch (error) {
     console.error("Error al crear actividad:", error);
