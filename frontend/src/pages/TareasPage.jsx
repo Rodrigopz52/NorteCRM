@@ -3,32 +3,49 @@ import axios from "axios";
 import { AuthContext } from "../context/AuthContext.jsx";
 import { useToast, useConfirm } from "../hooks/useNotifications.jsx";
 import Navbar from "../components/Navbar.jsx";
-import { 
-  PhoneIcon, 
-  CalendarIcon, 
-  EnvelopeIcon, 
+import {
+  PhoneIcon,
+  CalendarIcon,
+  EnvelopeIcon,
   ClipboardDocumentListIcon,
-  CheckCircleIcon,
   ClockIcon,
-  PlusIcon
+  HomeIcon,
+  UserIcon,
+  PencilSquareIcon,
+  TrashIcon,
+  CheckIcon,
+  MagnifyingGlassIcon,
+  Squares2X2Icon,
+  ListBulletIcon,
+  CalendarDaysIcon,
+  ExclamationCircleIcon,
+  XCircleIcon,
+  CheckCircleIcon
 } from "@heroicons/react/24/outline";
 
 export default function TareasPage() {
   const { token, usuario } = useContext(AuthContext);
   const { success, error, ToastContainer } = useToast();
   const { showConfirm, ConfirmContainer } = useConfirm();
-  
+
   const [actividades, setActividades] = useState([]);
   const [oportunidades, setOportunidades] = useState([]);
   const [openForm, setOpenForm] = useState(false);
-  const [filtro, setFiltro] = useState("TODAS"); // TODAS, PENDIENTES, COMPLETADAS, VENCIDAS, CANCELADAS
+  
+  // Filtros
+  const [filtro, setFiltro] = useState("PENDIENTES"); 
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filtroTipo, setFiltroTipo] = useState("TODOS");
+  const [vista, setVista] = useState("GRILLA"); // "GRILLA", "LISTA", "CALENDARIO"
+
   const [form, setForm] = useState({
     id: null,
     tipo: "LLAMADA",
     titulo: "",
     descripcion: "",
     fechaVencimiento: "",
-    oportunidadId: ""
+    oportunidadId: "",
+    prioridad: "MEDIA" // Agregado prioridad
   });
 
   const tiposIconos = {
@@ -38,11 +55,18 @@ export default function TareasPage() {
     TAREA: ClipboardDocumentListIcon
   };
 
-  const tiposColores = {
-    LLAMADA: "bg-blue-100 text-blue-700 border-blue-300",
-    REUNION: "bg-purple-100 text-purple-700 border-purple-300",
-    EMAIL: "bg-green-100 text-green-700 border-green-300",
-    TAREA: "bg-orange-100 text-orange-700 border-orange-300"
+  const tiposColoresText = {
+    LLAMADA: "text-blue-600",
+    REUNION: "text-purple-600",
+    EMAIL: "text-green-600",
+    TAREA: "text-orange-600"
+  };
+
+  const tiposBordes = {
+    LLAMADA: "border-blue-400",
+    REUNION: "border-purple-400",
+    EMAIL: "border-green-400",
+    TAREA: "border-orange-400"
   };
 
   const load = async () => {
@@ -55,7 +79,6 @@ export default function TareasPage() {
       const opps = await axios.get("http://localhost:3000/propiedades?limit=100", {
         headers: { Authorization: `Bearer ${token}` }
       });
-      // Extraemos .data de la respuesta paginada
       setOportunidades(opps.data.data || opps.data);
     } catch (error) {
       console.error("Error al cargar actividades:", error);
@@ -74,7 +97,6 @@ export default function TareasPage() {
 
     try {
       if (form.id) {
-        // EDITAR
         await axios.put(
           `http://localhost:3000/tareas/${form.id}`,
           {
@@ -82,13 +104,13 @@ export default function TareasPage() {
             titulo: form.titulo,
             descripcion: form.descripcion,
             fechaVencimiento: form.fechaVencimiento,
-            oportunidadId: Number(form.oportunidadId)
+            oportunidadId: Number(form.oportunidadId),
+            prioridad: form.prioridad
           },
           { headers: { Authorization: `Bearer ${token}` } }
         );
         success("Actividad actualizada exitosamente");
       } else {
-        // CREAR
         await axios.post(
           "http://localhost:3000/tareas",
           form,
@@ -103,7 +125,8 @@ export default function TareasPage() {
         titulo: "",
         descripcion: "",
         fechaVencimiento: "",
-        oportunidadId: ""
+        oportunidadId: "",
+        prioridad: "MEDIA"
       });
       setOpenForm(false);
       load();
@@ -139,7 +162,7 @@ export default function TareasPage() {
       await axios.delete(`http://localhost:3000/tareas/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      
+
       success("Tarea cancelada correctamente");
       load();
     } catch (err) {
@@ -153,15 +176,24 @@ export default function TareasPage() {
     const vencimiento = new Date(act.fechaVencimiento);
     const vencida = vencimiento < hoy && !act.completada;
 
-    if (filtro === "CANCELADAS") return !act.activo;
+    // Filtros de barra
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      const tituloMatch = act.titulo?.toLowerCase().includes(q);
+      const descMatch = act.descripcion?.toLowerCase().includes(q);
+      if (!tituloMatch && !descMatch) return false;
+    }
     
-    // Para los demás filtros, solo tareas activas
+    if (filtroTipo !== "TODOS" && act.tipo !== filtroTipo) return false;
+
+    // Filtros por estado (botones)
+    if (filtro === "CANCELADAS") return !act.activo;
     if (!act.activo) return false;
 
     if (filtro === "PENDIENTES") return !act.completada;
     if (filtro === "COMPLETADAS") return act.completada;
     if (filtro === "VENCIDAS") return vencida;
-    return true; // TODAS
+    return true; 
   });
 
   const contadores = {
@@ -177,294 +209,454 @@ export default function TareasPage() {
     canceladas: actividades.filter(a => !a.activo).length
   };
 
+  const formatPrioridad = (prioridad) => {
+    if (!prioridad) return null;
+    const props = {
+      ALTA: { color: "bg-red-50 text-red-600 border-red-200", text: "Alta" },
+      MEDIA: { color: "bg-yellow-50 text-yellow-600 border-yellow-200", text: "Media" },
+      BAJA: { color: "bg-green-50 text-green-600 border-green-200", text: "Baja" }
+    };
+    return props[prioridad] || props.MEDIA;
+  };
+
   return (
     <>
       <Navbar />
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-4 sm:p-6">
-        
+
         {/* ENCABEZADO */}
-        <div className="flex justify-between items-center mb-3">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4">
           <div>
             <h2 className="text-xl sm:text-2xl font-bold text-gray-800">Tareas</h2>
             <p className="text-sm text-gray-500 font-medium mt-1">Organiza tu agenda y seguimiento de ventas</p>
           </div>
-          <div className="flex gap-2">
-            <button
-              onClick={() => setOpenForm(true)}
-              className="w-full sm:w-auto bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded-lg text-sm font-medium shadow-md hover:shadow-lg transition-all"
-            >
-              + Nueva tarea
-            </button>
-          </div>
+          <button
+            onClick={() => setOpenForm(true)}
+            className="w-full sm:w-auto bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded-lg text-sm font-medium shadow-md hover:shadow-lg transition-all"
+          >
+            + Nueva tarea
+          </button>
         </div>
 
         {/* FILTROS Y CONTADORES */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-2 mb-3">
-          <button
-            onClick={() => setFiltro("TODAS")}
-            className={`p-2 rounded-lg border transition-all ${
-              filtro === "TODAS"
-                ? "bg-purple-50 border-purple-500"
-                : "bg-white border-gray-200 hover:border-purple-300"
-            }`}
-          >
-            <p className="text-lg font-bold text-gray-800">{contadores.total}</p>
-            <p className="text-xs text-gray-600">Todas</p>
-          </button>
-
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
           <button
             onClick={() => setFiltro("PENDIENTES")}
-            className={`p-2 rounded-lg border transition-all ${
-              filtro === "PENDIENTES"
-                ? "bg-blue-50 border-blue-500"
-                : "bg-white border-gray-200 hover:border-blue-300"
+            className={`p-2 sm:p-3 rounded-lg shadow-sm border text-left flex items-center gap-2 transition-all ${
+              filtro === "PENDIENTES" ? "bg-blue-50 border-blue-500" : "bg-white border-gray-200 hover:border-blue-400 hover:shadow-md"
             }`}
           >
-            <p className="text-lg font-bold text-blue-600">{contadores.pendientes}</p>
-            <p className="text-xs text-gray-600">Pendientes</p>
+            <div className="p-2 rounded-lg bg-blue-50 text-blue-600 flex-shrink-0">
+              <ClockIcon className="w-5 h-5" />
+            </div>
+            <div>
+              <p className={`text-lg sm:text-xl font-bold ${filtro === "PENDIENTES" ? "text-blue-800" : "text-gray-800"}`}>{contadores.pendientes}</p>
+              <p className={`text-xs font-medium ${filtro === "PENDIENTES" ? "text-blue-700" : "text-gray-500"}`}>Pendientes</p>
+            </div>
           </button>
 
           <button
             onClick={() => setFiltro("COMPLETADAS")}
-            className={`p-2 rounded-lg border transition-all ${
-              filtro === "COMPLETADAS"
-                ? "bg-green-50 border-green-500"
-                : "bg-white border-gray-200 hover:border-green-300"
+            className={`p-2 sm:p-3 rounded-lg shadow-sm border text-left flex items-center gap-2 transition-all ${
+              filtro === "COMPLETADAS" ? "bg-green-50 border-green-500" : "bg-white border-gray-200 hover:border-green-400 hover:shadow-md"
             }`}
           >
-            <p className="text-lg font-bold text-green-600">{contadores.completadas}</p>
-            <p className="text-xs text-gray-600">Completadas</p>
+            <div className="p-2 rounded-lg bg-green-50 text-green-600 flex-shrink-0">
+              <CheckCircleIcon className="w-5 h-5" />
+            </div>
+            <div>
+              <p className={`text-lg sm:text-xl font-bold ${filtro === "COMPLETADAS" ? "text-green-800" : "text-gray-800"}`}>{contadores.completadas}</p>
+              <p className={`text-xs font-medium ${filtro === "COMPLETADAS" ? "text-green-700" : "text-gray-500"}`}>Completadas</p>
+            </div>
           </button>
 
           <button
             onClick={() => setFiltro("VENCIDAS")}
-            className={`p-2 rounded-lg border transition-all ${
-              filtro === "VENCIDAS"
-                ? "bg-red-50 border-red-500"
-                : "bg-white border-gray-200 hover:border-red-300"
+            className={`p-2 sm:p-3 rounded-lg shadow-sm border text-left flex items-center gap-2 transition-all ${
+              filtro === "VENCIDAS" ? "bg-red-50 border-red-500" : "bg-white border-gray-200 hover:border-red-400 hover:shadow-md"
             }`}
           >
-            <p className="text-lg font-bold text-red-600">{contadores.vencidas}</p>
-            <p className="text-xs text-gray-600">Vencidas</p>
+            <div className="p-2 rounded-lg bg-red-50 text-red-600 flex-shrink-0">
+              <ExclamationCircleIcon className="w-5 h-5" />
+            </div>
+            <div>
+              <p className={`text-lg sm:text-xl font-bold ${filtro === "VENCIDAS" ? "text-red-800" : "text-gray-800"}`}>{contadores.vencidas}</p>
+              <p className={`text-xs font-medium ${filtro === "VENCIDAS" ? "text-red-700" : "text-gray-500"}`}>Vencidas</p>
+            </div>
           </button>
 
           <button
             onClick={() => setFiltro("CANCELADAS")}
-            className={`p-2 rounded-lg border transition-all ${
-              filtro === "CANCELADAS"
-                ? "bg-gray-100 border-gray-500"
-                : "bg-white border-gray-200 hover:border-gray-400"
+            className={`p-2 sm:p-3 rounded-lg shadow-sm border text-left flex items-center gap-2 transition-all ${
+              filtro === "CANCELADAS" ? "bg-gray-100 border-gray-500" : "bg-white border-gray-200 hover:border-gray-400 hover:shadow-md"
             }`}
           >
-            <p className="text-lg font-bold text-gray-500">{contadores.canceladas}</p>
-            <p className="text-xs text-gray-500">Canceladas</p>
+            <div className="p-2 rounded-lg bg-gray-100 text-gray-600 flex-shrink-0">
+              <XCircleIcon className="w-5 h-5" />
+            </div>
+            <div>
+              <p className={`text-lg sm:text-xl font-bold ${filtro === "CANCELADAS" ? "text-gray-900" : "text-gray-800"}`}>{contadores.canceladas}</p>
+              <p className={`text-xs font-medium ${filtro === "CANCELADAS" ? "text-gray-700" : "text-gray-500"}`}>Canceladas</p>
+            </div>
           </button>
         </div>
 
-        {/* LISTA DE ACTIVIDADES */}
-        <div className="bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden">
-          {actividadesFiltradas.length === 0 ? (
-            <div className="p-12 text-center text-gray-500">
-              <ClipboardDocumentListIcon className="w-16 h-16 mx-auto mb-4 opacity-50" />
-              <p className="text-lg">No hay actividades {filtro.toLowerCase()}</p>
+        {/* BARRA DE FILTROS, BÚSQUEDA Y VISTAS */}
+        <div className="bg-white rounded-xl shadow-sm p-3 mb-6 border border-gray-200 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          
+          <div className="flex flex-col sm:flex-row items-center gap-3">
+            {/* Buscador */}
+            <div className="relative w-full sm:w-80">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <MagnifyingGlassIcon className="h-4 w-4 text-gray-400" />
+              </div>
+              <input
+                type="text"
+                placeholder="Buscar tareas por título o descripción..."
+                className="w-full pl-9 pr-3 py-2 border border-gray-300 focus:border-purple-500 focus:ring-1 focus:ring-purple-200 rounded-lg transition-all outline-none text-sm"
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+              />
             </div>
-          ) : (
-            <div className="divide-y divide-gray-200">
-              {actividadesFiltradas.map(act => {
-                const IconoTipo = tiposIconos[act.tipo];
+
+            {/* Select Tipo */}
+            <select
+              className="w-full sm:w-auto border border-gray-300 focus:border-purple-500 focus:ring-1 focus:ring-purple-200 p-2 rounded-lg transition-all outline-none text-sm bg-white font-medium text-gray-700"
+              value={filtroTipo}
+              onChange={e => setFiltroTipo(e.target.value)}
+            >
+              <option value="TODOS">Todos los tipos</option>
+              <option value="LLAMADA">Llamada</option>
+              <option value="REUNION">Reunión</option>
+              <option value="EMAIL">Email</option>
+            </select>
+          </div>
+
+          {/* Selector de vistas */}
+          <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-lg self-end lg:self-auto border border-gray-200">
+            <button 
+              onClick={() => setVista("LISTA")}
+              className={`p-1.5 rounded-md transition-all ${vista === "LISTA" ? "bg-white text-purple-600 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
+              title="Vista de lista"
+            >
+              <ListBulletIcon className="w-5 h-5" />
+            </button>
+            <button 
+              onClick={() => setVista("GRILLA")}
+              className={`p-1.5 rounded-md transition-all ${vista === "GRILLA" ? "bg-white text-purple-600 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
+              title="Vista de tarjetas (Grilla)"
+            >
+              <Squares2X2Icon className="w-5 h-5" />
+            </button>
+            <button 
+              onClick={() => setVista("CALENDARIO")}
+              className={`p-1.5 rounded-md transition-all ${vista === "CALENDARIO" ? "bg-white text-purple-600 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
+              title="Vista de calendario (Próximamente)"
+            >
+              <CalendarDaysIcon className="w-5 h-5" />
+            </button>
+          </div>
+
+        </div>
+
+        {/* CONTENIDO DE TAREAS */}
+        {actividadesFiltradas.length === 0 ? (
+          <div className="p-16 text-center text-gray-500 bg-white rounded-2xl shadow-sm border border-gray-200">
+            <ClipboardDocumentListIcon className="w-20 h-20 mx-auto mb-4 opacity-30 text-purple-500" />
+            <p className="text-xl font-semibold text-gray-700">No hay tareas para mostrar</p>
+            <p className="text-sm mt-2">Intenta cambiar los filtros o crea una nueva tarea.</p>
+          </div>
+        ) : vista === "CALENDARIO" ? (
+          <div className="p-16 text-center text-gray-500 bg-white rounded-2xl shadow-sm border border-gray-200 flex flex-col items-center justify-center">
+             <CalendarDaysIcon className="w-16 h-16 text-gray-300 mb-4" />
+             <p className="text-lg font-bold text-gray-700">Vista de Calendario</p>
+             <p className="text-sm">Esta función estará disponible en la próxima actualización.</p>
+             <button onClick={() => setVista("GRILLA")} className="mt-4 text-purple-600 font-semibold hover:underline">Volver a la Grilla</button>
+          </div>
+        ) : (
+          <div className="mb-10">
+            {(() => {
+              const getGroupLabel = (dateString) => {
                 const hoy = new Date();
-                const vencimiento = new Date(act.fechaVencimiento);
-                const vencida = vencimiento < hoy && !act.completada;
+                hoy.setHours(0,0,0,0);
+                const d = new Date(dateString);
+                d.setHours(0,0,0,0);
+                
+                const diffTime = d - hoy;
+                const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+                
+                if (diffDays === 0) return "HOY";
+                if (diffDays === 1) return "MAÑANA";
+                if (diffDays === -1) return "AYER";
+                if (diffDays > 1 && diffDays <= 7) return "ESTA SEMANA";
+                if (diffDays > 7) return "MÁS ADELANTE";
+                if (diffDays < -1) return "ANTERIORES";
+                return "OTROS";
+              };
 
-                return (
-                  <div
-                    key={act.id}
-                    className={`p-3 hover:bg-gray-50 transition-colors ${
-                      act.completada ? "opacity-60" : ""
-                    }`}
+              const priorityWeight = { ALTA: 3, MEDIA: 2, BAJA: 1 };
+
+              const sortedActividades = [...actividadesFiltradas].sort((a, b) => {
+                const dateA = new Date(a.fechaVencimiento);
+                const dateB = new Date(b.fechaVencimiento);
+                
+                const dayA = new Date(dateA.getFullYear(), dateA.getMonth(), dateA.getDate()).getTime();
+                const dayB = new Date(dateB.getFullYear(), dateB.getMonth(), dateB.getDate()).getTime();
+                
+                if (dayA !== dayB) return dayA - dayB; // Orden por día
+                
+                const wA = priorityWeight[a.prioridad] || 0;
+                const wB = priorityWeight[b.prioridad] || 0;
+                if (wA !== wB) return wB - wA; // Orden por prioridad (Alta primero)
+                
+                return dateA.getTime() - dateB.getTime(); // Orden por hora
+              });
+
+              const groupedActivities = sortedActividades.reduce((acc, act) => {
+                const label = getGroupLabel(act.fechaVencimiento);
+                if (!acc[label]) acc[label] = [];
+                acc[label].push(act);
+                return acc;
+              }, {});
+
+              return Object.entries(groupedActivities).map(([label, acts]) => (
+                <div key={label} className="mb-8">
+                  <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                    {label} <span className="bg-gray-100 text-gray-500 border border-gray-200 px-2 py-0.5 rounded-full text-[10px]">{acts.length}</span>
+                  </h4>
+                  <div className={`${vista === "GRILLA" ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5" : "space-y-4"}`}>
+                    {acts.map(act => {
+              const IconoTipo = tiposIconos[act.tipo] || ClipboardDocumentListIcon;
+              const colorClase = tiposColoresText[act.tipo] || "text-gray-500";
+              const bordeClase = tiposBordes[act.tipo] || "border-gray-400";
+              const hoy = new Date();
+              const vencimiento = new Date(act.fechaVencimiento);
+              const vencida = vencimiento < hoy && !act.completada;
+              const propPrioridad = formatPrioridad(act.prioridad);
+
+              const leftBorderClase = act.prioridad === 'ALTA' ? 'border-l-red-500' : act.prioridad === 'BAJA' ? 'border-l-green-500' : 'border-l-yellow-500';
+
+              return (
+                <div
+                  key={act.id}
+                  className={`bg-white rounded-xl shadow-sm border border-gray-200 border-l-4 ${leftBorderClase} ${act.completada ? "opacity-60 bg-gray-50/50" : "hover:shadow-md transition-shadow"} p-4 sm:p-5 flex gap-4 items-start`}
+                >
+                  {/* CHECKBOX */}
+                  <button
+                    onClick={() => toggleCompletada(act.id, act.completada)}
+                    className="mt-0.5 flex-shrink-0 focus:outline-none"
                   >
-                    <div className="flex items-start gap-3">
-                      
-                      {/* CHECKBOX */}
-                      <button
-                        onClick={() => toggleCompletada(act.id, act.completada)}
-                        className="mt-0.5"
-                      >
-                        {act.completada ? (
-                          <CheckCircleIcon className="w-5 h-5 text-green-500" />
-                        ) : (
-                          <div className="w-5 h-5 border-2 border-gray-300 rounded-full hover:border-purple-500 transition-colors" />
+                    {act.completada ? (
+                       <div className="w-5 h-5 rounded flex items-center justify-center bg-green-500 border border-green-500 transition-colors">
+                         <CheckIcon className="w-3.5 h-3.5 text-white stroke-[3]" />
+                       </div>
+                    ) : (
+                       <div className={`w-5 h-5 rounded border-2 border-gray-300 hover:bg-gray-50 flex items-center justify-center transition-colors`}>
+                       </div>
+                    )}
+                  </button>
+
+                  {/* CONTENIDO PRINCIPAL */}
+                  <div className="flex-1 min-w-0">
+                    
+                    {/* TOP: Titulo, Prioridad y Menu */}
+                    <div className="flex justify-between items-start mb-1 gap-4">
+                      <h3 className={`text-base sm:text-lg font-semibold leading-tight ${act.completada ? "line-through text-gray-500" : "text-gray-900"}`}>
+                        {act.titulo}
+                        {!act.activo && <span className="ml-2 inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide border bg-gray-100 text-gray-600 border-gray-300 align-middle">CANCELADA</span>}
+                      </h3>
+
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        {propPrioridad && act.activo && (
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide border ${propPrioridad.color}`}>
+                            {propPrioridad.text}
+                          </span>
                         )}
-                      </button>
-
-                      {/* CONTENIDO */}
-                      <div className="flex-1">
-                        <div className="flex items-start justify-between mb-1.5">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className={`px-2 py-0.5 rounded-lg text-xs font-semibold border ${tiposColores[act.tipo]} flex items-center gap-1`}>
-                              <IconoTipo className="w-3 h-3" />
-                              {act.tipo}
-                            </span>
-                            <h3 className={`font-semibold text-sm ${act.completada ? "line-through text-gray-500" : "text-gray-800"} ${!act.activo ? "text-gray-400" : ""}`}>
-                              {act.titulo} {!act.activo && <span className="ml-2 text-xs text-red-500 font-bold">(Cancelada)</span>}
-                            </h3>
-                            {act.descripcion && (
-                              <span className="text-gray-400 text-xs" title="Tiene descripción">
-                                📝
-                              </span>
-                            )}
-                          </div>
-
-                          <div className="flex gap-2">
+                        
+                        {/* Acciones */}
+                        <div className="flex items-center gap-1 text-gray-400">
+                          <button
+                            onClick={() => {
+                              setForm({
+                                id: act.id,
+                                tipo: act.tipo,
+                                titulo: act.titulo,
+                                descripcion: act.descripcion || "",
+                                fechaVencimiento: act.fechaVencimiento.slice(0, 16),
+                                oportunidadId: act.oportunidadId,
+                                prioridad: act.prioridad || "MEDIA"
+                              });
+                              setOpenForm(true);
+                            }}
+                            className="hover:text-blue-600 transition-colors"
+                            title="Editar"
+                          >
+                            <PencilSquareIcon className="w-4 h-4" />
+                          </button>
+                          {act.activo && (
                             <button
-                              onClick={() => {
-                                setForm({
-                                  id: act.id,
-                                  tipo: act.tipo,
-                                  titulo: act.titulo,
-                                  descripcion: act.descripcion || "",
-                                  fechaVencimiento: act.fechaVencimiento.slice(0, 16),
-                                  oportunidadId: act.oportunidadId
-                                });
-                                setOpenForm(true);
-                              }}
-                              className="text-blue-600 hover:text-blue-800 text-xs font-bold"
+                              onClick={() => cancelarActividad(act.id)}
+                              className="hover:text-red-600 transition-colors"
+                              title="Cancelar tarea"
                             >
-                              Editar
+                              <TrashIcon className="w-4 h-4" />
                             </button>
-                            {act.activo && (
-                              <button
-                                onClick={() => cancelarActividad(act.id)}
-                                className="text-red-500 hover:text-red-700 text-xs font-bold"
-                              >
-                                Cancelar
-                              </button>
-                            )}
-                          </div>
-                        </div>
-
-                        {act.descripcion && (
-                          <div className="bg-gray-50 border-l-2 border-purple-300 px-2 py-1.5 mb-1.5 rounded">
-                            <p className="text-xs text-gray-700 italic">{act.descripcion}</p>
-                          </div>
-                        )}
-
-                        <div className="flex items-center gap-3 text-xs text-gray-500 flex-wrap">
-                          <span className="flex items-center gap-1">
-                            <ClockIcon className="w-3 h-3" />
-                            {new Date(act.fechaVencimiento).toLocaleDateString('es-ES', {
-                              day: 'numeric',
-                              month: 'short',
-                              hour: '2-digit',
-                              minute: '2-digit'
-                            })}
-                            {vencida && <span className="text-red-600 font-medium ml-1">(Vencida)</span>}
-                          </span>
-
-                          <span>•</span>
-
-                          <span>
-                            {act.oportunidad 
-                              ? `${act.oportunidad.titulo} - Cliente: ${act.oportunidad.cliente?.nombre || 'Desconocido'}`
-                              : `Cliente: ${act.cliente?.nombre || 'Desconocido'}`
-                            }
-                            {usuario?.rol === "GERENTE" && (
-                              <span className="ml-3">
-                                Asesor: <span className="text-purple-600 font-semibold">{act.usuario?.nombre} {act.usuario?.apellido}</span>
-                              </span>
-                            )}
-                          </span>
+                          )}
                         </div>
                       </div>
                     </div>
+
+                    {/* MEDIO: Descripción */}
+                    {act.descripcion && (
+                      <p className="text-sm text-gray-500 mb-3 line-clamp-2">
+                        {act.descripcion}
+                      </p>
+                    )}
+                    {!act.descripcion && <div className="mb-3"></div>}
+
+                    {/* BOTTOM: Metadata */}
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs font-medium text-gray-500">
+                      <span className="flex items-center gap-1.5">
+                        <CalendarIcon className="w-4 h-4 text-gray-400" />
+                        {new Date(act.fechaVencimiento).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}
+                      </span>
+                      
+                      <span className="flex items-center gap-1.5">
+                        <ClockIcon className="w-4 h-4 text-gray-400" />
+                        {new Date(act.fechaVencimiento).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+
+                      <span className="flex items-center gap-1.5">
+                        <UserIcon className="w-4 h-4 text-gray-400" />
+                        {act.usuario?.nombre || 'Duclos'}
+                      </span>
+
+                      {act.oportunidad && (
+                        <span className="flex items-center gap-1.5">
+                          <HomeIcon className="w-4 h-4 text-gray-400" />
+                          <span className="truncate max-w-[150px] sm:max-w-xs">{act.oportunidad.cliente?.nombre || 'Cliente'} - {act.oportunidad.titulo}</span>
+                        </span>
+                      )}
+
+                      {/* Estado */}
+                      <span className="flex items-center gap-1.5 ml-auto sm:ml-0 sm:border-l sm:pl-4 border-gray-200">
+                        <span className={`w-2 h-2 rounded-full ${act.completada ? 'bg-green-500' : vencida ? 'bg-red-500' : 'bg-yellow-500'}`}></span>
+                        {act.completada ? 'Completada' : vencida ? 'Vencida' : 'Pendiente'}
+                      </span>
+                    </div>
+
                   </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
+                </div>
+              );
+            })}
+                  </div>
+                </div>
+              ));
+            })()}
+          </div>
+        )}
 
         {/* MODAL CREAR/EDITAR ACTIVIDAD */}
         {openForm && (
-          <div className="fixed inset-0 bg-black/50 flex justify-center items-center z-50 backdrop-blur-sm">
-            <div className="bg-white p-8 rounded-xl shadow-2xl w-full max-w-md border border-gray-200 max-h-[90vh] overflow-y-auto">
-              <h3 className="text-2xl font-bold mb-6 text-gray-800">
-                {form.id ? "Editar tarea" : "Nueva tarea"}
+          <div className="fixed inset-0 bg-black/50 flex justify-center items-center z-50 backdrop-blur-sm p-4">
+            <div className="bg-white p-6 sm:p-8 rounded-2xl shadow-2xl w-full max-w-lg border border-gray-200 max-h-[90vh] overflow-y-auto">
+              <h3 className="text-2xl font-bold mb-6 text-gray-800 border-b pb-4">
+                {form.id ? "✏️ Editar Tarea" : "✨ Nueva Tarea"}
               </h3>
 
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Tipo *
-                  </label>
-                  <select
-                    className="w-full border-2 border-gray-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 p-3 rounded-lg transition-all outline-none"
-                    value={form.tipo}
-                    onChange={(e) => setForm({ ...form, tipo: e.target.value })}
-                  >
-                    <option value="LLAMADA">📞 Coordinar visita</option>
-                    <option value="REUNION">📅 Mostrar la propiedad</option>
-                    <option value="EMAIL">✉️ Enviar documentación</option>
-                  </select>
+              <div className="space-y-5">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-1.5">
+                      Tipo *
+                    </label>
+                    <select
+                      className="w-full border-2 border-gray-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 p-2.5 rounded-xl transition-all outline-none text-sm font-medium"
+                      value={form.tipo}
+                      onChange={(e) => setForm({ ...form, tipo: e.target.value })}
+                    >
+                      <option value="LLAMADA">📞 Llamada / Contacto</option>
+                      <option value="REUNION">📅 Visita / Reunión</option>
+                      <option value="EMAIL">✉️ Enviar correo</option>
+                      <option value="TAREA">📝 Tarea general</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-1.5">
+                      Prioridad *
+                    </label>
+                    <select
+                      className="w-full border-2 border-gray-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 p-2.5 rounded-xl transition-all outline-none text-sm font-medium"
+                      value={form.prioridad}
+                      onChange={(e) => setForm({ ...form, prioridad: e.target.value })}
+                    >
+                      <option value="BAJA">🟢 Baja</option>
+                      <option value="MEDIA">🟡 Media</option>
+                      <option value="ALTA">🔴 Alta</option>
+                    </select>
+                  </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-bold text-gray-700 mb-1.5">
                     Título *
                   </label>
                   <input
-                    className="w-full border-2 border-gray-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 p-3 rounded-lg transition-all outline-none"
-                    placeholder="Ej: Llamar para seguimiento"
+                    className="w-full border-2 border-gray-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 p-2.5 rounded-xl transition-all outline-none text-sm"
+                    placeholder="Ej: Llamar al cliente para confirmar..."
                     value={form.titulo}
                     onChange={(e) => setForm({ ...form, titulo: e.target.value })}
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Descripción
+                  <label className="block text-sm font-bold text-gray-700 mb-1.5">
+                    Descripción <span className="font-normal text-gray-400">(opcional)</span>
                   </label>
                   <textarea
-                    className="w-full border-2 border-gray-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 p-3 rounded-lg transition-all outline-none resize-none"
-                    placeholder="Detalles adicionales..."
+                    className="w-full border-2 border-gray-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 p-3 rounded-xl transition-all outline-none resize-none text-sm"
+                    placeholder="Detalles, recordatorios o notas de la actividad..."
                     rows="3"
                     value={form.descripcion}
                     onChange={(e) => setForm({ ...form, descripcion: e.target.value })}
                   />
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Fecha y hora *
-                  </label>
-                  <input
-                    type="datetime-local"
-                    className="w-full border-2 border-gray-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 p-3 rounded-lg transition-all outline-none"
-                    value={form.fechaVencimiento}
-                    onChange={(e) => setForm({ ...form, fechaVencimiento: e.target.value })}
-                  />
-                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-1.5">
+                      Fecha y Hora *
+                    </label>
+                    <input
+                      type="datetime-local"
+                      className="w-full border-2 border-gray-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 p-2.5 rounded-xl transition-all outline-none text-sm font-medium"
+                      value={form.fechaVencimiento}
+                      onChange={(e) => setForm({ ...form, fechaVencimiento: e.target.value })}
+                    />
+                  </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Propiedad *
-                  </label>
-                  <select
-                    className="w-full border-2 border-gray-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 p-3 rounded-lg transition-all outline-none"
-                    value={form.oportunidadId}
-                    onChange={(e) => setForm({ ...form, oportunidadId: e.target.value })}
-                  >
-                    <option value="">Seleccionar propiedad...</option>
-                    {oportunidades.map(opp => (
-                      <option value={opp.id} key={opp.id}>
-                        {opp.titulo} - {opp.cliente?.nombre}
-                      </option>
-                    ))}
-                  </select>
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-1.5">
+                      Relacionado con (Propiedad) *
+                    </label>
+                    <select
+                      className="w-full border-2 border-gray-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 p-2.5 rounded-xl transition-all outline-none text-sm font-medium"
+                      value={form.oportunidadId}
+                      onChange={(e) => setForm({ ...form, oportunidadId: e.target.value })}
+                    >
+                      <option value="">Seleccionar propiedad...</option>
+                      {oportunidades.map(opp => (
+                        <option value={opp.id} key={opp.id}>
+                          {opp.titulo} - {opp.cliente?.nombre}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
               </div>
 
-              <div className="flex justify-end gap-3 mt-8">
+              <div className="flex justify-end gap-3 mt-8 pt-4 border-t border-gray-100">
                 <button
                   onClick={() => {
                     setOpenForm(false);
@@ -474,25 +666,25 @@ export default function TareasPage() {
                       titulo: "",
                       descripcion: "",
                       fechaVencimiento: "",
-                      oportunidadId: ""
+                      oportunidadId: "",
+                      prioridad: "MEDIA"
                     });
                   }}
-                  className="text-gray-600 hover:text-gray-800 px-4 py-2 font-medium transition-colors"
+                  className="px-5 py-2.5 text-gray-600 font-bold hover:bg-gray-100 rounded-xl transition-colors"
                 >
                   Cancelar
                 </button>
                 <button
                   onClick={guardarActividad}
-                  className="bg-purple-600 hover:bg-purple-700 text-white px-5 py-2.5 rounded-lg font-medium shadow-md hover:shadow-lg transition-all"
+                  className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-2.5 rounded-xl font-bold shadow-md hover:shadow-lg transition-all"
                 >
-                  {form.id ? "Actualizar" : "Guardar"}
+                  {form.id ? "Guardar Cambios" : "Crear Tarea"}
                 </button>
               </div>
             </div>
           </div>
         )}
 
-        {/* Contenedores de Notificaciones */}
         <ToastContainer />
         <ConfirmContainer />
       </div>
