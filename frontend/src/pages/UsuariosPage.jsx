@@ -28,8 +28,9 @@ export default function UsuariosPage() {
   const [usuariosActivos, setUsuariosActivos] = useState(0);
   const [usuariosInactivos, setUsuariosInactivos] = useState(0);
   const [filtroRol, setFiltroRol] = useState("");
-  const [filtroEstado, setFiltroEstado] = useState("TODOS");
+  const [filtroEstado, setFiltroEstado] = useState("ACTIVOS");
   const [metricasGlobales, setMetricasGlobales] = useState({ totalClientes: 0, totalPropiedades: 0, totalTareas: 0 });
+  const [menuAbiertoId, setMenuAbiertoId] = useState(null);
   const limit = 10;
 
   const fetchUsuarios = async () => {
@@ -44,7 +45,7 @@ export default function UsuariosPage() {
       });
       setUsuarios(data.data);
       setTotalPaginas(data.meta.totalPaginas);
-      setTotalUsuarios(data.meta.totalActivos + data.meta.totalInactivos);
+      setTotalUsuarios(filtroEstado === "ACTIVOS" ? data.meta.totalActivos : data.meta.totalInactivos);
       setUsuariosActivos(data.meta.totalActivos);
       setUsuariosInactivos(data.meta.totalInactivos);
       if (data.meta.metricasGlobales) {
@@ -63,6 +64,13 @@ export default function UsuariosPage() {
 
   // Resetear página al cambiar filtros
   useEffect(() => { setPagina(1); }, [busqueda, filtroRol, filtroEstado]);
+
+  // Cerrar menú al hacer click afuera
+  useEffect(() => {
+    const handleCloseMenu = () => setMenuAbiertoId(null);
+    window.addEventListener("click", handleCloseMenu);
+    return () => window.removeEventListener("click", handleCloseMenu);
+  }, []);
 
   const crearOEditarUsuario = async () => {
     try {
@@ -138,255 +146,227 @@ export default function UsuariosPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-4 sm:p-6 overflow-x-hidden">
       
-      {/* HEADER */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-3">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-6">
         <div>
-          <h2 className="text-xl sm:text-2xl font-bold text-gray-800">Usuarios</h2>
+          <h2 className="text-2xl font-bold text-gray-900 tracking-tight">Usuarios</h2>
           <p className="text-sm text-gray-500 font-medium mt-1">
-            {esAdministrador ? "Vista de usuarios del sistema (solo lectura)" : "Administra vendedores y usuarios del sistema"}
+            Administra vendedores y usuarios del sistema
           </p>
         </div>
-        {!esAdministrador && (
-          <button
-            onClick={() => {
-              setForm({ id: null, nombre: "", apellido: "", email: "", rol: "VENDEDOR", dni: "" });
-              setOpenForm(true);
-            }}
-            className="w-full sm:w-auto bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded-lg text-sm font-medium shadow-md hover:shadow-lg transition-all"
-          >
-            + Nuevo usuario
-          </button>
-        )}
-      </div>
-
-      {/* RESUMEN Y FILTROS */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 mb-3">
         <button
           onClick={() => {
-            setFiltroRol("");
-            setBusqueda("");
-            setFiltroEstado("TODOS");
+            setForm({ id: null, nombre: "", apellido: "", email: "", rol: "VENDEDOR", dni: "" });
+            setOpenForm(true);
           }}
-          className={`p-2 sm:p-3 rounded-lg shadow-sm border text-left flex items-center gap-2 transition-all ${
-            filtroEstado === "TODOS" ? "bg-purple-50 border-purple-500" : "bg-white border-gray-200 hover:border-purple-400 hover:shadow-md"
-          }`}
+          className="w-full sm:w-auto bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded-lg text-sm font-medium shadow-md hover:shadow-lg transition-all"
         >
-          <div className="p-2 rounded-lg bg-purple-50 text-purple-600 flex-shrink-0">
-            <UserGroupIcon className="w-5 h-5" />
-          </div>
-          <div>
-            <p className={`text-lg sm:text-xl font-bold ${filtroEstado === "TODOS" ? "text-purple-800" : "text-gray-800"}`}>{totalUsuarios}</p>
-            <p className={`text-xs font-medium ${filtroEstado === "TODOS" ? "text-purple-700" : "text-gray-500"}`}>Total usuarios</p>
-          </div>
-        </button>
-
-        <button
-          onClick={() => setFiltroEstado("ACTIVOS")}
-          className={`p-2 sm:p-3 rounded-lg shadow-sm border text-left flex items-center gap-2 transition-all ${
-            filtroEstado === "ACTIVOS" ? "bg-green-50 border-green-500" : "bg-white border-gray-200 hover:border-green-400 hover:shadow-md"
-          }`}
-        >
-          <div className="p-2 rounded-lg bg-green-50 text-green-600 flex-shrink-0">
-            <CheckCircleIcon className="w-5 h-5" />
-          </div>
-          <div>
-            <p className={`text-lg sm:text-xl font-bold ${filtroEstado === "ACTIVOS" ? "text-green-800" : "text-gray-800"}`}>{usuariosActivos}</p>
-            <p className={`text-xs font-medium ${filtroEstado === "ACTIVOS" ? "text-green-700" : "text-gray-500"}`}>Activos</p>
-          </div>
-        </button>
-
-        <button
-          onClick={() => setFiltroEstado("INACTIVOS")}
-          className={`p-2 sm:p-3 rounded-lg shadow-sm border text-left flex items-center gap-2 transition-all ${
-            filtroEstado === "INACTIVOS" ? "bg-red-50 border-red-500" : "bg-white border-gray-200 hover:border-red-400 hover:shadow-md"
-          }`}
-        >
-          <div className="p-2 rounded-lg bg-red-50 text-red-600 flex-shrink-0">
-            <XCircleIcon className="w-5 h-5" />
-          </div>
-          <div>
-            <p className={`text-lg sm:text-xl font-bold ${filtroEstado === "INACTIVOS" ? "text-red-800" : "text-gray-800"}`}>{usuariosInactivos}</p>
-            <p className={`text-xs font-medium ${filtroEstado === "INACTIVOS" ? "text-red-700" : "text-gray-500"}`}>Inactivos</p>
-          </div>
+          + Nuevo usuario
         </button>
       </div>
 
       {/* BARRA DE BÚSQUEDA Y FILTROS */}
-      <div className="bg-white rounded-lg shadow-sm p-3 mb-3 border border-gray-200">
-        <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-2">
-          {/* Filtros */}
-          <div className="flex flex-col sm:flex-row gap-2">
-            <select
-              className="sm:w-44 border border-gray-300 focus:border-purple-500 focus:ring-1 focus:ring-purple-200 p-2 rounded-lg transition-all outline-none text-sm"
-              value={filtroRol}
-              onChange={e => setFiltroRol(e.target.value)}
-            >
-              <option value="">Todos los roles</option>
-              <option value="GERENTE">Gerente</option>
-              <option value="VENDEDOR">Vendedor</option>
-              <option value="ADMINISTRADOR">Administrador</option>
-            </select>
-            <select
-              className="sm:w-36 border border-gray-300 focus:border-purple-500 focus:ring-1 focus:ring-purple-200 p-2 rounded-lg transition-all outline-none text-sm"
-              value={filtroEstado}
-              onChange={e => setFiltroEstado(e.target.value)}
-            >
-              <option value="TODOS">Todos</option>
-              <option value="ACTIVOS">Activos</option>
-              <option value="INACTIVOS">Inactivos</option>
-            </select>
-          </div>
-          {/* Buscador */}
-          <div className="flex items-center gap-2 lg:ml-auto w-full lg:w-auto">
-            <div className="relative flex-1 lg:flex-initial">
-              <input
-                type="text"
-                placeholder="Buscar por nombre, email o DNI..."
-                className="w-full lg:w-72 border border-gray-300 focus:border-purple-500 focus:ring-1 focus:ring-purple-200 p-2 rounded-lg transition-all outline-none text-sm"
-                value={busqueda}
-                onChange={e => setBusqueda(e.target.value)}
-              />
-            </div>
-          </div>
+      <div className="flex flex-col sm:flex-row items-center gap-3 mb-6">
+        <div className="relative flex-1 w-full">
+          <span className="absolute inset-y-0 left-0 flex items-center pl-3">
+            <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          </span>
+          <input
+            type="text"
+            placeholder="Buscar por nombre o email..."
+            className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm text-gray-700 shadow-sm"
+            value={busqueda}
+            onChange={e => setBusqueda(e.target.value)}
+          />
+        </div>
+        <div className="flex gap-3 w-full sm:w-auto">
+          <select
+            className="w-1/2 sm:w-44 border border-gray-200 bg-white px-3 py-2.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm text-gray-700 shadow-sm cursor-pointer"
+            value={filtroEstado}
+            onChange={e => setFiltroEstado(e.target.value)}
+          >
+            <option value="ACTIVOS">Activos</option>
+            <option value="INACTIVOS">Inactivos</option>
+          </select>
+          <select
+            className="w-1/2 sm:w-48 border border-gray-200 bg-white px-3 py-2.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm text-gray-700 shadow-sm cursor-pointer"
+            value={filtroRol}
+            onChange={e => setFiltroRol(e.target.value)}
+          >
+            <option value="">Todos los roles</option>
+            <option value="GERENTE">Gerente</option>
+            <option value="VENDEDOR">Vendedor</option>
+            <option value="ADMINISTRADOR">Administrador</option>
+          </select>
         </div>
       </div>
 
-      {/* LISTA DE USUARIOS (GRID MASONRY/ITEMS-START) */}
+      {/* CANTIDAD DE USUARIOS */}
+      <div className="text-sm font-medium text-gray-500 mb-4 ml-1">
+        {totalUsuarios} {totalUsuarios === 1 ? 'usuario' : 'usuarios'}
+      </div>
+
+      {/* LISTA DE USUARIOS */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mb-6 items-start">
-        {usuarios.map(u => (
-          <div key={u.id} className={`bg-white rounded-xl shadow-sm border p-5 flex flex-col hover:shadow-md transition-shadow ${!u.activo ? 'opacity-70 grayscale-[30%]' : 'border-gray-200'}`}>
-            
-            {/* Header: Avatar, Info, Status */}
-            <div className="flex gap-4 items-start mb-4">
-              {/* Avatar con iniciales */}
-              <div className="w-12 h-12 rounded-full bg-purple-600 flex items-center justify-center text-white font-bold text-lg flex-shrink-0">
-                {u.nombre.charAt(0)}{u.apellido.charAt(0)}
-              </div>
+        {usuarios.map(u => {
+          let avatarBg = "bg-emerald-600";
+          if (u.rol === "GERENTE") avatarBg = "bg-purple-600";
+          else if (u.rol === "ADMINISTRADOR") avatarBg = "bg-blue-600";
+
+          return (
+            <div key={u.id} className={`relative bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex flex-col hover:shadow-md transition-all duration-200 ${!u.activo ? 'opacity-70 grayscale-[20%]' : ''}`}>
               
-              {/* Nombre y DNI */}
-              <div className="flex-1 min-w-0">
-                <h3 className="font-bold text-gray-900 text-lg leading-tight truncate">{u.nombre} {u.apellido}</h3>
-                <p className="text-gray-500 text-sm mt-0.5">DNI: {u.dni || "Sin DNI"}</p>
-                
-                {/* Badges de Rol y Estado */}
-                <div className="flex flex-wrap items-center gap-2 mt-2">
-                  <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-bold ${
-                    u.rol === "GERENTE" 
-                      ? "bg-purple-100 text-purple-700" 
-                      : u.rol === "ADMINISTRADOR"
-                      ? "bg-blue-100 text-blue-700"
-                      : "bg-green-50 text-green-700 border border-green-200"
-                  }`}>
-                    {u.rol}
-                  </span>
-                  
-                  <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-bold ${
-                    u.activo ? 'bg-green-50 text-green-600 border border-green-200' : 'bg-gray-100 text-gray-600 border border-gray-200'
-                  }`}>
-                    {u.activo ? 'Activo' : 'Inactivo'}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Datos de contacto */}
-            <div className="space-y-2 mb-4">
-              <div className="flex items-center gap-2 text-sm text-gray-600">
-                <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
-                <span className="truncate">{u.email}</span>
-              </div>
-              <div className="flex items-center gap-2 text-sm text-gray-600">
-                <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
-                <span className="truncate">{u.telefono || "+54 11 0000-0000"}</span>
-              </div>
-            </div>
-
-            {/* Tarjeta de rendimiento / Métricas globales */}
-            {u.rol === "VENDEDOR" ? (
-              <div className="bg-gray-50 rounded-lg p-3 mb-4 border border-gray-100">
-                <p className="text-xs font-bold text-gray-500 mb-2">Rendimiento indiv.</p>
-                <div className="grid grid-cols-3 gap-2">
-                  <div>
-                    <p className="text-[10px] sm:text-xs text-gray-500 uppercase tracking-wide">Clientes</p>
-                    <p className="font-bold text-gray-800">{u._count?.clientes || 0}</p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] sm:text-xs text-gray-500 uppercase tracking-wide">Propiedades</p>
-                    <p className="font-bold text-gray-800">{u._count?.oportunidades || 0}</p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] sm:text-xs text-gray-500 uppercase tracking-wide">Tareas asig.</p>
-                    <p className="font-bold text-green-600">{u._count?.actividades || 0}</p>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="bg-gray-50 rounded-lg p-3 mb-4 border border-gray-100">
-                <p className="text-xs font-bold text-gray-500 mb-2">Métricas globales CRM</p>
-                <div className="grid grid-cols-3 gap-2">
-                  <div>
-                    <p className="text-[10px] sm:text-xs text-gray-500 uppercase tracking-wide">Clientes</p>
-                    <p className="font-bold text-gray-800">{metricasGlobales.totalClientes}</p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] sm:text-xs text-gray-500 uppercase tracking-wide">Propiedades</p>
-                    <p className="font-bold text-gray-800">{metricasGlobales.totalPropiedades}</p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] sm:text-xs text-gray-500 uppercase tracking-wide">Tareas activ.</p>
-                    <p className="font-bold text-green-600">{metricasGlobales.totalTareas}</p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Botones de acción */}
-            <div className="mt-auto pt-4 border-t border-gray-100 flex items-center justify-between">
-              {esAdministrador ? (
-                <span className="text-gray-400 text-xs italic">Vista de solo lectura</span>
-              ) : (
-                <div className="flex flex-wrap gap-4 w-full justify-between sm:justify-start">
-                  {u.rol === "VENDEDOR" && (
-                    <button
-                      onClick={() => alert("Métricas detalladas próximamente...")}
-                      className="flex items-center gap-1 text-blue-600 hover:text-blue-800 text-sm font-semibold transition-colors"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
-                      Ver métricas
-                    </button>
-                  )}
-                  <button
-                    onClick={() => {
-                      setForm({
-                        id: u.id,
-                        nombre: u.nombre,
-                        apellido: u.apellido,
-                        email: u.email,
-                        rol: u.rol,
-                        dni: u.dni || ""
-                      });
-                      setOpenForm(true);
-                    }}
-                    className="flex items-center gap-1 text-gray-600 hover:text-gray-900 text-sm font-semibold transition-colors"
+              {/* Menú de 3 puntos (Kebab Dropdown) */}
+              <div className="absolute top-6 right-6">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setMenuAbiertoId(menuAbiertoId === u.id ? null : u.id);
+                  }}
+                  className="p-1 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-50 transition-colors"
+                >
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M6 10a2 2 0 11-4 0 2 2 0 014 0zM14 10a2 2 0 11-4 0 2 2 0 014 0zM22 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                  </svg>
+                </button>
+                {menuAbiertoId === u.id && (
+                  <div 
+                    onClick={(e) => e.stopPropagation()}
+                    className="absolute right-0 mt-1 w-44 bg-white border border-gray-100 rounded-xl shadow-lg py-1.5 z-20 animate-fadeIn"
                   >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
-                    Editar
-                  </button>
-                  {u.id !== usuario.id && (
+                    {u.rol === "VENDEDOR" && (
+                      <button
+                        onClick={() => {
+                          setMenuAbiertoId(null);
+                          alert("Métricas detalladas próximamente...");
+                        }}
+                        className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2 transition-colors"
+                      >
+                        <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                        Ver métricas
+                      </button>
+                    )}
                     <button
-                      onClick={() => toggleActivo(u.id)}
-                      className={`flex items-center gap-1 text-sm font-semibold transition-colors ${
-                        u.activo ? 'text-red-600 hover:text-red-800 ml-auto sm:ml-0' : 'text-green-600 hover:text-green-800 ml-auto sm:ml-0'
-                      }`}
+                      onClick={() => {
+                        setMenuAbiertoId(null);
+                        setForm({
+                          id: u.id,
+                          nombre: u.nombre,
+                          apellido: u.apellido,
+                          email: u.email,
+                          rol: u.rol,
+                          dni: u.dni || ""
+                        });
+                        setOpenForm(true);
+                      }}
+                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2 transition-colors"
                     >
-                      {u.activo ? 'Desactivar' : 'Activar'}
+                      <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                      Editar
                     </button>
-                  )}
+                    {u.id !== usuario.id && !(usuario.rol === "ADMINISTRADOR" && u.rol === "GERENTE") && (
+                      <button
+                        onClick={() => {
+                          setMenuAbiertoId(null);
+                          toggleActivo(u.id);
+                        }}
+                        className={`w-full text-left px-4 py-2 text-sm font-medium flex items-center gap-2 border-t border-gray-50 mt-1 pt-1.5 transition-colors ${
+                          u.activo ? 'text-red-600 hover:bg-red-50' : 'text-green-600 hover:bg-green-50'
+                        }`}
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" /></svg>
+                        {u.activo ? 'Desactivar' : 'Activar'}
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Header: Avatar e Información del Usuario */}
+              <div className="flex gap-4 items-start mb-5 pr-8">
+                <div className={`w-12 h-12 rounded-full ${avatarBg} flex items-center justify-center text-white font-bold text-lg flex-shrink-0 shadow-sm`}>
+                  {u.nombre.charAt(0)}{u.apellido.charAt(0)}
+                </div>
+                
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-bold text-gray-900 text-base leading-tight truncate">{u.nombre} {u.apellido}</h3>
+                  <p className="text-gray-400 text-xs font-medium mt-1">DNI {u.dni || "—"}</p>
+                  
+                  {/* Badges de Rol y Estado */}
+                  <div className="flex flex-wrap items-center gap-2 mt-2">
+                    <span className={`inline-flex px-2.5 py-0.5 rounded-md text-[10px] font-bold tracking-wider ${
+                      u.rol === "GERENTE" 
+                        ? "bg-purple-50 text-purple-600" 
+                        : u.rol === "ADMINISTRADOR"
+                        ? "bg-blue-50 text-blue-600"
+                        : "bg-green-50 text-green-600"
+                    }`}>
+                      {u.rol}
+                    </span>
+                    
+                    <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-wider ${
+                      u.activo ? 'bg-green-50 text-green-600 border border-green-100' : 'bg-gray-50 text-gray-500 border border-gray-100'
+                    }`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${u.activo ? 'bg-green-500' : 'bg-gray-400'}`}></span>
+                      {u.activo ? 'ACTIVO' : 'INACTIVO'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Datos de contacto */}
+              <div className="space-y-2 mb-5">
+                <div className="flex items-center gap-2.5 text-sm text-gray-600">
+                  <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+                  <span className="truncate font-medium">{u.email}</span>
+                </div>
+                <div className="flex items-center gap-2.5 text-sm text-gray-600">
+                  <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
+                  <span className="truncate font-medium">{u.telefono || "+54 11 0000-0000"}</span>
+                </div>
+              </div>
+
+              {/* Tarjeta de rendimiento / Métricas globales */}
+              {u.rol === "VENDEDOR" ? (
+                <div className="bg-gray-50 rounded-xl p-3.5 border border-gray-100/80 mt-auto">
+                  <div className="grid grid-cols-3 gap-2 text-center">
+                    <div>
+                      <p className="font-bold text-gray-800 text-lg leading-none">{u._count?.clientes || 0}</p>
+                      <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mt-1.5">Clientes</p>
+                    </div>
+                    <div className="border-l border-gray-200/60">
+                      <p className="font-bold text-gray-800 text-lg leading-none">{u._count?.oportunidades || 0}</p>
+                      <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mt-1.5">Props.</p>
+                    </div>
+                    <div className="border-l border-gray-200/60">
+                      <p className="font-bold text-gray-800 text-lg leading-none">{u._count?.actividades || 0}</p>
+                      <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mt-1.5">Tareas</p>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-gray-50 rounded-xl p-3.5 border border-gray-100/80 mt-auto">
+                  <div className="grid grid-cols-3 gap-2 text-center">
+                    <div>
+                      <p className="font-bold text-gray-800 text-lg leading-none">{metricasGlobales.totalClientes}</p>
+                      <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mt-1.5">Clientes</p>
+                    </div>
+                    <div className="border-l border-gray-200/60">
+                      <p className="font-bold text-gray-800 text-lg leading-none">{metricasGlobales.totalPropiedades}</p>
+                      <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mt-1.5">Props.</p>
+                    </div>
+                    <div className="border-l border-gray-200/60">
+                      <p className="font-bold text-gray-800 text-lg leading-none">{metricasGlobales.totalTareas}</p>
+                      <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mt-1.5">Tareas</p>
+                    </div>
+                  </div>
                 </div>
               )}
+
             </div>
-          </div>
-        ))}
+          );
+        })}
 
         {usuarios.length === 0 && (
           <div className="col-span-full text-center py-12 text-gray-500 bg-white rounded-xl border border-gray-200">

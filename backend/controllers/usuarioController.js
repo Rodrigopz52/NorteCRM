@@ -92,11 +92,11 @@ export const listarUsuarios = async (req, res) => {
   }
 };
 
-// Crear nuevo usuario/vendedor (solo GERENTE, ADMINISTRADOR no puede)
+// Crear nuevo usuario/vendedor (GERENTE y ADMINISTRADOR)
 export const crearUsuario = async (req, res) => {
   try {
-    if (req.usuario.rol !== "GERENTE") {
-      return res.status(403).json({ error: "Solo el gerente puede crear usuarios" });
+    if (req.usuario.rol !== "GERENTE" && req.usuario.rol !== "ADMINISTRADOR") {
+      return res.status(403).json({ error: "Solo el gerente o administrador pueden crear usuarios" });
     }
 
     const { nombre, apellido, email, rol, dni } = req.body;
@@ -176,11 +176,11 @@ export const crearUsuario = async (req, res) => {
   }
 };
 
-// Editar usuario (solo GERENTE, ADMINISTRADOR no puede)
+// Editar usuario (GERENTE y ADMINISTRADOR)
 export const editarUsuario = async (req, res) => {
   try {
-    if (req.usuario.rol !== "GERENTE") {
-      return res.status(403).json({ error: "Solo el gerente puede editar usuarios" });
+    if (req.usuario.rol !== "GERENTE" && req.usuario.rol !== "ADMINISTRADOR") {
+      return res.status(403).json({ error: "Solo el gerente o administrador pueden editar usuarios" });
     }
 
     const { id } = req.params;
@@ -216,11 +216,11 @@ export const editarUsuario = async (req, res) => {
   }
 };
 
-// Toggle activo/inactivo (solo GERENTE, ADMINISTRADOR no puede)
+// Toggle activo/inactivo (GERENTE y ADMINISTRADOR)
 export const toggleActivo = async (req, res) => {
   try {
-    if (req.usuario.rol !== "GERENTE") {
-      return res.status(403).json({ error: "Solo el gerente puede cambiar el estado" });
+    if (req.usuario.rol !== "GERENTE" && req.usuario.rol !== "ADMINISTRADOR") {
+      return res.status(403).json({ error: "Solo el gerente o administrador pueden cambiar el estado" });
     }
 
     const { id } = req.params;
@@ -233,6 +233,15 @@ export const toggleActivo = async (req, res) => {
     const usuarioActual = await prisma.usuario.findUnique({
       where: { id: Number(id) }
     });
+
+    if (!usuarioActual) {
+      return res.status(404).json({ error: "Usuario no encontrado" });
+    }
+
+    // Un administrador no puede desactivar/activar a un gerente
+    if (req.usuario.rol === "ADMINISTRADOR" && usuarioActual.rol === "GERENTE") {
+      return res.status(403).json({ error: "Un administrador no puede cambiar el estado de un gerente" });
+    }
 
     const usuario = await prisma.usuario.update({
       where: { id: Number(id) },
@@ -261,11 +270,11 @@ export const toggleActivo = async (req, res) => {
   }
 };
 
-// Resetear contraseña (solo GERENTE, ADMINISTRADOR no puede)
+// Resetear contraseña (GERENTE y ADMINISTRADOR)
 export const resetearPassword = async (req, res) => {
   try {
-    if (req.usuario.rol !== "GERENTE") {
-      return res.status(403).json({ error: "Solo el gerente puede resetear contraseñas" });
+    if (req.usuario.rol !== "GERENTE" && req.usuario.rol !== "ADMINISTRADOR") {
+      return res.status(403).json({ error: "Solo el gerente o administrador pueden resetear contraseñas" });
     }
 
     const { id } = req.params;
