@@ -29,7 +29,7 @@ export const listarClientes = async (req, res) => {
     const whereStats = { ...filtroRol, ...filtroTipo, ...filtroBusqueda };
     const where = { ...whereStats, ...filtroEstado };
 
-    const [clientes, total, totalActivos, totalInactivos] = await Promise.all([
+    const [clientes, total, totalActivos, totalInactivos, totalConTareasPendientes] = await Promise.all([
       prisma.cliente.findMany({
         where,
         include: {
@@ -48,12 +48,21 @@ export const listarClientes = async (req, res) => {
       }),
       prisma.cliente.count({ where }),
       prisma.cliente.count({ where: { ...whereStats, activo: true } }),
-      prisma.cliente.count({ where: { ...whereStats, activo: false } })
+      prisma.cliente.count({ where: { ...whereStats, activo: false } }),
+      prisma.cliente.count({
+        where: {
+          ...where,
+          actividades: {
+            some: { completada: false }
+          }
+        }
+      })
     ]);
 
     const baseResponse = construirRespuestaPaginada(clientes, total, page, limit);
     baseResponse.meta.totalActivos = totalActivos;
     baseResponse.meta.totalInactivos = totalInactivos;
+    baseResponse.meta.totalConTareasPendientes = totalConTareasPendientes;
 
     return res.json(baseResponse);
 
@@ -68,6 +77,10 @@ export const crearCliente = async (req, res) => {
   try {
     const usuario = req.usuario;
     const { nombre, empresa, telefono, dni, email, notas, temperatura, interes, usuarioId, etapaLead } = req.body;
+
+    if (!nombre || !dni) {
+      return res.status(400).json({ error: "El nombre y el DNI son obligatorios" });
+    }
 
     const etapasValidas = ["LEAD", "CONTACTADO", "VISITA", "NEGOCIACION", "CERRADO"];
     if (etapaLead && !etapasValidas.includes(etapaLead)) {
@@ -110,6 +123,10 @@ export const editarCliente = async (req, res) => {
     // El gerente y administrador pueden editar cualquier cliente, el vendedor solo sus propios clientes
     if (usuario.rol === "VENDEDOR" && cliente.usuarioId !== usuario.id) {
       return res.status(403).json({ error: "No tienes permiso para editar este cliente" });
+    }
+
+    if (!nombre || !dni) {
+      return res.status(400).json({ error: "El nombre y el DNI son obligatorios" });
     }
 
     const etapasValidas = ["LEAD", "CONTACTADO", "VISITA", "NEGOCIACION", "CERRADO"];

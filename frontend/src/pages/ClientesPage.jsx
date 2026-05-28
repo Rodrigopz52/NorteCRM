@@ -2,8 +2,25 @@ import { useContext, useEffect, useState } from "react";
 import axios from "axios";
 import { AuthContext } from "../context/AuthContext.jsx";
 import { useToast, useConfirm } from "../hooks/useNotifications.jsx";
-import { PhoneIcon, EnvelopeIcon, ChatBubbleLeftEllipsisIcon } from "@heroicons/react/24/outline";
+import { PhoneIcon, EnvelopeIcon, ChatBubbleLeftEllipsisIcon, IdentificationIcon } from "@heroicons/react/24/outline";
 import Paginacion from "../components/Paginacion.jsx";
+
+// Helper function to format time elapsed
+function formatTiempoHace(dateString) {
+  if (!dateString) return "";
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffTime = Math.abs(now - date);
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  if (diffDays <= 1) return "Hoy";
+  if (diffDays < 7) return `Hace ${diffDays} días`;
+  if (diffDays < 30) {
+    const weeks = Math.floor(diffDays / 7);
+    return `Hace ${weeks} ${weeks === 1 ? 'semana' : 'semanas'}`;
+  }
+  const months = Math.floor(diffDays / 30);
+  return `Hace ${months} ${months === 1 ? 'mes' : 'meses'}`;
+}
 
 export default function ClientesPage() {
   const { token, usuario } = useContext(AuthContext);
@@ -17,11 +34,13 @@ export default function ClientesPage() {
   const [openForm, setOpenForm] = useState(false);
   const [form, setForm] = useState({ id: null, nombre: "", empresa: "", telefono: "", dni: "", email: "", notas: "", temperatura: "FRIO", interes: "", usuarioId: "" });
   const [tareaModal, setTareaModal] = useState({ open: false, clienteId: null, descripcion: "", fechaLimite: "" });
+  const [menuAbiertoId, setMenuAbiertoId] = useState(null);
 
   // Paginación
   const [pagina, setPagina] = useState(1);
   const [totalPaginas, setTotalPaginas] = useState(1);
   const [totalClientes, setTotalClientes] = useState(0);
+  const [totalConTareasPendientes, setTotalConTareasPendientes] = useState(0);
   const [clientesActivos, setClientesActivos] = useState(0);
   const [clientesInactivos, setClientesInactivos] = useState(0);
   const limit = 6;
@@ -38,9 +57,10 @@ export default function ClientesPage() {
       });
       setClientes(data.data);
       setTotalPaginas(data.meta.totalPaginas);
-      setTotalClientes(data.meta.totalActivos + data.meta.totalInactivos);
+      setTotalClientes(filtroEstado === "ACTIVOS" ? data.meta.totalActivos : data.meta.totalInactivos);
       setClientesActivos(data.meta.totalActivos);
       setClientesInactivos(data.meta.totalInactivos);
+      setTotalConTareasPendientes(data.meta.totalConTareasPendientes || 0);
     } catch (err) {
       console.error("Error al cargar clientes:", err);
     }
@@ -50,6 +70,13 @@ export default function ClientesPage() {
     fetchClientes();
   }, [pagina, filtroTipo, filtroEstado, busqueda]); // Refetch automático al cambiar params
 
+  // Cerrar menú al hacer click afuera
+  useEffect(() => {
+    const handleCloseMenu = () => setMenuAbiertoId(null);
+    window.addEventListener("click", handleCloseMenu);
+    return () => window.removeEventListener("click", handleCloseMenu);
+  }, []);
+
   // Si cambia el filtro o la búsqueda, volver a la página 1
   useEffect(() => {
     setPagina(1);
@@ -57,8 +84,18 @@ export default function ClientesPage() {
 
   const crearCliente = async () => {
     try {
-      if (!form.nombre) {
-        error("El nombre es obligatorio");
+      if (!form.nombre || !form.dni) {
+        error("El nombre y el DNI son obligatorios");
+        return;
+      }
+
+      if (form.dni && (form.dni.length < 7 || form.dni.length > 8)) {
+        error("El DNI debe tener 7 u 8 dígitos");
+        return;
+      }
+
+      if (form.dni && !/^\d+$/.test(form.dni)) {
+        error("El DNI debe contener solo números");
         return;
       }
 
@@ -94,7 +131,7 @@ export default function ClientesPage() {
       }
 
       setOpenForm(false);
-      setForm({ nombre: "", empresa: "", telefono: "", email: "", notas: "" });
+      setForm({ nombre: "", empresa: "", telefono: "", dni: "", email: "", notas: "", temperatura: "FRIO", interes: "", usuarioId: "" });
       fetchClientes();
     } catch (err) {
       console.error("Error al guardar cliente:", err);
@@ -132,17 +169,30 @@ export default function ClientesPage() {
       return;
     }
     try {
-      await axios.post("http://localhost:3000/actividades", {
-        tipo: "TAREA",
-        titulo: tareaModal.descripcion,
-        descripcion: tareaModal.descripcion,
-        fechaVencimiento: tareaModal.fechaLimite || new Date().toISOString(),
-        clienteId: tareaModal.clienteId
-      }, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      success("Tarea guardada");
-      setTareaModal({ open: false, clienteId: null, descripcion: "", fechaLimite: "" });
+      if (tareaModal.id) {
+        await axios.put(`http://localhost:3000/actividades/${tareaModal.id}`, {
+          tipo: "TAREA",
+          titulo: tareaModal.descripcion,
+          descripcion: tareaModal.descripcion,
+          fechaVencimiento: tareaModal.fechaLimite || new Date().toISOString(),
+          clienteId: tareaModal.clienteId
+        }, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        success("Tarea actualizada");
+      } else {
+        await axios.post("http://localhost:3000/actividades", {
+          tipo: "TAREA",
+          titulo: tareaModal.descripcion,
+          descripcion: tareaModal.descripcion,
+          fechaVencimiento: tareaModal.fechaLimite || new Date().toISOString(),
+          clienteId: tareaModal.clienteId
+        }, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        success("Tarea guardada");
+      }
+      setTareaModal({ id: null, open: false, clienteId: null, descripcion: "", fechaLimite: "" });
       fetchClientes();
     } catch (err) {
       error("Error al guardar tarea");
@@ -167,9 +217,11 @@ export default function ClientesPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-4 sm:p-6 overflow-x-hidden">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-3">
+      
+      {/* HEADER */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-6">
         <div>
-          <h2 className="text-xl sm:text-2xl font-bold text-gray-800">Clientes</h2>
+          <h2 className="text-2xl font-bold text-gray-900 tracking-tight">Clientes</h2>
           <p className="text-sm text-gray-500 font-medium mt-1">Gestión de inquilinos, compradores y propietarios</p>
         </div>
         <button
@@ -181,192 +233,277 @@ export default function ClientesPage() {
       </div>
 
       {/* FILTROS Y BÚSQUEDA */}
-      <div className="bg-white rounded-lg shadow-sm p-3 mb-3 border border-gray-200">
-        <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-2">
-          {/* Filtro por tipo */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-1.5 sm:gap-2">
-            <span className="text-xs font-semibold text-gray-700">Filtrar:</span>
-            <div className="flex flex-wrap gap-1.5">
-              {["Todos", "INQUILINO", "PROPIETARIO", "COMPRADOR"].map(tipo => (
-                <button
-                  key={tipo}
-                  onClick={() => setFiltroTipo(tipo)}
-                  className={`px-2.5 py-1.5 rounded-lg font-medium text-xs transition-all ${filtroTipo === tipo
-                    ? "bg-purple-600 text-white shadow-md"
-                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                    }`}
-                >
-                  {tipo === "INQUILINO" ? "🏠 Inquilino" : tipo === "PROPIETARIO" ? "🏘️ Propietario" : tipo === "COMPRADOR" ? "💰 Comprador" : "Todos"}
-                </button>
-              ))}
-            </div>
-
-            <select
-              className="sm:ml-2 border border-gray-300 focus:border-purple-500 focus:ring-1 focus:ring-purple-200 p-2 rounded-lg transition-all outline-none text-sm"
-              value={filtroEstado}
-              onChange={e => setFiltroEstado(e.target.value)}
-            >
-              <option value="ACTIVOS">Activos</option>
-              <option value="INACTIVOS">Inactivos</option>
-              <option value="TODOS">Todos</option>
-            </select>
-          </div>
-
-          {/* Buscador */}
-          <div className="flex items-center gap-2 lg:ml-auto w-full lg:w-auto">
-            <div className="relative flex-1 lg:flex-initial">
-              <input
-                type="text"
-                placeholder="Buscar por nombre, email o teléfono..."
-                className="w-full lg:w-72 border border-gray-300 focus:border-purple-500 focus:ring-1 focus:ring-purple-200 p-2 rounded-lg transition-all outline-none text-sm"
-                value={busqueda}
-                onChange={e => setBusqueda(e.target.value)}
-              />
-              {busqueda && (
-                <button
-                  onClick={() => setBusqueda("")}
-                  className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 text-sm"
-                >
-                  ✕
-                </button>
-              )}
-            </div>
-          </div>
+      <div className="flex flex-col sm:flex-row items-center gap-3 mb-6">
+        <div className="relative flex-1 w-full">
+          <span className="absolute inset-y-0 left-0 flex items-center pl-3">
+            <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          </span>
+          <input
+            type="text"
+            placeholder="Buscar por nombre, email, teléfono o DNI..."
+            className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm text-gray-700 shadow-sm"
+            value={busqueda}
+            onChange={e => setBusqueda(e.target.value)}
+          />
+        </div>
+        <div className="flex gap-3 w-full sm:w-auto">
+          <select
+            className="w-1/2 sm:w-48 border border-gray-200 bg-white px-3 py-2.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm text-gray-700 shadow-sm cursor-pointer"
+            value={filtroTipo}
+            onChange={e => setFiltroTipo(e.target.value)}
+          >
+            <option value="Todos">Todos los tipos</option>
+            <option value="INQUILINO">Inquilinos</option>
+            <option value="PROPIETARIO">Propietarios</option>
+            <option value="COMPRADOR">Compradores</option>
+          </select>
+          <select
+            className="w-1/2 sm:w-44 border border-gray-200 bg-white px-3 py-2.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm text-gray-700 shadow-sm cursor-pointer"
+            value={filtroEstado}
+            onChange={e => setFiltroEstado(e.target.value)}
+          >
+            <option value="ACTIVOS">Activos</option>
+            <option value="INACTIVOS">Inactivos</option>
+          </select>
         </div>
       </div>
 
+      {/* CONTADOR DE CLIENTES Y TAREAS */}
+      <div className="flex gap-2 text-sm text-gray-500 mb-4 ml-1 animate-fadeIn">
+        <span>{totalClientes} {totalClientes === 1 ? 'contacto' : 'contactos'}</span>
+        {totalConTareasPendientes > 0 && (
+          <>
+            <span>•</span>
+            <span className="text-orange-500 font-semibold">{totalConTareasPendientes} con tarea pendiente</span>
+          </>
+        )}
+      </div>
+
       {/* Grilla 2 Columnas - Tarjetas Horizontales */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         {clientes.length > 0 ? (
-          clientes.map(c => (
-            <div
-              key={c.id}
-              className={`bg-white rounded-xl shadow-sm border ${c.activo ? 'border-gray-200 hover:shadow-md hover:border-purple-300' : 'border-gray-200 bg-gray-50 opacity-75'} p-4 transition-all flex flex-col sm:flex-row gap-4`}
-            >
-              {/* Lado Izquierdo: Info & Contacto */}
-              <div className="flex-1 flex flex-col">
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-lg" title={c.temperatura === 'CALIENTE' ? 'Caliente' : c.temperatura === 'TIBIO' ? 'Tibio' : 'Frío'}>
-                    {c.temperatura === 'CALIENTE' ? '🔥' : c.temperatura === 'TIBIO' ? '☀️' : '❄️'}
-                  </span>
-                  <h3 className="text-base font-bold text-gray-800 line-clamp-1">{c.nombre}</h3>
-                </div>
-                <div className="flex items-center gap-2 mb-3">
-                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${c.empresa === 'INQUILINO' ? 'bg-green-100 text-green-700 border border-green-200' :
-                      c.empresa === 'PROPIETARIO' ? 'bg-purple-100 text-purple-700 border border-purple-200' :
-                        c.empresa === 'COMPRADOR' ? 'bg-blue-100 text-blue-700 border border-blue-200' :
-                          'bg-gray-100 text-gray-700 border border-gray-200'
-                    }`}>
-                    {c.empresa || "Sin tipo"}
-                  </span>
-                  {!c.activo && (
-                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-100 text-red-800 uppercase">
-                      Inactivo
-                    </span>
-                  )}
-                </div>
+          clientes.map(c => {
+            let borderTypeColor = "border-l-gray-200";
+            if (c.activo) {
+              if (c.empresa === "INQUILINO") borderTypeColor = "border-l-emerald-500";
+              else if (c.empresa === "PROPIETARIO") borderTypeColor = "border-l-purple-500";
+              else if (c.empresa === "COMPRADOR") borderTypeColor = "border-l-amber-500";
+            }
 
-                <div className="text-sm text-gray-700 font-medium space-y-2 mt-auto bg-gray-50/50 p-2.5 rounded-lg border border-gray-100">
-                  {c.dni && (
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-bold text-gray-400 bg-gray-200 px-1.5 rounded">DNI</span>
-                      <span>{c.dni}</span>
-                    </div>
-                  )}
-                  <div className="flex items-center gap-2">
-                    <PhoneIcon className="w-4 h-4 text-purple-500" />
-                    {c.telefono || <span className="italic text-gray-400 text-xs font-normal">Sin teléfono</span>}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <EnvelopeIcon className="w-4 h-4 text-purple-500" />
-                    <span className="truncate">{c.email || <span className="italic text-gray-400 text-xs font-normal">Sin email</span>}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Lado Derecho: Interés, Tarea & Acciones */}
-              <div className="flex-1 flex flex-col border-t sm:border-t-0 sm:border-l border-gray-100 pt-3 sm:pt-0 sm:pl-4">
-                <div className="flex-1">
-                  {c.interes && (
-                    <div className="text-xs text-gray-700 mb-2">
-                      <span className="font-bold text-gray-400 text-[9px] uppercase tracking-wider block mb-0.5">Busca</span>
-                      <span className="line-clamp-2" title={c.interes}>{c.interes}</span>
-                    </div>
-                  )}
-                  {/* Tareas / Actividades */}
-                  {c.actividades && c.actividades.length > 0 ? (
-                    <div 
-                      onClick={() => completarActividad(c.actividades[0].id)}
-                      className="inline-flex items-start gap-1.5 mt-1 text-[10px] bg-orange-50 text-orange-700 border border-orange-100 px-2 py-1.5 rounded font-medium cursor-pointer hover:bg-orange-100 transition-colors"
-                      title="Haz clic para marcar como completada"
+            return (
+              <div
+                key={c.id}
+                className={`relative bg-white rounded-2xl shadow-sm border-y border-r border-l-4 ${borderTypeColor} ${c.activo ? 'border-gray-100' : 'border-gray-100 bg-gray-50 opacity-75'} p-4 transition-all hover:shadow-md duration-200 flex flex-col sm:flex-row gap-4`}
+              >
+                
+                {/* Menú de 3 puntos (Kebab Dropdown) */}
+                <div className="absolute top-4 right-4">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setMenuAbiertoId(menuAbiertoId === c.id ? null : c.id);
+                    }}
+                    className="p-1 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-50 transition-colors"
+                  >
+                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M6 10a2 2 0 11-4 0 2 2 0 014 0zM14 10a2 2 0 11-4 0 2 2 0 014 0zM22 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
+                  </button>
+                  {menuAbiertoId === c.id && (
+                    <div
+                      onClick={(e) => e.stopPropagation()}
+                      className="absolute right-0 mt-1 w-48 bg-white border border-gray-100 rounded-xl shadow-lg py-1.5 z-20 animate-fadeIn"
                     >
-                      <span className="mt-0.5">⏱️</span>
-                      <span className="line-clamp-2">
-                        Pendiente: {c.actividades[0].titulo}
-                        {c.actividades[0].fechaVencimiento && ` - Vence: ${new Date(c.actividades[0].fechaVencimiento).toLocaleDateString()}`}
+                      <button
+                        onClick={() => {
+                          setMenuAbiertoId(null);
+                          setForm(c);
+                          setOpenForm(true);
+                        }}
+                        className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2 transition-colors"
+                      >
+                        <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                        Editar
+                      </button>
+                      <button
+                        onClick={() => {
+                          setMenuAbiertoId(null);
+                          const act = c.actividades?.[0];
+                          setTareaModal({
+                            id: act ? act.id : null,
+                            open: true,
+                            clienteId: c.id,
+                            descripcion: act ? act.titulo : "",
+                            fechaLimite: act && act.fechaVencimiento ? new Date(act.fechaVencimiento).toISOString().split('T')[0] : ""
+                          });
+                        }}
+                        className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2 transition-colors"
+                      >
+                        <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                        {c.actividades && c.actividades.length > 0 ? "Editar tarea" : "Añadir tarea"}
+                      </button>
+                      {(usuario?.rol === "GERENTE" || usuario?.rol === "ADMINISTRADOR") && (
+                        <button
+                          onClick={() => {
+                            setMenuAbiertoId(null);
+                            toggleActivo(c.id, c.activo);
+                          }}
+                          className={`w-full text-left px-4 py-2 text-sm font-medium flex items-center gap-2 border-t border-gray-50 mt-1 pt-1.5 transition-colors ${
+                            c.activo ? 'text-red-600 hover:bg-red-50' : 'text-green-600 hover:bg-green-50'
+                          }`}
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" /></svg>
+                          {c.activo ? 'Desactivar cliente' : 'Activar cliente'}
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Lado Izquierdo: Info & Contacto */}
+                <div className="flex-1 flex flex-col pr-2 justify-between">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-lg" title={c.temperatura === 'CALIENTE' ? 'Caliente' : c.temperatura === 'TIBIO' ? 'Tibio' : 'Frío'}>
+                        {c.temperatura === 'CALIENTE' ? '🔥' : c.temperatura === 'TIBIO' ? '☀️' : '❄️'}
+                      </span>
+                      <h3 className="text-base font-bold text-gray-900 uppercase line-clamp-1 leading-tight">{c.nombre}</h3>
+                    </div>
+                    <div className="flex items-center gap-2 mb-3">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                          c.empresa === 'INQUILINO' ? 'bg-green-50 text-green-700 border border-green-100' :
+                          c.empresa === 'PROPIETARIO' ? 'bg-purple-50 text-purple-700 border border-purple-100' :
+                          c.empresa === 'COMPRADOR' ? 'bg-blue-50 text-blue-700 border border-blue-100' :
+                          'bg-gray-50 text-gray-700 border border-gray-100'
+                        }`}>
+                        {c.empresa === 'INQUILINO' ? '🏠 INQUILINO' : c.empresa === 'PROPIETARIO' ? '🏘️ PROPIETARIO' : c.empresa === 'COMPRADOR' ? '💰 COMPRADOR' : 'Sin tipo'}
+                      </span>
+                      {!c.activo && (
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-red-50 text-red-800 uppercase">
+                          Inactivo
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="text-sm text-gray-800 font-medium space-y-2 mt-4">
+                    <div className="flex items-center gap-2">
+                      <IdentificationIcon className="w-4 h-4 text-gray-900 flex-shrink-0" />
+                      <span className="text-sm font-medium">DNI {c.dni || "—"}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <PhoneIcon className="w-4 h-4 text-gray-900 flex-shrink-0" />
+                      <span className="text-sm font-medium">{c.telefono || <span className="italic text-gray-400 text-xs font-normal">Sin teléfono</span>}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <EnvelopeIcon className="w-4 h-4 text-gray-900 flex-shrink-0" />
+                      <span className="text-sm font-medium truncate">{c.email || <span className="italic text-gray-400 text-xs font-normal">Sin email</span>}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Lado Derecho: Interés, Tarea & Botones de Comunicación */}
+                <div className="flex-1 flex flex-col border-t sm:border-t-0 sm:border-l border-gray-100 pt-3 sm:pt-0 sm:pl-4 justify-between">
+                  <div className="flex-1">
+                    <div className="text-xs text-gray-700 mb-2">
+                      <span className="font-bold text-gray-400 text-[9px] uppercase tracking-wider block mb-0.5">Interés</span>
+                      <span className="line-clamp-2" title={c.interes || "Sin especificar"}>
+                        {c.interes || <span className="italic text-gray-400 font-normal">Sin especificar</span>}
                       </span>
                     </div>
-                  ) : (
-                    <button 
-                      onClick={() => setTareaModal({ open: true, clienteId: c.id, descripcion: "", fechaLimite: "" })}
-                      className="inline-flex items-center gap-1 mt-1 text-[10px] text-gray-500 hover:text-purple-600 bg-gray-50 hover:bg-purple-50 px-2 py-1 rounded border border-dashed border-gray-300 hover:border-purple-300 transition-colors"
-                    >
-                      <span>+</span> Añadir tarea
-                    </button>
-                  )}
-                </div>
+                    
+                    {/* Tareas / Actividades */}
+                    {c.actividades && c.actividades.length > 0 ? (() => {
+                      const tarea = c.actividades[0];
+                      const isVencida = new Date(tarea.fechaVencimiento) < new Date();
+                      
+                      const dateObj = new Date(tarea.fechaVencimiento);
+                      const day = dateObj.getDate();
+                      const month = dateObj.getMonth() + 1;
+                      const year = dateObj.getFullYear();
+                      const formattedDate = `${day}/${month}/${year}`;
 
-                <div className="flex items-center justify-between mt-3 pt-2 border-t border-gray-50">
-                  <div className="flex items-center gap-2">
-                    {c.telefono ? (
-                      <>
-                        <a href={`tel:${c.telefono}`} title="Llamar" className="text-gray-500 hover:text-green-600 transition-colors p-1.5 bg-gray-100 hover:bg-green-100 rounded-lg">
-                          <PhoneIcon className="w-5 h-5" />
-                        </a>
-                        <a href={`https://wa.me/${c.telefono.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" title="WhatsApp" className="text-gray-500 hover:text-green-600 transition-colors p-1.5 bg-gray-100 hover:bg-green-100 rounded-lg">
-                          <ChatBubbleLeftEllipsisIcon className="w-5 h-5" />
-                        </a>
-                      </>
-                    ) : (
-                      <>
-                        <span className="text-gray-300 p-1.5 bg-gray-50 rounded-lg"><PhoneIcon className="w-5 h-5" /></span>
-                        <span className="text-gray-300 p-1.5 bg-gray-50 rounded-lg"><ChatBubbleLeftEllipsisIcon className="w-5 h-5" /></span>
-                      </>
-                    )}
-                    {c.email ? (
-                      <a href={`mailto:${c.email}`} title="Enviar Email" className="text-gray-500 hover:text-blue-600 transition-colors p-1.5 bg-gray-100 hover:bg-blue-100 rounded-lg ml-1">
-                        <EnvelopeIcon className="w-5 h-5" />
-                      </a>
-                    ) : (
-                      <span className="text-gray-300 p-1.5 bg-gray-50 rounded-lg ml-1"><EnvelopeIcon className="w-5 h-5" /></span>
-                    )}
-                  </div>
+                      const bgClass = isVencida ? "bg-red-50/70" : "bg-orange-50/70";
+                      const textClass = isVencida ? "text-red-700" : "text-orange-700";
+                      const borderClass = isVencida ? "border-red-100/80" : "border-orange-100/80";
 
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => {
-                        setForm(c);
-                        setOpenForm(true);
-                      }}
-                      className="text-blue-600 hover:bg-blue-50 px-2 py-1 rounded font-bold transition-colors text-xs"
-                    >
-                      Editar
-                    </button>
-                    {usuario?.rol === "GERENTE" && (
-                      <button
-                        onClick={() => toggleActivo(c.id, c.activo)}
-                        className={`font-bold transition-colors text-xs px-2 py-1 rounded ${c.activo ? 'text-gray-400 hover:text-red-600 hover:bg-red-50' : 'text-gray-400 hover:text-green-600 hover:bg-green-50'
-                          }`}
-                        title={c.activo ? 'Desactivar cliente' : 'Activar cliente'}
+                      return (
+                        <div 
+                          onClick={() => completarActividad(tarea.id)}
+                          className={`flex items-start justify-between gap-1.5 mt-2 text-[10px] ${bgClass} ${textClass} border ${borderClass} px-2.5 py-2 rounded-xl font-medium cursor-pointer hover:bg-opacity-80 transition-all`}
+                          title="Haz clic para marcar como completada"
+                        >
+                          <div className="flex gap-2 items-start">
+                            <span className="mt-0.5 text-xs">{isVencida ? "⚠️" : "⏱️"}</span>
+                            <div>
+                              <p className="font-semibold text-gray-800 text-[11px] leading-tight">{tarea.titulo}</p>
+                              <p className="text-[9px] mt-1 text-gray-500 font-medium">
+                                {isVencida ? "Vencida" : "Vence"} {formattedDate}
+                              </p>
+                            </div>
+                          </div>
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              completarActividad(tarea.id);
+                            }}
+                            className="text-gray-400 hover:text-green-600 transition-colors p-1"
+                            title="Completar"
+                          >
+                            <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                          </button>
+                        </div>
+                      );
+                    })() : (
+                      <button 
+                        onClick={() => setTareaModal({ id: null, open: true, clienteId: c.id, descripcion: "", fechaLimite: "" })}
+                        className="inline-flex items-center justify-center gap-1.5 mt-2 w-full text-[10px] text-gray-500 hover:text-purple-600 bg-gray-50 hover:bg-purple-50 px-3 py-2 rounded-xl border border-dashed border-gray-300 hover:border-purple-300 transition-colors font-medium"
                       >
-                        {c.activo ? 'Baja' : 'Alta'}
+                        <span>+</span> Añadir tarea
                       </button>
                     )}
                   </div>
+
+                  {/* Botones de acción integrados horizontalmente al pie del lado derecho */}
+                  <div className="flex gap-2 mt-4 pt-2.5 border-t border-gray-100">
+                    {c.telefono ? (
+                      <>
+                        <a href={`tel:${c.telefono}`} className="flex-1 py-1.5 px-2 bg-gray-50 hover:bg-gray-100 text-gray-700 rounded-lg text-[10px] font-semibold flex items-center justify-center gap-1 border border-gray-200/80 transition-colors">
+                          <PhoneIcon className="w-3.5 h-3.5 text-gray-900" /> Llamar
+                        </a>
+                        <a href={`https://wa.me/${c.telefono.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="flex-1 py-1.5 px-2 bg-gray-50 hover:bg-gray-100 text-gray-700 rounded-lg text-[10px] font-semibold flex items-center justify-center gap-1 border border-gray-200/80 transition-colors">
+                          <ChatBubbleLeftEllipsisIcon className="w-3.5 h-3.5 text-gray-900" /> WhatsApp
+                        </a>
+                      </>
+                    ) : (
+                      <>
+                        <div className="flex-1 py-1.5 px-2 bg-gray-50 text-gray-300 rounded-lg text-[10px] font-semibold flex items-center justify-center gap-1 border border-gray-100 cursor-not-allowed">
+                          <PhoneIcon className="w-3.5 h-3.5 text-gray-300" /> Llamar
+                        </div>
+                        <div className="flex-1 py-1.5 px-2 bg-gray-50 text-gray-300 rounded-lg text-[10px] font-semibold flex items-center justify-center gap-1 border border-gray-100 cursor-not-allowed">
+                          <ChatBubbleLeftEllipsisIcon className="w-3.5 h-3.5 text-gray-300" /> WhatsApp
+                        </div>
+                      </>
+                    )}
+                    {c.email ? (
+                      <a href={`mailto:${c.email}`} className="flex-1 py-1.5 px-2 bg-gray-50 hover:bg-gray-100 text-gray-700 rounded-lg text-[10px] font-semibold flex items-center justify-center gap-1 border border-gray-200/80 transition-colors">
+                        <EnvelopeIcon className="w-3.5 h-3.5 text-gray-900" /> Email
+                      </a>
+                    ) : (
+                      <div className="flex-1 py-1.5 px-2 bg-gray-50 text-gray-300 rounded-lg text-[10px] font-semibold flex items-center justify-center gap-1 border border-gray-100 cursor-not-allowed">
+                        <EnvelopeIcon className="w-3.5 h-3.5 text-gray-300" /> Email
+                      </div>
+                    )}
+                  </div>
                 </div>
+
               </div>
-            </div>
-          ))
+            );
+          })
         ) : (
           <div className="col-span-full text-center py-12 bg-white rounded-xl border border-gray-200 shadow-sm">
             <p className="text-gray-500 font-medium">No se encontraron clientes</p>
@@ -439,12 +576,12 @@ export default function ClientesPage() {
 
               {[
                 { field: "telefono", label: "Teléfono", type: "tel", maxLength: 11, pattern: "\\d*" },
-                { field: "dni", label: "DNI/Documento", type: "text", maxLength: 8, pattern: "\\d*" },
+                { field: "dni", label: "DNI *", type: "text", maxLength: 8, pattern: "\\d*" },
                 { field: "email", label: "Email", type: "text" },
                 { field: "interes", label: "Interés en... (Ej: Casa Moderna)", type: "text" },
                 { field: "notas", label: "Notas", type: "textarea" }
               ].map(({ field, label, type, maxLength, pattern }) => (
-                <div key={field}>
+                <div key={field} className="mt-4">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     {label}
                   </label>
@@ -465,7 +602,7 @@ export default function ClientesPage() {
                       maxLength={maxLength}
                       pattern={pattern}
                       onChange={e => {
-                        if (field === "telefono") {
+                        if (field === "telefono" || field === "dni") {
                           const value = e.target.value.replace(/\D/g, "");
                           setForm({ ...form, [field]: value });
                         } else {
