@@ -354,7 +354,7 @@ export const dashboardGerencial = async (req, res) => {
   }
 
   try {
-    const { periodo = "mes", compararAnterior = "true" } = req.query;
+    const { periodo = "mes", compararAnterior = "true", fechaInicio, fechaFin } = req.query;
     const ahora = new Date();
 
     // Calcular rangos de fechas
@@ -396,8 +396,29 @@ export const dashboardGerencial = async (req, res) => {
       return { desde, hasta };
     };
 
-    const { desde, hasta } = calcularRango(periodo, 0);
-    const { desde: desdeAnt, hasta: hastaAnt } = calcularRango(periodo, -1);
+    let desde, hasta, desdeAnt, hastaAnt;
+
+    if (fechaInicio && fechaFin) {
+      desde = new Date(fechaInicio);
+      desde.setHours(0, 0, 0, 0);
+      hasta = new Date(fechaFin);
+      hasta.setHours(23, 59, 59, 999);
+
+      // Calcular rango anterior equivalente en duración
+      const diffMs = hasta.getTime() - desde.getTime();
+      desdeAnt = new Date(desde.getTime() - diffMs - 1);
+      desdeAnt.setHours(0, 0, 0, 0);
+      hastaAnt = new Date(desde.getTime() - 1);
+      hastaAnt.setHours(23, 59, 59, 999);
+    } else {
+      const rangoAct = calcularRango(periodo, 0);
+      desde = rangoAct.desde;
+      hasta = rangoAct.hasta;
+
+      const rangoAnt = calcularRango(periodo, -1);
+      desdeAnt = rangoAnt.desde;
+      hastaAnt = rangoAnt.hasta;
+    }
 
     const hoyInicio = new Date(ahora);
     hoyInicio.setHours(0, 0, 0, 0);
@@ -658,10 +679,13 @@ export const dashboardGerencial = async (req, res) => {
     }
 
     // ── ETIQUETA DEL PERÍODO ──────────────────────────────────
-    const labelPeriodo = periodo === "semana" ? "Esta semana"
-      : periodo === "trimestre" ? "Este trimestre"
-      : periodo === "anio" ? `Año ${ahora.getFullYear()}`
-      : `${desde.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })}`;
+    const formatearFecha = (d) => d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' });
+    const labelPeriodo = (fechaInicio && fechaFin)
+      ? `${formatearFecha(desde)} - ${formatearFecha(hasta)}`
+      : (periodo === "semana" ? "Esta semana"
+         : periodo === "trimestre" ? "Este trimestre"
+         : periodo === "anio" ? `Año ${ahora.getFullYear()}`
+         : `${desde.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })}`);
 
     return res.json({
       periodo: {
