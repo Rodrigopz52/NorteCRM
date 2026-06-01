@@ -239,26 +239,26 @@ export default function TareasPage() {
         </div>
 
         {/* BARRA DE FILTROS, BÚSQUEDA Y VISTAS */}
-        <div className="bg-white rounded-xl shadow-sm p-3 mb-6 border border-gray-200 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-          
-          <div className="flex flex-col sm:flex-row items-center gap-3">
-            {/* Buscador */}
-            <div className="relative w-full sm:w-80">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <MagnifyingGlassIcon className="h-4 w-4 text-gray-400" />
-              </div>
-              <input
-                type="text"
-                placeholder="Buscar tareas por título o descripción..."
-                className="w-full pl-9 pr-3 py-2 border border-gray-300 focus:border-purple-500 focus:ring-1 focus:ring-purple-200 rounded-lg transition-all outline-none text-sm"
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-              />
-            </div>
+        <div className="flex flex-col lg:flex-row lg:items-center gap-3 mb-6">
+          {/* Buscador */}
+          <div className="relative flex-1 w-full">
+            <span className="absolute inset-y-0 left-0 flex items-center pl-3">
+              <MagnifyingGlassIcon className="h-5 h-5 text-gray-400" />
+            </span>
+            <input
+              type="text"
+              placeholder="Buscar tareas por título o descripción..."
+              className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm text-gray-700 shadow-sm"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+            />
+          </div>
 
+          {/* Controles del filtro y Vistas */}
+          <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
             {/* Select Tipo */}
             <select
-              className="w-full sm:w-auto border border-gray-300 focus:border-purple-500 focus:ring-1 focus:ring-purple-200 p-2 rounded-lg transition-all outline-none text-sm bg-white font-medium text-gray-700"
+              className="flex-1 sm:flex-none sm:w-44 border border-gray-200 bg-white px-3 py-2.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm text-gray-700 shadow-sm cursor-pointer"
               value={filtroTipo}
               onChange={e => setFiltroTipo(e.target.value)}
             >
@@ -270,40 +270,40 @@ export default function TareasPage() {
 
             {/* Select Estado */}
             <select
-              className="w-full sm:w-auto border border-gray-300 focus:border-purple-500 focus:ring-1 focus:ring-purple-200 p-2 rounded-lg transition-all outline-none text-sm bg-white font-medium text-gray-700"
+              className="flex-1 sm:flex-none sm:w-44 border border-gray-200 bg-white px-3 py-2.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm text-gray-700 shadow-sm cursor-pointer"
               value={filtro}
               onChange={e => setFiltro(e.target.value)}
             >
-              <option value="PENDIENTES">Pendientes ({contadores.pendientes})</option>
-              <option value="COMPLETADAS">Completadas ({contadores.completadas})</option>
-              <option value="VENCIDAS">Vencidas ({contadores.vencidas})</option>
-              <option value="CANCELADAS">Canceladas ({contadores.canceladas})</option>
+              <option value="PENDIENTES">Pendientes</option>
+              <option value="COMPLETADAS">Completadas</option>
+              <option value="VENCIDAS">Vencidas</option>
+              <option value="CANCELADAS">Canceladas</option>
             </select>
-          </div>
 
-          {/* Selector de vistas */}
-          <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-lg self-end lg:self-auto border border-gray-200">
-            <button 
-              onClick={() => setVista("LISTA")}
-              className={`p-1.5 rounded-md transition-all ${vista === "LISTA" ? "bg-white text-purple-600 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
-              title="Vista de lista"
-            >
-              <ListBulletIcon className="w-5 h-5" />
-            </button>
-            <button 
-              onClick={() => setVista("GRILLA")}
-              className={`p-1.5 rounded-md transition-all ${vista === "GRILLA" ? "bg-white text-purple-600 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
-              title="Vista de tarjetas (Grilla)"
-            >
-              <Squares2X2Icon className="w-5 h-5" />
-            </button>
-            <button 
-              onClick={() => setVista("CALENDARIO")}
-              className={`p-1.5 rounded-md transition-all ${vista === "CALENDARIO" ? "bg-white text-purple-600 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
-              title="Vista de calendario (Próximamente)"
-            >
-              <CalendarDaysIcon className="w-5 h-5" />
-            </button>
+            {/* Selector de vistas */}
+            <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-lg border border-gray-200 h-[42px] flex-shrink-0">
+              <button 
+                onClick={() => setVista("LISTA")}
+                className={`p-1.5 rounded-md transition-all ${vista === "LISTA" ? "bg-white text-purple-600 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
+                title="Vista de lista"
+              >
+                <ListBulletIcon className="w-5 h-5" />
+              </button>
+              <button 
+                onClick={() => setVista("GRILLA")}
+                className={`p-1.5 rounded-md transition-all ${vista === "GRILLA" ? "bg-white text-purple-600 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
+                title="Vista de tarjetas (Grilla)"
+              >
+                <Squares2X2Icon className="w-5 h-5" />
+              </button>
+              <button 
+                onClick={() => setVista("CALENDARIO")}
+                className={`p-1.5 rounded-md transition-all ${vista === "CALENDARIO" ? "bg-white text-purple-600 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
+                title="Vista de calendario (Próximamente)"
+              >
+                <CalendarDaysIcon className="w-5 h-5" />
+              </button>
+            </div>
           </div>
 
         </div>
