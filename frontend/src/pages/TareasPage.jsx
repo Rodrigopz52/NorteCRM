@@ -238,69 +238,6 @@ export default function TareasPage() {
           </button>
         </div>
 
-        {/* FILTROS Y CONTADORES */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-          <button
-            onClick={() => setFiltro("PENDIENTES")}
-            className={`p-2 sm:p-3 rounded-lg shadow-sm border text-left flex items-center gap-2 transition-all ${
-              filtro === "PENDIENTES" ? "bg-blue-50 border-blue-500" : "bg-white border-gray-200 hover:border-blue-400 hover:shadow-md"
-            }`}
-          >
-            <div className="p-2 rounded-lg bg-blue-50 text-blue-600 flex-shrink-0">
-              <ClockIcon className="w-5 h-5" />
-            </div>
-            <div>
-              <p className={`text-lg sm:text-xl font-bold ${filtro === "PENDIENTES" ? "text-blue-800" : "text-gray-800"}`}>{contadores.pendientes}</p>
-              <p className={`text-xs font-medium ${filtro === "PENDIENTES" ? "text-blue-700" : "text-gray-500"}`}>Pendientes</p>
-            </div>
-          </button>
-
-          <button
-            onClick={() => setFiltro("COMPLETADAS")}
-            className={`p-2 sm:p-3 rounded-lg shadow-sm border text-left flex items-center gap-2 transition-all ${
-              filtro === "COMPLETADAS" ? "bg-green-50 border-green-500" : "bg-white border-gray-200 hover:border-green-400 hover:shadow-md"
-            }`}
-          >
-            <div className="p-2 rounded-lg bg-green-50 text-green-600 flex-shrink-0">
-              <CheckCircleIcon className="w-5 h-5" />
-            </div>
-            <div>
-              <p className={`text-lg sm:text-xl font-bold ${filtro === "COMPLETADAS" ? "text-green-800" : "text-gray-800"}`}>{contadores.completadas}</p>
-              <p className={`text-xs font-medium ${filtro === "COMPLETADAS" ? "text-green-700" : "text-gray-500"}`}>Completadas</p>
-            </div>
-          </button>
-
-          <button
-            onClick={() => setFiltro("VENCIDAS")}
-            className={`p-2 sm:p-3 rounded-lg shadow-sm border text-left flex items-center gap-2 transition-all ${
-              filtro === "VENCIDAS" ? "bg-red-50 border-red-500" : "bg-white border-gray-200 hover:border-red-400 hover:shadow-md"
-            }`}
-          >
-            <div className="p-2 rounded-lg bg-red-50 text-red-600 flex-shrink-0">
-              <ExclamationCircleIcon className="w-5 h-5" />
-            </div>
-            <div>
-              <p className={`text-lg sm:text-xl font-bold ${filtro === "VENCIDAS" ? "text-red-800" : "text-gray-800"}`}>{contadores.vencidas}</p>
-              <p className={`text-xs font-medium ${filtro === "VENCIDAS" ? "text-red-700" : "text-gray-500"}`}>Vencidas</p>
-            </div>
-          </button>
-
-          <button
-            onClick={() => setFiltro("CANCELADAS")}
-            className={`p-2 sm:p-3 rounded-lg shadow-sm border text-left flex items-center gap-2 transition-all ${
-              filtro === "CANCELADAS" ? "bg-gray-100 border-gray-500" : "bg-white border-gray-200 hover:border-gray-400 hover:shadow-md"
-            }`}
-          >
-            <div className="p-2 rounded-lg bg-gray-100 text-gray-600 flex-shrink-0">
-              <XCircleIcon className="w-5 h-5" />
-            </div>
-            <div>
-              <p className={`text-lg sm:text-xl font-bold ${filtro === "CANCELADAS" ? "text-gray-900" : "text-gray-800"}`}>{contadores.canceladas}</p>
-              <p className={`text-xs font-medium ${filtro === "CANCELADAS" ? "text-gray-700" : "text-gray-500"}`}>Canceladas</p>
-            </div>
-          </button>
-        </div>
-
         {/* BARRA DE FILTROS, BÚSQUEDA Y VISTAS */}
         <div className="bg-white rounded-xl shadow-sm p-3 mb-6 border border-gray-200 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           
@@ -329,6 +266,18 @@ export default function TareasPage() {
               <option value="LLAMADA">Llamada</option>
               <option value="REUNION">Reunión</option>
               <option value="EMAIL">Email</option>
+            </select>
+
+            {/* Select Estado */}
+            <select
+              className="w-full sm:w-auto border border-gray-300 focus:border-purple-500 focus:ring-1 focus:ring-purple-200 p-2 rounded-lg transition-all outline-none text-sm bg-white font-medium text-gray-700"
+              value={filtro}
+              onChange={e => setFiltro(e.target.value)}
+            >
+              <option value="PENDIENTES">Pendientes ({contadores.pendientes})</option>
+              <option value="COMPLETADAS">Completadas ({contadores.completadas})</option>
+              <option value="VENCIDAS">Vencidas ({contadores.vencidas})</option>
+              <option value="CANCELADAS">Canceladas ({contadores.canceladas})</option>
             </select>
           </div>
 
