@@ -3,6 +3,7 @@ import axios from "axios";
 import { AuthContext } from "../context/AuthContext.jsx";
 import { useToast, useConfirm } from "../hooks/useNotifications.jsx";
 import Navbar from "../components/Navbar.jsx";
+import Paginacion from "../components/Paginacion.jsx";
 import {
   PhoneIcon,
   CalendarIcon,
@@ -283,9 +284,9 @@ export default function TareasPage() {
   const [actividades, setActividades] = useState([]);
   const [oportunidades, setOportunidades] = useState([]);
   const [openForm, setOpenForm] = useState(false);
-  
+
   // Filtros
-  const [filtro, setFiltro] = useState("PENDIENTES"); 
+  const [filtro, setFiltro] = useState("PENDIENTES");
   const [searchQuery, setSearchQuery] = useState("");
   const [filtroTipo, setFiltroTipo] = useState("TODOS");
   const [filtroPrioridad, setFiltroPrioridad] = useState("TODAS");
@@ -295,6 +296,13 @@ export default function TareasPage() {
   const [periodo, setPeriodo] = useState("mes");
   const [fechaInicio, setFechaInicio] = useState(null);
   const [fechaFin, setFechaFin] = useState(null);
+
+  // Paginación
+  const [pagina, setPagina] = useState(1);
+  const limit = 9;
+
+  // Resetear página al cambiar filtros
+  useEffect(() => { setPagina(1); }, [searchQuery, filtroTipo, filtroPrioridad, filtro, periodo, fechaInicio, fechaFin]);
 
   // Cerrar dropdown de más filtros al hacer clic afuera
   useEffect(() => {
@@ -463,7 +471,7 @@ export default function TareasPage() {
       const descMatch = act.descripcion?.toLowerCase().includes(q);
       if (!tituloMatch && !descMatch) return false;
     }
-    
+
     if (filtroTipo !== "TODOS" && act.tipo !== filtroTipo) return false;
 
     // Filtro por prioridad
@@ -607,14 +615,14 @@ export default function TareasPage() {
 
             {/* Selector de vistas */}
             <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-lg border border-gray-200 h-[42px] flex-shrink-0">
-              <button 
+              <button
                 onClick={() => setVista("LISTA")}
                 className={`p-1.5 rounded-md transition-all ${vista === "LISTA" ? "bg-white text-purple-600 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
                 title="Vista de lista"
               >
                 <ListBulletIcon className="w-5 h-5" />
               </button>
-              <button 
+              <button
                 onClick={() => setVista("GRILLA")}
                 className={`p-1.5 rounded-md transition-all ${vista === "GRILLA" ? "bg-white text-purple-600 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
                 title="Vista de tarjetas (Grilla)"
@@ -638,13 +646,13 @@ export default function TareasPage() {
             {(() => {
               const getGroupLabel = (dateString) => {
                 const hoy = new Date();
-                hoy.setHours(0,0,0,0);
+                hoy.setHours(0, 0, 0, 0);
                 const d = new Date(dateString);
-                d.setHours(0,0,0,0);
-                
+                d.setHours(0, 0, 0, 0);
+
                 const diffTime = d - hoy;
                 const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
-                
+
                 if (diffDays === 0) return "HOY";
                 if (diffDays === 1) return "MAÑANA";
                 if (diffDays === -1) return "AYER";
@@ -659,162 +667,182 @@ export default function TareasPage() {
               const sortedActividades = [...actividadesFiltradas].sort((a, b) => {
                 const dateA = new Date(a.fechaVencimiento);
                 const dateB = new Date(b.fechaVencimiento);
-                
+
                 const dayA = new Date(dateA.getFullYear(), dateA.getMonth(), dateA.getDate()).getTime();
                 const dayB = new Date(dateB.getFullYear(), dateB.getMonth(), dateB.getDate()).getTime();
-                
+
                 if (dayA !== dayB) return dayA - dayB; // Orden por día
-                
+
                 const wA = priorityWeight[a.prioridad] || 0;
                 const wB = priorityWeight[b.prioridad] || 0;
                 if (wA !== wB) return wB - wA; // Orden por prioridad (Alta primero)
-                
+
                 return dateA.getTime() - dateB.getTime(); // Orden por hora
               });
 
-              const groupedActivities = sortedActividades.reduce((acc, act) => {
+              const totalPaginas = Math.ceil(sortedActividades.length / limit);
+              const startIndex = (pagina - 1) * limit;
+              const endIndex = startIndex + limit;
+              const actividadesPaginadas = sortedActividades.slice(startIndex, endIndex);
+
+              const groupedActivities = actividadesPaginadas.reduce((acc, act) => {
                 const label = getGroupLabel(act.fechaVencimiento);
                 if (!acc[label]) acc[label] = [];
                 acc[label].push(act);
                 return acc;
               }, {});
 
-              return Object.entries(groupedActivities).map(([label, acts]) => (
-                <div key={label} className="mb-8">
-                  <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                    {label} <span className="bg-gray-100 text-gray-500 border border-gray-200 px-2 py-0.5 rounded-full text-[10px]">{acts.length}</span>
-                  </h4>
-                  <div className={`${vista === "GRILLA" ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5" : "space-y-4"}`}>
-                    {acts.map(act => {
-              const IconoTipo = tiposIconos[act.tipo] || ClipboardDocumentListIcon;
-              const colorClase = tiposColoresText[act.tipo] || "text-gray-500";
-              const bordeClase = tiposBordes[act.tipo] || "border-gray-400";
-              const hoy = new Date();
-              const vencimiento = new Date(act.fechaVencimiento);
-              const vencida = vencimiento < hoy && !act.completada;
-              const propPrioridad = formatPrioridad(act.prioridad);
-
-              const leftBorderClase = act.prioridad === 'ALTA' ? 'border-l-red-500' : act.prioridad === 'BAJA' ? 'border-l-green-500' : 'border-l-yellow-500';
-
               return (
-                <div
-                  key={act.id}
-                  className={`bg-white rounded-xl shadow-sm border border-gray-200 border-l-4 ${leftBorderClase} ${act.completada ? "opacity-60 bg-gray-50/50" : "hover:shadow-md transition-shadow"} p-4 sm:p-5 flex gap-4 items-start`}
-                >
-                  {/* CHECKBOX */}
-                  <button
-                    onClick={() => toggleCompletada(act.id, act.completada)}
-                    className="mt-0.5 flex-shrink-0 focus:outline-none"
-                  >
-                    {act.completada ? (
-                       <div className="w-5 h-5 rounded flex items-center justify-center bg-green-500 border border-green-500 transition-colors">
-                         <CheckIcon className="w-3.5 h-3.5 text-white stroke-[3]" />
-                       </div>
-                    ) : (
-                       <div className={`w-5 h-5 rounded border-2 border-gray-300 hover:bg-gray-50 flex items-center justify-center transition-colors`}>
-                       </div>
-                    )}
-                  </button>
+                <>
+                  {Object.entries(groupedActivities).map(([label, acts]) => (
+                    <div key={label} className="mb-8">
+                      <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                        {label} <span className="bg-gray-100 text-gray-500 border border-gray-200 px-2 py-0.5 rounded-full text-[10px]">{acts.length}</span>
+                      </h4>
+                      <div className={`${vista === "GRILLA" ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5" : "space-y-4"}`}>
+                        {acts.map(act => {
+                      const IconoTipo = tiposIconos[act.tipo] || ClipboardDocumentListIcon;
+                      const colorClase = tiposColoresText[act.tipo] || "text-gray-500";
+                      const bordeClase = tiposBordes[act.tipo] || "border-gray-400";
+                      const hoy = new Date();
+                      const vencimiento = new Date(act.fechaVencimiento);
+                      const vencida = vencimiento < hoy && !act.completada;
+                      const propPrioridad = formatPrioridad(act.prioridad);
 
-                  {/* CONTENIDO PRINCIPAL */}
-                  <div className="flex-1 min-w-0">
-                    
-                    {/* TOP: Titulo, Prioridad y Menu */}
-                    <div className="flex justify-between items-start mb-1 gap-4">
-                      <h3 className={`text-base sm:text-lg font-semibold leading-tight ${act.completada ? "line-through text-gray-500" : "text-gray-900"}`}>
-                        {act.titulo}
-                        {!act.activo && <span className="ml-2 inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide border bg-gray-100 text-gray-600 border-gray-300 align-middle">CANCELADA</span>}
-                      </h3>
+                      const leftBorderClase = act.prioridad === 'ALTA' ? 'border-l-red-500' : act.prioridad === 'BAJA' ? 'border-l-green-500' : 'border-l-yellow-500';
 
-                      <div className="flex items-center gap-2 flex-shrink-0">
-                        {propPrioridad && act.activo && (
-                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide border ${propPrioridad.color}`}>
-                            {propPrioridad.text}
-                          </span>
-                        )}
-                        
-                        {/* Acciones */}
-                        <div className="flex items-center gap-1 text-gray-400">
+                      return (
+                        <div
+                          key={act.id}
+                          className={`bg-white rounded-xl shadow-sm border border-gray-200 border-l-4 ${leftBorderClase} ${act.completada ? "opacity-60 bg-gray-50/50" : "hover:shadow-md transition-shadow"} p-4 sm:p-5 flex gap-4 items-start`}
+                        >
+                          {/* CHECKBOX */}
                           <button
-                            onClick={() => {
-                              setForm({
-                                id: act.id,
-                                tipo: act.tipo,
-                                titulo: act.titulo,
-                                descripcion: act.descripcion || "",
-                                fechaVencimiento: act.fechaVencimiento.slice(0, 16),
-                                oportunidadId: act.oportunidadId,
-                                prioridad: act.prioridad || "MEDIA"
-                              });
-                              setOpenForm(true);
-                            }}
-                            className="hover:text-blue-600 transition-colors"
-                            title="Editar"
+                            onClick={() => toggleCompletada(act.id, act.completada)}
+                            className="mt-0.5 flex-shrink-0 focus:outline-none"
                           >
-                            <PencilSquareIcon className="w-4 h-4" />
+                            {act.completada ? (
+                              <div className="w-5 h-5 rounded flex items-center justify-center bg-green-500 border border-green-500 transition-colors">
+                                <CheckIcon className="w-3.5 h-3.5 text-white stroke-[3]" />
+                              </div>
+                            ) : (
+                              <div className={`w-5 h-5 rounded border-2 border-gray-300 hover:bg-gray-50 flex items-center justify-center transition-colors`}>
+                              </div>
+                            )}
                           </button>
-                          {act.activo && (
-                            <button
-                              onClick={() => cancelarActividad(act.id)}
-                              className="hover:text-red-600 transition-colors"
-                              title="Cancelar tarea"
-                            >
-                              <TrashIcon className="w-4 h-4" />
-                            </button>
-                          )}
+
+                          {/* CONTENIDO PRINCIPAL */}
+                          <div className="flex-1 min-w-0">
+
+                            {/* TOP: Titulo, Prioridad y Menu */}
+                            <div className="flex justify-between items-start mb-1 gap-4">
+                              <h3 className={`text-base sm:text-lg font-semibold leading-tight ${act.completada ? "line-through text-gray-500" : "text-gray-900"}`}>
+                                {act.titulo}
+                                {!act.activo && <span className="ml-2 inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide border bg-gray-100 text-gray-600 border-gray-300 align-middle">CANCELADA</span>}
+                              </h3>
+
+                              <div className="flex items-center gap-2 flex-shrink-0">
+                                {propPrioridad && act.activo && (
+                                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide border ${propPrioridad.color}`}>
+                                    {propPrioridad.text}
+                                  </span>
+                                )}
+
+                                {/* Acciones */}
+                                <div className="flex items-center gap-1 text-gray-400">
+                                  <button
+                                    onClick={() => {
+                                      setForm({
+                                        id: act.id,
+                                        tipo: act.tipo,
+                                        titulo: act.titulo,
+                                        descripcion: act.descripcion || "",
+                                        fechaVencimiento: act.fechaVencimiento.slice(0, 16),
+                                        oportunidadId: act.oportunidadId,
+                                        prioridad: act.prioridad || "MEDIA"
+                                      });
+                                      setOpenForm(true);
+                                    }}
+                                    className="hover:text-blue-600 transition-colors"
+                                    title="Editar"
+                                  >
+                                    <PencilSquareIcon className="w-4 h-4" />
+                                  </button>
+                                  {act.activo && (
+                                    <button
+                                      onClick={() => cancelarActividad(act.id)}
+                                      className="hover:text-red-600 transition-colors"
+                                      title="Cancelar tarea"
+                                    >
+                                      <TrashIcon className="w-4 h-4" />
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* MEDIO: Descripción */}
+                            {act.descripcion && (
+                              <p className="text-sm text-gray-500 mb-3 line-clamp-2">
+                                {act.descripcion}
+                              </p>
+                            )}
+                            {!act.descripcion && <div className="mb-3"></div>}
+
+                            {/* BOTTOM: Metadata */}
+                            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs font-medium text-gray-500">
+                              <span className="flex items-center gap-1.5">
+                                <CalendarIcon className="w-4 h-4 text-gray-400" />
+                                {new Date(act.fechaVencimiento).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}
+                              </span>
+
+                              <span className="flex items-center gap-1.5">
+                                <ClockIcon className="w-4 h-4 text-gray-400" />
+                                {new Date(act.fechaVencimiento).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
+                              </span>
+
+                              <span className="flex items-center gap-1.5">
+                                <UserIcon className="w-4 h-4 text-gray-400" />
+                                {act.usuario?.nombre || 'Duclos'}
+                              </span>
+
+                              {act.oportunidad && (
+                                <span className="flex items-center gap-1.5">
+                                  <HomeIcon className="w-4 h-4 text-gray-400" />
+                                  <span className="truncate max-w-[150px] sm:max-w-xs">{act.oportunidad.cliente?.nombre || 'Cliente'} - {act.oportunidad.titulo}</span>
+                                </span>
+                              )}
+
+                              {/* Estado */}
+                              <span className="flex items-center gap-1.5 ml-auto sm:ml-0 sm:border-l sm:pl-4 border-gray-200">
+                                <span className={`w-2 h-2 rounded-full ${act.completada ? 'bg-green-500' : vencida ? 'bg-red-500' : 'bg-yellow-500'}`}></span>
+                                {act.completada ? 'Completada' : vencida ? 'Vencida' : 'Pendiente'}
+                              </span>
+                            </div>
+
+                          </div>
                         </div>
-                      </div>
-                    </div>
-
-                    {/* MEDIO: Descripción */}
-                    {act.descripcion && (
-                      <p className="text-sm text-gray-500 mb-3 line-clamp-2">
-                        {act.descripcion}
-                      </p>
-                    )}
-                    {!act.descripcion && <div className="mb-3"></div>}
-
-                    {/* BOTTOM: Metadata */}
-                    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs font-medium text-gray-500">
-                      <span className="flex items-center gap-1.5">
-                        <CalendarIcon className="w-4 h-4 text-gray-400" />
-                        {new Date(act.fechaVencimiento).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}
-                      </span>
-                      
-                      <span className="flex items-center gap-1.5">
-                        <ClockIcon className="w-4 h-4 text-gray-400" />
-                        {new Date(act.fechaVencimiento).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
-                      </span>
-
-                      <span className="flex items-center gap-1.5">
-                        <UserIcon className="w-4 h-4 text-gray-400" />
-                        {act.usuario?.nombre || 'Duclos'}
-                      </span>
-
-                      {act.oportunidad && (
-                        <span className="flex items-center gap-1.5">
-                          <HomeIcon className="w-4 h-4 text-gray-400" />
-                          <span className="truncate max-w-[150px] sm:max-w-xs">{act.oportunidad.cliente?.nombre || 'Cliente'} - {act.oportunidad.titulo}</span>
-                        </span>
-                      )}
-
-                      {/* Estado */}
-                      <span className="flex items-center gap-1.5 ml-auto sm:ml-0 sm:border-l sm:pl-4 border-gray-200">
-                        <span className={`w-2 h-2 rounded-full ${act.completada ? 'bg-green-500' : vencida ? 'bg-red-500' : 'bg-yellow-500'}`}></span>
-                        {act.completada ? 'Completada' : vencida ? 'Vencida' : 'Pendiente'}
-                      </span>
-                    </div>
-
+                      );
+                    })}
                   </div>
                 </div>
-              );
-            })}
-                  </div>
+              ))}
+              {sortedActividades.length > limit && (
+                <div className="mt-8">
+                  <Paginacion
+                    page={pagina}
+                    totalPages={totalPaginas}
+                    total={sortedActividades.length}
+                    limit={limit}
+                    onPageChange={setPagina}
+                  />
                 </div>
-              ));
-            })()}
-          </div>
-        )}
+              )}
+            </>
+          );
+        })()}
+      </div>
+    )}
 
         {/* MODAL CREAR/EDITAR ACTIVIDAD */}
         {openForm && (
