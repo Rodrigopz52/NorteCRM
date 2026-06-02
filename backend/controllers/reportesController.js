@@ -399,10 +399,11 @@ export const dashboardGerencial = async (req, res) => {
     let desde, hasta, desdeAnt, hastaAnt;
 
     if (fechaInicio && fechaFin) {
-      desde = new Date(fechaInicio);
-      desde.setHours(0, 0, 0, 0);
-      hasta = new Date(fechaFin);
-      hasta.setHours(23, 59, 59, 999);
+      const [y1, m1, d1] = fechaInicio.split("-").map(Number);
+      desde = new Date(y1, m1 - 1, d1, 0, 0, 0, 0);
+
+      const [y2, m2, d2] = fechaFin.split("-").map(Number);
+      hasta = new Date(y2, m2 - 1, d2, 23, 59, 59, 999);
 
       // Calcular rango anterior equivalente en duración
       const diffMs = hasta.getTime() - desde.getTime();

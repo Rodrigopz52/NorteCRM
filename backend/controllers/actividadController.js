@@ -6,6 +6,7 @@ export const obtenerActividades = async (req, res) => {
   try {
     const { rol, id: usuarioId } = req.usuario;
     const estadoActivo = req.query.estadoActivo || "ACTIVOS"; // "ACTIVOS", "INACTIVOS", "TODOS"
+    const { fechaInicio, fechaFin } = req.query;
 
     let where = rol === "VENDEDOR" ? { usuarioId } : {};
     
@@ -13,6 +14,19 @@ export const obtenerActividades = async (req, res) => {
       where.activo = true;
     } else if (estadoActivo === "INACTIVOS") {
       where.activo = false;
+    }
+
+    if (fechaInicio && fechaFin) {
+      const [y1, m1, d1] = fechaInicio.split("-").map(Number);
+      const desde = new Date(y1, m1 - 1, d1, 0, 0, 0, 0);
+
+      const [y2, m2, d2] = fechaFin.split("-").map(Number);
+      const hasta = new Date(y2, m2 - 1, d2, 23, 59, 59, 999);
+
+      where.fechaVencimiento = {
+        gte: desde,
+        lte: hasta
+      };
     }
 
     const actividades = await prisma.actividad.findMany({
