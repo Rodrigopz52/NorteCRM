@@ -9,7 +9,8 @@ import {
   HomeModernIcon,
   ClockIcon,
   ExclamationCircleIcon,
-  PlusIcon
+  PlusIcon,
+  MagnifyingGlassIcon
 } from "@heroicons/react/24/outline";
 
 export default function PropiedadesPage() {
@@ -216,7 +217,7 @@ export default function PropiedadesPage() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-3">
         <div>
           <h2 className="text-xl sm:text-2xl font-bold text-gray-800">Propiedades</h2>
-          <p className="text-sm text-gray-500 font-medium mt-1">{totalPropiedades} inmuebles en cartera</p>
+          <p className="text-sm text-gray-500 font-medium mt-1">Gestiona y organiza las propiedades en cartera</p>
         </div>
         <button
           onClick={() => {
@@ -233,57 +234,57 @@ export default function PropiedadesPage() {
         </button>
       </div>
 
-      {/* FILTROS Y BÚSQUEDA */}
-      <div className="bg-white rounded-lg shadow-sm p-3 mb-6 border border-gray-200">
-        <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-2">
-          {/* Filtros */}
-          <div className="flex flex-col sm:flex-row gap-2">
-            <select
-              value={filtroTipo}
-              onChange={(e) => setFiltroTipo(e.target.value)}
-              className="lg:w-40 border border-gray-300 focus:border-purple-500 focus:ring-1 focus:ring-purple-200 p-2 rounded-lg transition-all outline-none text-sm"
-            >
-              <option value="Todos">Todos los tipos</option>
-              <option value="Casa">Casa</option>
-              <option value="Dpto">Departamento</option>
-              <option value="Terreno">Terreno</option>
-              <option value="Oficina">Oficina</option>
-            </select>
+      {/* BARRA DE BÚSQUEDA Y FILTROS */}
+      <div className="flex flex-col lg:flex-row lg:items-center gap-3 mb-6">
+        {/* Buscador */}
+        <div className="relative flex-1 w-full">
+          <span className="absolute inset-y-0 left-0 flex items-center pl-3">
+            <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
+          </span>
+          <input
+            type="text"
+            placeholder="Buscar por título, dirección, ID..."
+            value={busqueda}
+            onChange={(e) => setBusqueda(e.target.value)}
+            className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm text-gray-700 shadow-sm"
+          />
+        </div>
 
-            <select
-              value={filtroEtapa}
-              onChange={(e) => setFiltroEtapa(e.target.value)}
-              className="lg:w-40 border border-gray-300 focus:border-purple-500 focus:ring-1 focus:ring-purple-200 p-2 rounded-lg transition-all outline-none text-sm"
-            >
-              <option value="Todos">Todos los estados</option>
-              <option value="DISPONIBLE">Disponible</option>
-              <option value="RESERVADA">Reservada</option>
-              <option value="VENDIDA">Vendida</option>
-              <option value="ALQUILADA">Alquilada</option>
-            </select>
+        {/* Filtros */}
+        <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
+          <select
+            value={filtroTipo}
+            onChange={(e) => setFiltroTipo(e.target.value)}
+            className="flex-1 sm:flex-none sm:w-44 border border-gray-200 bg-white px-3 py-2.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm text-gray-700 shadow-sm cursor-pointer"
+          >
+            <option value="Todos">Todos los tipos</option>
+            <option value="Casa">Casa</option>
+            <option value="Dpto">Departamento</option>
+            <option value="Terreno">Terreno</option>
+            <option value="Oficina">Oficina</option>
+          </select>
 
-            <select
-              value={filtroOperacion}
-              onChange={(e) => setFiltroOperacion(e.target.value)}
-              className="lg:w-36 border border-gray-300 focus:border-purple-500 focus:ring-1 focus:ring-purple-200 p-2 rounded-lg transition-all outline-none text-sm"
-            >
-              <option value="Todos">Operación</option>
-              <option value="Venta">Venta</option>
-              <option value="Alquiler">Alquiler</option>
-            </select>
-          </div>
-          {/* Buscador */}
-          <div className="flex items-center gap-2 lg:ml-auto w-full lg:w-auto">
-            <div className="relative flex-1 lg:flex-initial">
-              <input
-                type="text"
-                placeholder="Buscar por título, dirección, ID..."
-                value={busqueda}
-                onChange={(e) => setBusqueda(e.target.value)}
-                className="w-full lg:w-72 border border-gray-300 focus:border-purple-500 focus:ring-1 focus:ring-purple-200 p-2 rounded-lg transition-all outline-none text-sm"
-              />
-            </div>
-          </div>
+          <select
+            value={filtroEtapa}
+            onChange={(e) => setFiltroEtapa(e.target.value)}
+            className="flex-1 sm:flex-none sm:w-44 border border-gray-200 bg-white px-3 py-2.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm text-gray-700 shadow-sm cursor-pointer"
+          >
+            <option value="Todos">Todos los estados</option>
+            <option value="DISPONIBLE">Disponible</option>
+            <option value="RESERVADA">Reservada</option>
+            <option value="VENDIDA">Vendida</option>
+            <option value="ALQUILADA">Alquilada</option>
+          </select>
+
+          <select
+            value={filtroOperacion}
+            onChange={(e) => setFiltroOperacion(e.target.value)}
+            className="flex-1 sm:flex-none sm:w-36 border border-gray-200 bg-white px-3 py-2.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm text-gray-700 shadow-sm cursor-pointer"
+          >
+            <option value="Todos">Operación</option>
+            <option value="Venta">Venta</option>
+            <option value="Alquiler">Alquiler</option>
+          </select>
         </div>
       </div>
 
