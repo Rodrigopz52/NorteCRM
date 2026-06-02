@@ -4,6 +4,7 @@ import axios from "axios";
 import { AuthContext } from "../context/AuthContext.jsx";
 import { useToast } from "../hooks/useNotifications.jsx";
 import { LockClosedIcon, EnvelopeIcon } from "@heroicons/react/24/outline";
+import logo from "../assets/logo.png";
 
 export default function LoginPage() {
   const { login } = useContext(AuthContext);
@@ -35,9 +36,8 @@ export default function LoginPage() {
     <div className="flex justify-center items-center min-h-screen bg-gradient-to-br from-purple-50 via-gray-50 to-purple-100 px-4 py-8">
       <ToastContainer />
       <div className="w-full max-w-md">
-        <div className="text-center mb-4">
-          <h1 className="text-3xl sm:text-4xl font-bold text-purple-600 mb-2">NorteCRM</h1>
-          <p className="text-sm sm:text-base text-gray-600">Sistema de gestión inmobiliaria</p>
+        <div className="text-center mb-6">
+          <img src={logo} alt="NorteCRM Logo" className="mx-auto h-20 w-auto object-contain" />
         </div>
         
         <form onSubmit={handleLogin} className="bg-white p-5 sm:p-6 rounded-xl shadow-2xl border border-gray-200">

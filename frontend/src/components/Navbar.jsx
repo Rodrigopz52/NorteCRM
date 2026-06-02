@@ -1,6 +1,7 @@
 import { useContext, useState } from "react";
 import { AuthContext } from "../context/AuthContext.jsx";
 import { UserCircleIcon, Bars3Icon, XMarkIcon } from "@heroicons/react/24/outline";
+import logo from "../assets/logo.png";
 
 export default function Navbar() {
   const { logout, usuario } = useContext(AuthContext);
@@ -11,7 +12,9 @@ export default function Navbar() {
       <div className="flex justify-between items-center px-4 sm:px-6 py-2">
         {/* Logo y Navegación - Lado Izquierdo */}
         <div className="flex items-center gap-4">
-          <h1 className="text-lg font-bold text-purple-600">NorteCRM</h1>
+          <a href="/dashboard" className="flex items-center">
+            <img src={logo} alt="NorteCRM" className="h-10 w-auto object-contain" />
+          </a>
           
           {/* Desktop Navigation */}
           <div className="hidden md:flex gap-1">
