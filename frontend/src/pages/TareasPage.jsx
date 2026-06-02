@@ -22,7 +22,8 @@ import {
   XCircleIcon,
   CheckCircleIcon,
   ChevronLeftIcon,
-  ChevronRightIcon
+  ChevronRightIcon,
+  FunnelIcon
 } from "@heroicons/react/24/outline";
 
 // ─── SELECTOR DE PERÍODO ─────────────────────────────────────
@@ -287,10 +288,24 @@ export default function TareasPage() {
   const [filtro, setFiltro] = useState("PENDIENTES"); 
   const [searchQuery, setSearchQuery] = useState("");
   const [filtroTipo, setFiltroTipo] = useState("TODOS");
-  const [vista, setVista] = useState("GRILLA"); // "GRILLA", "LISTA", "CALENDARIO"
+  const [filtroPrioridad, setFiltroPrioridad] = useState("TODAS");
+  const [openFiltros, setOpenFiltros] = useState(false);
+  const dropdownFiltrosRef = useRef(null);
+  const [vista, setVista] = useState("GRILLA"); // "GRILLA", "LISTA"
   const [periodo, setPeriodo] = useState("mes");
   const [fechaInicio, setFechaInicio] = useState(null);
   const [fechaFin, setFechaFin] = useState(null);
+
+  // Cerrar dropdown de más filtros al hacer clic afuera
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (dropdownFiltrosRef.current && !dropdownFiltrosRef.current.contains(event.target)) {
+        setOpenFiltros(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const [form, setForm] = useState({
     id: null,
@@ -451,6 +466,9 @@ export default function TareasPage() {
     
     if (filtroTipo !== "TODOS" && act.tipo !== filtroTipo) return false;
 
+    // Filtro por prioridad
+    if (filtroPrioridad !== "TODAS" && act.prioridad !== filtroPrioridad) return false;
+
     // Filtros por estado (botones)
     if (filtro === "CANCELADAS") return !act.activo;
     if (!act.activo) return false;
@@ -458,7 +476,7 @@ export default function TareasPage() {
     if (filtro === "PENDIENTES") return !act.completada;
     if (filtro === "COMPLETADAS") return act.completada;
     if (filtro === "VENCIDAS") return vencida;
-    return true; 
+    return true;
   });
 
   const contadores = {
@@ -543,17 +561,49 @@ export default function TareasPage() {
               setFechaFin={setFechaFin}
             />
 
-            {/* Select Estado */}
-            <select
-              className="flex-1 sm:flex-none sm:w-44 border border-gray-200 bg-white px-3 py-2.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm text-gray-700 shadow-sm cursor-pointer"
-              value={filtro}
-              onChange={e => setFiltro(e.target.value)}
-            >
-              <option value="PENDIENTES">Pendientes</option>
-              <option value="COMPLETADAS">Completadas</option>
-              <option value="VENCIDAS">Vencidas</option>
-              <option value="CANCELADAS">Canceladas</option>
-            </select>
+            {/* Más filtros */}
+            <div className="relative font-sans" ref={dropdownFiltrosRef}>
+              <button
+                onClick={() => setOpenFiltros(!openFiltros)}
+                className="flex items-center gap-1.5 px-3 py-2.5 border border-gray-200 bg-white hover:bg-gray-50 rounded-xl text-xs text-gray-700 shadow-sm font-semibold transition-all cursor-pointer h-[42px]"
+              >
+                <FunnelIcon className="w-4 h-4 text-gray-500" />
+                <span>Más filtros</span>
+              </button>
+              {openFiltros && (
+                <div className="absolute right-0 mt-2 bg-white rounded-xl shadow-xl border border-gray-100 z-50 p-4 min-w-[240px] flex flex-col gap-4">
+                  {/* Filtro Estado */}
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Estado</label>
+                    <select
+                      className="w-full border border-gray-200 bg-white px-3 py-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm text-gray-700 shadow-sm cursor-pointer"
+                      value={filtro}
+                      onChange={e => setFiltro(e.target.value)}
+                    >
+                      <option value="PENDIENTES">Pendientes</option>
+                      <option value="COMPLETADAS">Completadas</option>
+                      <option value="VENCIDAS">Vencidas</option>
+                      <option value="CANCELADAS">Canceladas</option>
+                    </select>
+                  </div>
+
+                  {/* Filtro Prioridad */}
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Prioridad</label>
+                    <select
+                      className="w-full border border-gray-200 bg-white px-3 py-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm text-gray-700 shadow-sm cursor-pointer"
+                      value={filtroPrioridad}
+                      onChange={e => setFiltroPrioridad(e.target.value)}
+                    >
+                      <option value="TODAS">Todas las prioridades</option>
+                      <option value="ALTA">Alta</option>
+                      <option value="MEDIA">Media</option>
+                      <option value="BAJA">Baja</option>
+                    </select>
+                  </div>
+                </div>
+              )}
+            </div>
 
             {/* Selector de vistas */}
             <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-lg border border-gray-200 h-[42px] flex-shrink-0">
