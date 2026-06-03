@@ -1,9 +1,59 @@
-import { useContext, useEffect, useState } from "react";
+import { useContext, useEffect, useState, useRef } from "react";
 import axios from "axios";
 import { AuthContext } from "../context/AuthContext.jsx";
-import { UserGroupIcon, CheckCircleIcon, XCircleIcon } from "@heroicons/react/24/outline";
+import { UserGroupIcon, CheckCircleIcon, XCircleIcon, ChevronDownIcon, CheckIcon } from "@heroicons/react/24/outline";
 import { useToast, useConfirm } from "../hooks/useNotifications.jsx";
 import Paginacion from "../components/Paginacion.jsx";
+
+function CustomSelect({ value, onChange, options, className }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef(null);
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (containerRef.current && !containerRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const selectedOption = options.find(opt => opt.value === value) || options[0];
+
+  return (
+    <div className={`relative ${className}`} ref={containerRef}>
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full flex items-center justify-between border border-gray-200 bg-white px-3 py-2.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm text-gray-700 shadow-sm cursor-pointer"
+      >
+        <span className="truncate pr-2 text-left">{selectedOption?.label}</span>
+        <ChevronDownIcon className="w-4 h-4 text-gray-500 flex-shrink-0" />
+      </button>
+
+      {isOpen && (
+        <div className="absolute z-50 mt-1 w-full min-w-full bg-white border border-gray-100 rounded-xl shadow-lg py-1 animate-fadeIn max-h-60 overflow-auto">
+          {options.map((opt) => (
+            <button
+              key={opt.value}
+              onClick={() => {
+                onChange(opt.value);
+                setIsOpen(false);
+              }}
+              className={`w-full text-left px-3 py-2 text-sm flex items-center justify-between transition-colors ${
+                value === opt.value ? "bg-gray-50 text-gray-900 font-medium" : "text-gray-700 hover:bg-gray-50"
+              }`}
+            >
+              <span className="truncate">{opt.label}</span>
+              {value === opt.value && <CheckIcon className="w-4 h-4 text-gray-600 flex-shrink-0 ml-2" />}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function UsuariosPage() {
   const { token, usuario } = useContext(AuthContext);
@@ -181,24 +231,26 @@ export default function UsuariosPage() {
           />
         </div>
         <div className="flex gap-3 w-full sm:w-auto">
-          <select
-            className="w-1/2 sm:w-44 border border-gray-200 bg-white px-3 py-2.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm text-gray-700 shadow-sm cursor-pointer"
+          <CustomSelect
             value={filtroEstado}
-            onChange={e => setFiltroEstado(e.target.value)}
-          >
-            <option value="ACTIVOS">Activos</option>
-            <option value="INACTIVOS">Inactivos</option>
-          </select>
-          <select
-            className="w-1/2 sm:w-48 border border-gray-200 bg-white px-3 py-2.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm text-gray-700 shadow-sm cursor-pointer"
+            onChange={setFiltroEstado}
+            className="w-1/2 sm:w-44"
+            options={[
+              { value: "ACTIVOS", label: "Activos" },
+              { value: "INACTIVOS", label: "Inactivos" }
+            ]}
+          />
+          <CustomSelect
             value={filtroRol}
-            onChange={e => setFiltroRol(e.target.value)}
-          >
-            <option value="">Todos los roles</option>
-            <option value="GERENTE">Gerente</option>
-            <option value="VENDEDOR">Vendedor</option>
-            <option value="ADMINISTRADOR">Administrador</option>
-          </select>
+            onChange={setFiltroRol}
+            className="w-1/2 sm:w-48"
+            options={[
+              { value: "", label: "Todos los roles" },
+              { value: "GERENTE", label: "Gerente" },
+              { value: "VENDEDOR", label: "Vendedor" },
+              { value: "ADMINISTRADOR", label: "Administrador" }
+            ]}
+          />
         </div>
       </div>
 
