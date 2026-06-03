@@ -24,7 +24,8 @@ import {
   CheckCircleIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
-  FunnelIcon
+  FunnelIcon,
+  ChevronDownIcon
 } from "@heroicons/react/24/outline";
 
 // ─── SELECTOR DE PERÍODO ─────────────────────────────────────
@@ -270,6 +271,56 @@ function PeriodoSelector({ periodo, onChange, fechaInicio, setFechaInicio, fecha
               })}
             </div>
           </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CustomSelect({ value, onChange, options, className }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef(null);
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (containerRef.current && !containerRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const selectedOption = options.find(opt => opt.value === value) || options[0];
+
+  return (
+    <div className={`relative ${className}`} ref={containerRef}>
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full flex items-center justify-between border border-gray-200 bg-white px-3 py-2.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm text-gray-700 shadow-sm cursor-pointer"
+      >
+        <span className="truncate pr-2 text-left">{selectedOption?.label}</span>
+        <ChevronDownIcon className="w-4 h-4 text-gray-500 flex-shrink-0" />
+      </button>
+
+      {isOpen && (
+        <div className="absolute z-50 mt-1 w-full min-w-full bg-white border border-gray-100 rounded-xl shadow-lg py-1 animate-fadeIn max-h-60 overflow-auto">
+          {options.map((opt) => (
+            <button
+              key={opt.value}
+              onClick={() => {
+                onChange(opt.value);
+                setIsOpen(false);
+              }}
+              className={`w-full text-left px-3 py-2 text-sm flex items-center justify-between transition-colors ${
+                value === opt.value ? "bg-gray-50 text-gray-900 font-medium" : "text-gray-700 hover:bg-gray-50"
+              }`}
+            >
+              <span className="truncate">{opt.label}</span>
+              {value === opt.value && <CheckIcon className="w-4 h-4 text-gray-600 flex-shrink-0 ml-2" />}
+            </button>
+          ))}
         </div>
       )}
     </div>
@@ -548,16 +599,17 @@ export default function TareasPage() {
           {/* Controles del filtro y Vistas */}
           <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
             {/* Select Tipo */}
-            <select
-              className="flex-1 sm:flex-none sm:w-44 border border-gray-200 bg-white px-3 py-2.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm text-gray-700 shadow-sm cursor-pointer"
+            <CustomSelect
               value={filtroTipo}
-              onChange={e => setFiltroTipo(e.target.value)}
-            >
-              <option value="TODOS">Todos los tipos</option>
-              <option value="LLAMADA">Llamada</option>
-              <option value="REUNION">Reunión</option>
-              <option value="EMAIL">Email</option>
-            </select>
+              onChange={setFiltroTipo}
+              className="flex-1 sm:flex-none sm:w-44"
+              options={[
+                { value: "TODOS", label: "Todos los tipos" },
+                { value: "LLAMADA", label: "Llamada" },
+                { value: "REUNION", label: "Reunión" },
+                { value: "EMAIL", label: "Email" }
+              ]}
+            />
 
             {/* Selector de Periodo */}
             <PeriodoSelector
@@ -583,31 +635,33 @@ export default function TareasPage() {
                   {/* Filtro Estado */}
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Estado</label>
-                    <select
-                      className="w-full border border-gray-200 bg-white px-3 py-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm text-gray-700 shadow-sm cursor-pointer"
+                    <CustomSelect
                       value={filtro}
-                      onChange={e => setFiltro(e.target.value)}
-                    >
-                      <option value="PENDIENTES">Pendientes</option>
-                      <option value="COMPLETADAS">Completadas</option>
-                      <option value="VENCIDAS">Vencidas</option>
-                      <option value="CANCELADAS">Canceladas</option>
-                    </select>
+                      onChange={setFiltro}
+                      className="w-full"
+                      options={[
+                        { value: "PENDIENTES", label: "Pendientes" },
+                        { value: "COMPLETADAS", label: "Completadas" },
+                        { value: "VENCIDAS", label: "Vencidas" },
+                        { value: "CANCELADAS", label: "Canceladas" }
+                      ]}
+                    />
                   </div>
 
                   {/* Filtro Prioridad */}
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Prioridad</label>
-                    <select
-                      className="w-full border border-gray-200 bg-white px-3 py-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm text-gray-700 shadow-sm cursor-pointer"
+                    <CustomSelect
                       value={filtroPrioridad}
-                      onChange={e => setFiltroPrioridad(e.target.value)}
-                    >
-                      <option value="TODAS">Todas las prioridades</option>
-                      <option value="ALTA">Alta</option>
-                      <option value="MEDIA">Media</option>
-                      <option value="BAJA">Baja</option>
-                    </select>
+                      onChange={setFiltroPrioridad}
+                      className="w-full"
+                      options={[
+                        { value: "TODAS", label: "Todas las prioridades" },
+                        { value: "ALTA", label: "Alta" },
+                        { value: "MEDIA", label: "Media" },
+                        { value: "BAJA", label: "Baja" }
+                      ]}
+                    />
                   </div>
                 </div>
               )}
