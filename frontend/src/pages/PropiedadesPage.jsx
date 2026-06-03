@@ -1,9 +1,9 @@
-import { useEffect, useState, useContext } from "react";
+import { useEffect, useState, useContext, useRef } from "react";
 import axios from "axios";
 import { AuthContext } from "../context/AuthContext.jsx";
 import { useToast, useConfirm } from "../hooks/useNotifications.jsx";
 import Paginacion from "../components/Paginacion.jsx";
-import { 
+import {
   MapPinIcon,
   UserIcon,
   HomeModernIcon,
@@ -13,7 +13,9 @@ import {
   MagnifyingGlassIcon,
   ListBulletIcon,
   Squares2X2Icon,
-  EllipsisVerticalIcon
+  EllipsisVerticalIcon,
+  ChevronDownIcon,
+  CheckIcon
 } from "@heroicons/react/24/outline";
 
 // Iconos de características en SVG (outline negro/gris)
@@ -41,6 +43,56 @@ const IconCar = () => (
   </svg>
 );
 
+function CustomSelect({ value, onChange, options, className }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef(null);
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (containerRef.current && !containerRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const selectedOption = options.find(opt => opt.value === value) || options[0];
+
+  return (
+    <div className={`relative ${className}`} ref={containerRef}>
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full flex items-center justify-between border border-gray-200 bg-white px-3 py-2.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm text-gray-700 shadow-sm cursor-pointer"
+      >
+        <span className="truncate pr-2 text-left">{selectedOption?.label}</span>
+        <ChevronDownIcon className="w-4 h-4 text-gray-500 flex-shrink-0" />
+      </button>
+
+      {isOpen && (
+        <div className="absolute z-50 mt-1 w-full bg-white border border-gray-100 rounded-xl shadow-lg py-1 animate-fadeIn max-h-60 overflow-auto">
+          {options.map((opt) => (
+            <button
+              key={opt.value}
+              onClick={() => {
+                onChange(opt.value);
+                setIsOpen(false);
+              }}
+              className={`w-full text-left px-3 py-2 text-sm flex items-center justify-between transition-colors ${
+                value === opt.value ? "bg-gray-50 text-gray-900 font-medium" : "text-gray-700 hover:bg-gray-50"
+              }`}
+            >
+              <span className="truncate">{opt.label}</span>
+              {value === opt.value && <CheckIcon className="w-4 h-4 text-gray-600 flex-shrink-0 ml-2" />}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function PropiedadesPage() {
   const { token, usuario } = useContext(AuthContext);
   const { success, error, ToastContainer } = useToast();
@@ -51,15 +103,15 @@ export default function PropiedadesPage() {
   const [openForm, setOpenForm] = useState(false);
   const [selectedOpp, setSelectedOpp] = useState(null);
   const [showActividades, setShowActividades] = useState(false);
-  
+
   const [formActividad, setFormActividad] = useState({
     tipo: "LLAMADA", titulo: "", descripcion: "", fechaVencimiento: ""
   });
 
-  const [form, setForm] = useState({ 
-    id: null, titulo: "", direccion: "", habitaciones: "", banos: "", 
-    garages: "", metrosCuadrados: "", operacion: "", imagenUrl: "", 
-    notas: "", tipo: "", valor: "", clienteId: "", etapa: "" 
+  const [form, setForm] = useState({
+    id: null, titulo: "", direccion: "", habitaciones: "", banos: "",
+    garages: "", metrosCuadrados: "", operacion: "", imagenUrl: "",
+    notas: "", tipo: "", valor: "", clienteId: "", etapa: ""
   });
 
   // Vista (Grilla/Lista) y Kebab Menu
@@ -192,19 +244,19 @@ export default function PropiedadesPage() {
     }
     try {
       await axios.post("http://localhost:3000/tareas", {
-          ...formActividad, oportunidadId: selectedOpp.id
-        }, { headers: { Authorization: `Bearer ${token}` } }
+        ...formActividad, oportunidadId: selectedOpp.id
+      }, { headers: { Authorization: `Bearer ${token}` } }
       );
       setFormActividad({ tipo: "LLAMADA", titulo: "", descripcion: "", fechaVencimiento: "" });
       success("Tarea agregada");
       fetchPropiedades();
-      
+
       // Actualizamos la vista del modal
       const { data } = await axios.get(`http://localhost:3000/propiedades?estadoActivo=ACTIVOS&limit=100`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const actualizada = data.data.find(p => p.id === selectedOpp.id);
-      if(actualizada) setSelectedOpp(actualizada);
+      if (actualizada) setSelectedOpp(actualizada);
 
     } catch (err) {
       error("Error al crear tarea");
@@ -213,14 +265,14 @@ export default function PropiedadesPage() {
 
   const toggleActividadCompletada = async (actividadId, completada) => {
     try {
-      await axios.put(`http://localhost:3000/tareas/${actividadId}/completar`, 
+      await axios.put(`http://localhost:3000/tareas/${actividadId}/completar`,
         { completada: !completada },
         { headers: { Authorization: `Bearer ${token}` } }
       );
       fetchPropiedades();
       const { data } = await axios.get(`http://localhost:3000/propiedades?estadoActivo=ACTIVOS&limit=100`, { headers: { Authorization: `Bearer ${token}` } });
       const actualizada = data.data.find(p => p.id === selectedOpp.id);
-      if(actualizada) setSelectedOpp(actualizada);
+      if (actualizada) setSelectedOpp(actualizada);
     } catch (error) {
       console.error(error);
     }
@@ -238,12 +290,12 @@ export default function PropiedadesPage() {
       });
       success("Tarea cancelada");
       fetchPropiedades();
-      
+
       const { data } = await axios.get(`http://localhost:3000/propiedades?estadoActivo=ACTIVOS&limit=100`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const actualizada = data.data.find(p => p.id === selectedOpp.id);
-      if(actualizada) setSelectedOpp(actualizada);
+      if (actualizada) setSelectedOpp(actualizada);
     } catch (err) {
       error("Error al cancelar");
     }
@@ -251,7 +303,7 @@ export default function PropiedadesPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-4 sm:p-6 overflow-x-hidden">
-      
+
       {/* ENCABEZADO */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-3">
         <div>
@@ -260,10 +312,10 @@ export default function PropiedadesPage() {
         </div>
         <button
           onClick={() => {
-            setForm({ 
-              id: null, titulo: "", direccion: "", habitaciones: "", banos: "", 
-              garages: "", metrosCuadrados: "", operacion: "Venta", imagenUrl: "", 
-              notas: "", tipo: "Casa", valor: "", clienteId: "", etapa: "DISPONIBLE" 
+            setForm({
+              id: null, titulo: "", direccion: "", habitaciones: "", banos: "",
+              garages: "", metrosCuadrados: "", operacion: "Venta", imagenUrl: "",
+              notas: "", tipo: "Casa", valor: "", clienteId: "", etapa: "DISPONIBLE"
             });
             setOpenForm(true);
           }}
@@ -291,50 +343,53 @@ export default function PropiedadesPage() {
 
         {/* Filtros */}
         <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
-          <select
+          <CustomSelect
             value={filtroTipo}
-            onChange={(e) => setFiltroTipo(e.target.value)}
-            className="flex-1 sm:flex-none sm:w-44 border border-gray-200 bg-white px-3 py-2.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm text-gray-700 shadow-sm cursor-pointer"
-          >
-            <option value="Todos">Todos los tipos</option>
-            <option value="Casa">Casa</option>
-            <option value="Dpto">Departamento</option>
-            <option value="Terreno">Terreno</option>
-            <option value="Oficina">Oficina</option>
-          </select>
+            onChange={setFiltroTipo}
+            className="flex-1 sm:flex-none sm:w-44"
+            options={[
+              { value: "Todos", label: "Todos los tipos" },
+              { value: "Casa", label: "Casa" },
+              { value: "Dpto", label: "Departamento" },
+              { value: "Terreno", label: "Terreno" },
+              { value: "Oficina", label: "Oficina" }
+            ]}
+          />
 
-          <select
+          <CustomSelect
             value={filtroEtapa}
-            onChange={(e) => setFiltroEtapa(e.target.value)}
-            className="flex-1 sm:flex-none sm:w-44 border border-gray-200 bg-white px-3 py-2.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm text-gray-700 shadow-sm cursor-pointer"
-          >
-            <option value="Todos">Todos los estados</option>
-            <option value="DISPONIBLE">Disponible</option>
-            <option value="RESERVADA">Reservada</option>
-            <option value="VENDIDA">Vendida</option>
-            <option value="ALQUILADA">Alquilada</option>
-          </select>
+            onChange={setFiltroEtapa}
+            className="flex-1 sm:flex-none sm:w-44"
+            options={[
+              { value: "Todos", label: "Todos los estados" },
+              { value: "DISPONIBLE", label: "Disponible" },
+              { value: "RESERVADA", label: "Reservada" },
+              { value: "VENDIDA", label: "Vendida" },
+              { value: "ALQUILADA", label: "Alquilada" }
+            ]}
+          />
 
-          <select
+          <CustomSelect
             value={filtroOperacion}
-            onChange={(e) => setFiltroOperacion(e.target.value)}
-            className="flex-1 sm:flex-none sm:w-36 border border-gray-200 bg-white px-3 py-2.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm text-gray-700 shadow-sm cursor-pointer"
-          >
-            <option value="Todos">Operación</option>
-            <option value="Venta">Venta</option>
-            <option value="Alquiler">Alquiler</option>
-          </select>
+            onChange={setFiltroOperacion}
+            className="flex-1 sm:flex-none sm:w-36"
+            options={[
+              { value: "Todos", label: "Operación" },
+              { value: "Venta", label: "Venta" },
+              { value: "Alquiler", label: "Alquiler" }
+            ]}
+          />
 
           {/* Selector de vistas */}
           <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-lg border border-gray-200 h-[42px] flex-shrink-0">
-            <button 
+            <button
               onClick={() => setVista("LISTA")}
               className={`p-1.5 rounded-md transition-all ${vista === "LISTA" ? "bg-white text-purple-600 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
               title="Vista de lista"
             >
               <ListBulletIcon className="w-5 h-5" />
             </button>
-            <button 
+            <button
               onClick={() => setVista("GRILLA")}
               className={`p-1.5 rounded-md transition-all ${vista === "GRILLA" ? "bg-white text-purple-600 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
               title="Vista de tarjetas (Grilla)"
@@ -363,17 +418,17 @@ export default function PropiedadesPage() {
                 const actsVencidas = p.actividades?.filter(a => new Date(a.fechaVencimiento) < new Date() && !a.completada).length || 0;
 
                 return (
-                  <div 
-                    key={p.id} 
+                  <div
+                    key={p.id}
                     className="bg-white rounded-2xl shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300 overflow-hidden border border-gray-100 cursor-pointer group flex flex-col"
                     onClick={() => {
                       setSelectedOpp(p);
                       setForm({
-                        id: p.id, titulo: p.titulo, direccion: p.direccion || "", 
-                        habitaciones: p.habitaciones || "", banos: p.banos || "", 
-                        garages: p.garages || "", metrosCuadrados: p.metrosCuadrados || "", 
-                        operacion: p.operacion || "", imagenUrl: p.imagenUrl || "", 
-                        notas: p.notas || "", tipo: p.tipo || "", valor: p.valor || "", 
+                        id: p.id, titulo: p.titulo, direccion: p.direccion || "",
+                        habitaciones: p.habitaciones || "", banos: p.banos || "",
+                        garages: p.garages || "", metrosCuadrados: p.metrosCuadrados || "",
+                        operacion: p.operacion || "", imagenUrl: p.imagenUrl || "",
+                        notas: p.notas || "", tipo: p.tipo || "", valor: p.valor || "",
                         clienteId: p.clienteId, etapa: p.etapa
                       });
                       setShowActividades(true);
@@ -381,19 +436,18 @@ export default function PropiedadesPage() {
                   >
                     {/* IMAGE HEADER */}
                     <div className="relative h-56 w-full bg-gray-100 overflow-hidden flex-shrink-0">
-                      <img 
-                        src={p.imagenUrl || "https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&w=800&q=80"} 
+                      <img
+                        src={p.imagenUrl || "https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&w=800&q=80"}
                         alt={p.titulo}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-in-out"
                       />
-                      
+
                       {/* Etapa Badge */}
                       <div className="absolute top-3 left-3">
-                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider text-white shadow-md ${
-                          p.etapa === 'DISPONIBLE' ? 'bg-emerald-500' : 
-                          p.etapa === 'RESERVADA' ? 'bg-amber-500' : 
-                          p.etapa === 'VENDIDA' ? 'bg-rose-500' : 'bg-indigo-500'
-                        }`}>
+                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider text-white shadow-md ${p.etapa === 'DISPONIBLE' ? 'bg-emerald-500' :
+                            p.etapa === 'RESERVADA' ? 'bg-amber-500' :
+                              p.etapa === 'VENDIDA' ? 'bg-rose-500' : 'bg-indigo-500'
+                          }`}>
                           {p.etapa}
                         </span>
                       </div>
@@ -422,14 +476,14 @@ export default function PropiedadesPage() {
 
                     {/* BODY */}
                     <div className="p-4 flex-1 flex flex-col justify-between bg-white relative">
-                      
+
                       <div>
                         {/* Title and 3-dots Kebab */}
                         <div className="flex justify-between items-start mb-1 gap-2 relative">
                           <h3 className="font-extrabold text-gray-900 text-base line-clamp-1 truncate flex-1 group-hover:text-purple-600 transition-colors">
                             {p.titulo}
                           </h3>
-                          
+
                           {/* Kebab dropdown */}
                           <div className="relative">
                             <button
@@ -442,7 +496,7 @@ export default function PropiedadesPage() {
                               <EllipsisVerticalIcon className="w-5 h-5" />
                             </button>
                             {menuAbiertoId === p.id && (
-                              <div 
+                              <div
                                 onClick={(e) => e.stopPropagation()}
                                 className="absolute right-0 mt-1 w-32 bg-white border border-gray-100 rounded-xl shadow-lg py-1.5 z-20 animate-fadeIn"
                               >
@@ -451,11 +505,11 @@ export default function PropiedadesPage() {
                                     setMenuAbiertoId(null);
                                     setSelectedOpp(p);
                                     setForm({
-                                      id: p.id, titulo: p.titulo, direccion: p.direccion || "", 
-                                      habitaciones: p.habitaciones || "", banos: p.banos || "", 
-                                      garages: p.garages || "", metrosCuadrados: p.metrosCuadrados || "", 
-                                      operacion: p.operacion || "", imagenUrl: p.imagenUrl || "", 
-                                      notas: p.notas || "", tipo: p.tipo || "", valor: p.valor || "", 
+                                      id: p.id, titulo: p.titulo, direccion: p.direccion || "",
+                                      habitaciones: p.habitaciones || "", banos: p.banos || "",
+                                      garages: p.garages || "", metrosCuadrados: p.metrosCuadrados || "",
+                                      operacion: p.operacion || "", imagenUrl: p.imagenUrl || "",
+                                      notas: p.notas || "", tipo: p.tipo || "", valor: p.valor || "",
                                       clienteId: p.clienteId, etapa: p.etapa
                                     });
                                     setOpenForm(true);
@@ -531,17 +585,17 @@ export default function PropiedadesPage() {
                 const actsVencidas = p.actividades?.filter(a => new Date(a.fechaVencimiento) < new Date() && !a.completada).length || 0;
 
                 return (
-                  <div 
-                    key={p.id} 
+                  <div
+                    key={p.id}
                     className="relative bg-white rounded-2xl shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300 overflow-hidden border border-gray-100 cursor-pointer group flex flex-col md:flex-row"
                     onClick={() => {
                       setSelectedOpp(p);
                       setForm({
-                        id: p.id, titulo: p.titulo, direccion: p.direccion || "", 
-                        habitaciones: p.habitaciones || "", banos: p.banos || "", 
-                        garages: p.garages || "", metrosCuadrados: p.metrosCuadrados || "", 
-                        operacion: p.operacion || "", imagenUrl: p.imagenUrl || "", 
-                        notas: p.notas || "", tipo: p.tipo || "", valor: p.valor || "", 
+                        id: p.id, titulo: p.titulo, direccion: p.direccion || "",
+                        habitaciones: p.habitaciones || "", banos: p.banos || "",
+                        garages: p.garages || "", metrosCuadrados: p.metrosCuadrados || "",
+                        operacion: p.operacion || "", imagenUrl: p.imagenUrl || "",
+                        notas: p.notas || "", tipo: p.tipo || "", valor: p.valor || "",
                         clienteId: p.clienteId, etapa: p.etapa
                       });
                       setShowActividades(true);
@@ -549,19 +603,18 @@ export default function PropiedadesPage() {
                   >
                     {/* LEFT IMAGE */}
                     <div className="relative h-48 md:h-auto md:w-64 bg-gray-100 overflow-hidden flex-shrink-0">
-                      <img 
-                        src={p.imagenUrl || "https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&w=800&q=80"} 
+                      <img
+                        src={p.imagenUrl || "https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&w=800&q=80"}
                         alt={p.titulo}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-in-out"
                       />
-                      
+
                       {/* Etapa Badge */}
                       <div className="absolute top-3 left-3">
-                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider text-white shadow-md ${
-                          p.etapa === 'DISPONIBLE' ? 'bg-emerald-500' : 
-                          p.etapa === 'RESERVADA' ? 'bg-amber-500' : 
-                          p.etapa === 'VENDIDA' ? 'bg-rose-500' : 'bg-indigo-500'
-                        }`}>
+                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider text-white shadow-md ${p.etapa === 'DISPONIBLE' ? 'bg-emerald-500' :
+                            p.etapa === 'RESERVADA' ? 'bg-amber-500' :
+                              p.etapa === 'VENDIDA' ? 'bg-rose-500' : 'bg-indigo-500'
+                          }`}>
                           {p.etapa}
                         </span>
                       </div>
@@ -590,7 +643,7 @@ export default function PropiedadesPage() {
 
                     {/* RIGHT CONTENT */}
                     <div className="p-5 flex-1 flex flex-col justify-between bg-white relative">
-                      
+
                       <div>
                         {/* Header: Title and Kebab & Price */}
                         <div className="flex justify-between items-start mb-1 gap-4 relative">
@@ -604,12 +657,12 @@ export default function PropiedadesPage() {
                               <span className="truncate">{p.direccion || "Ubicación a confirmar"}</span>
                             </div>
                           </div>
-                          
+
                           <div className="flex items-center gap-2 relative">
                             <span className="text-gray-900 font-extrabold text-xl whitespace-nowrap">
                               USD {p.valor?.toLocaleString('es-AR') || '0'}
                             </span>
-                            
+
                             {/* Kebab dropdown */}
                             <div className="relative">
                               <button
@@ -622,7 +675,7 @@ export default function PropiedadesPage() {
                                 <EllipsisVerticalIcon className="w-5 h-5" />
                               </button>
                               {menuAbiertoId === p.id && (
-                                <div 
+                                <div
                                   onClick={(e) => e.stopPropagation()}
                                   className="absolute right-0 mt-1 w-32 bg-white border border-gray-100 rounded-xl shadow-lg py-1.5 z-20 animate-fadeIn"
                                 >
@@ -631,11 +684,11 @@ export default function PropiedadesPage() {
                                       setMenuAbiertoId(null);
                                       setSelectedOpp(p);
                                       setForm({
-                                        id: p.id, titulo: p.titulo, direccion: p.direccion || "", 
-                                        habitaciones: p.habitaciones || "", banos: p.banos || "", 
-                                        garages: p.garages || "", metrosCuadrados: p.metrosCuadrados || "", 
-                                        operacion: p.operacion || "", imagenUrl: p.imagenUrl || "", 
-                                        notas: p.notas || "", tipo: p.tipo || "", valor: p.valor || "", 
+                                        id: p.id, titulo: p.titulo, direccion: p.direccion || "",
+                                        habitaciones: p.habitaciones || "", banos: p.banos || "",
+                                        garages: p.garages || "", metrosCuadrados: p.metrosCuadrados || "",
+                                        operacion: p.operacion || "", imagenUrl: p.imagenUrl || "",
+                                        notas: p.notas || "", tipo: p.tipo || "", valor: p.valor || "",
                                         clienteId: p.clienteId, etapa: p.etapa
                                       });
                                       setOpenForm(true);
@@ -711,13 +764,13 @@ export default function PropiedadesPage() {
       {(openForm || showActividades) && (
         <div className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm flex justify-center items-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-[1000px] max-h-[90vh] overflow-hidden flex flex-col border border-gray-100">
-            
+
             {/* Header del Modal */}
             <div className="p-5 sm:p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
               <h3 className="text-2xl font-extrabold text-gray-900">
                 {form.id ? "Editar propiedad" : "Nueva propiedad"}
               </h3>
-              <button 
+              <button
                 onClick={() => {
                   setOpenForm(false);
                   setShowActividades(false);
@@ -731,7 +784,7 @@ export default function PropiedadesPage() {
 
             <div className="flex-1 overflow-y-auto p-5 sm:p-6">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                
+
                 {/* COLUMNA IZQUIERDA: FORMULARIO */}
                 <div className="space-y-5">
                   <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
@@ -836,28 +889,28 @@ export default function PropiedadesPage() {
                           <IconBed />
                           <span>Habitaciones</span>
                         </label>
-                        <input type="number" min="0" className="w-full border border-gray-200 p-2 rounded-lg text-center outline-none focus:border-[#8B5CF6]" value={form.habitaciones} onChange={e=>setForm({...form, habitaciones: e.target.value})} />
+                        <input type="number" min="0" className="w-full border border-gray-200 p-2 rounded-lg text-center outline-none focus:border-[#8B5CF6]" value={form.habitaciones} onChange={e => setForm({ ...form, habitaciones: e.target.value })} />
                       </div>
                       <div className="flex flex-col items-center">
                         <label className="flex items-center gap-1.5 text-xs font-semibold text-gray-700 mb-1.5 justify-center">
                           <IconBath />
                           <span>Baños</span>
                         </label>
-                        <input type="number" min="0" className="w-full border border-gray-200 p-2 rounded-lg text-center outline-none focus:border-[#8B5CF6]" value={form.banos} onChange={e=>setForm({...form, banos: e.target.value})} />
+                        <input type="number" min="0" className="w-full border border-gray-200 p-2 rounded-lg text-center outline-none focus:border-[#8B5CF6]" value={form.banos} onChange={e => setForm({ ...form, banos: e.target.value })} />
                       </div>
                       <div className="flex flex-col items-center">
                         <label className="flex items-center gap-1.5 text-xs font-semibold text-gray-700 mb-1.5 justify-center">
                           <IconCar />
                           <span>Garages</span>
                         </label>
-                        <input type="number" min="0" className="w-full border border-gray-200 p-2 rounded-lg text-center outline-none focus:border-[#8B5CF6]" value={form.garages} onChange={e=>setForm({...form, garages: e.target.value})} />
+                        <input type="number" min="0" className="w-full border border-gray-200 p-2 rounded-lg text-center outline-none focus:border-[#8B5CF6]" value={form.garages} onChange={e => setForm({ ...form, garages: e.target.value })} />
                       </div>
                       <div className="flex flex-col items-center">
                         <label className="flex items-center gap-1.5 text-xs font-semibold text-gray-700 mb-1.5 justify-center">
                           <IconRuler />
                           <span>Metros (m²)</span>
                         </label>
-                        <input type="number" min="0" className="w-full border border-gray-200 p-2 rounded-lg text-center outline-none focus:border-[#8B5CF6]" value={form.metrosCuadrados} onChange={e=>setForm({...form, metrosCuadrados: e.target.value})} />
+                        <input type="number" min="0" className="w-full border border-gray-200 p-2 rounded-lg text-center outline-none focus:border-[#8B5CF6]" value={form.metrosCuadrados} onChange={e => setForm({ ...form, metrosCuadrados: e.target.value })} />
                       </div>
                     </div>
                   </div>
