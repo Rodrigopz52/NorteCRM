@@ -10,8 +10,36 @@ import {
   ClockIcon,
   ExclamationCircleIcon,
   PlusIcon,
-  MagnifyingGlassIcon
+  MagnifyingGlassIcon,
+  ListBulletIcon,
+  Squares2X2Icon,
+  EllipsisVerticalIcon
 } from "@heroicons/react/24/outline";
+
+// Iconos de características en SVG (outline negro/gris)
+const IconBed = () => (
+  <svg className="w-4 h-4 text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M3 10V19M21 10V19M3 14H21M3 10H21M6 10V6H10V10M14 10V6H18V10" />
+  </svg>
+);
+
+const IconBath = () => (
+  <svg className="w-4 h-4 text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M4 10h16M4 10a2 2 0 00-2 2v4a3 3 0 003 3h14a3 3 0 003-3v-4a2 2 0 00-2-2M4 10V6a2 2 0 012-2h2m10 6V7a2 2 0 00-2-2h-2" />
+  </svg>
+);
+
+const IconRuler = () => (
+  <svg className="w-4 h-4 text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M19 11l-8 8H4v-7l8-8h7v7zM14 6l-1 1M11 9l-1 1M8 12l-1 1" />
+  </svg>
+);
+
+const IconCar = () => (
+  <svg className="w-4 h-4 text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M5 10V6a2 2 0 012-2h10a2 2 0 012 2v4M2 14h20M4 14a2 2 0 012-2h12a2 2 0 012 2v3a1 1 0 01-1 1H5a1 1 0 01-1-1v-3z" />
+  </svg>
+);
 
 export default function PropiedadesPage() {
   const { token, usuario } = useContext(AuthContext);
@@ -33,6 +61,17 @@ export default function PropiedadesPage() {
     garages: "", metrosCuadrados: "", operacion: "", imagenUrl: "", 
     notas: "", tipo: "", valor: "", clienteId: "", etapa: "" 
   });
+
+  // Vista (Grilla/Lista) y Kebab Menu
+  const [vista, setVista] = useState("GRILLA"); // "GRILLA", "LISTA"
+  const [menuAbiertoId, setMenuAbiertoId] = useState(null);
+
+  // Cerrar kebab menu al hacer click afuera
+  useEffect(() => {
+    const handleCloseMenu = () => setMenuAbiertoId(null);
+    window.addEventListener("click", handleCloseMenu);
+    return () => window.removeEventListener("click", handleCloseMenu);
+  }, []);
 
   // Filtros
   const [filtroTipo, setFiltroTipo] = useState("Todos");
@@ -285,6 +324,24 @@ export default function PropiedadesPage() {
             <option value="Venta">Venta</option>
             <option value="Alquiler">Alquiler</option>
           </select>
+
+          {/* Selector de vistas */}
+          <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-lg border border-gray-200 h-[42px] flex-shrink-0">
+            <button 
+              onClick={() => setVista("LISTA")}
+              className={`p-1.5 rounded-md transition-all ${vista === "LISTA" ? "bg-white text-purple-600 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
+              title="Vista de lista"
+            >
+              <ListBulletIcon className="w-5 h-5" />
+            </button>
+            <button 
+              onClick={() => setVista("GRILLA")}
+              className={`p-1.5 rounded-md transition-all ${vista === "GRILLA" ? "bg-white text-purple-600 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
+              title="Vista de tarjetas (Grilla)"
+            >
+              <Squares2X2Icon className="w-5 h-5" />
+            </button>
+          </div>
         </div>
       </div>
 
@@ -299,131 +356,344 @@ export default function PropiedadesPage() {
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {propiedades.map(p => {
-              const actsPendientes = p.actividades?.filter(a => !a.completada).length || 0;
-              const actsVencidas = p.actividades?.filter(a => new Date(a.fechaVencimiento) < new Date() && !a.completada).length || 0;
+          {vista === "GRILLA" ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {propiedades.map(p => {
+                const actsPendientes = p.actividades?.filter(a => !a.completada).length || 0;
+                const actsVencidas = p.actividades?.filter(a => new Date(a.fechaVencimiento) < new Date() && !a.completada).length || 0;
 
-              return (
-                <div 
-                  key={p.id} 
-                  className="bg-white rounded-2xl shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300 overflow-hidden border border-gray-100 cursor-pointer group flex flex-col"
-                  onClick={() => {
-                    setSelectedOpp(p);
-                    setForm({
-                      id: p.id, titulo: p.titulo, direccion: p.direccion || "", 
-                      habitaciones: p.habitaciones || "", banos: p.banos || "", 
-                      garages: p.garages || "", metrosCuadrados: p.metrosCuadrados || "", 
-                      operacion: p.operacion || "", imagenUrl: p.imagenUrl || "", 
-                      notas: p.notas || "", tipo: p.tipo || "", valor: p.valor || "", 
-                      clienteId: p.clienteId, etapa: p.etapa
-                    });
-                    setShowActividades(true);
-                  }}
-                >
-                  {/* IMAGE HEADER */}
-                  <div className="relative h-56 w-full bg-gray-100 overflow-hidden">
-                    <img 
-                      src={p.imagenUrl || "https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&w=800&q=80"} 
-                      alt={p.titulo}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-in-out"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-                    
-                    {/* Operacion Badge */}
-                    {p.operacion && (
-                      <div className="absolute top-3 right-3">
-                        <span className={`px-3 py-1 rounded-full text-xs font-bold text-white shadow-lg backdrop-blur-md border ${
-                          p.operacion === 'Venta' ? 'bg-[#9333EA]/90 border-purple-400/30' : 'bg-[#10B981]/90 border-emerald-400/30'
+                return (
+                  <div 
+                    key={p.id} 
+                    className="bg-white rounded-2xl shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300 overflow-hidden border border-gray-100 cursor-pointer group flex flex-col"
+                    onClick={() => {
+                      setSelectedOpp(p);
+                      setForm({
+                        id: p.id, titulo: p.titulo, direccion: p.direccion || "", 
+                        habitaciones: p.habitaciones || "", banos: p.banos || "", 
+                        garages: p.garages || "", metrosCuadrados: p.metrosCuadrados || "", 
+                        operacion: p.operacion || "", imagenUrl: p.imagenUrl || "", 
+                        notas: p.notas || "", tipo: p.tipo || "", valor: p.valor || "", 
+                        clienteId: p.clienteId, etapa: p.etapa
+                      });
+                      setShowActividades(true);
+                    }}
+                  >
+                    {/* IMAGE HEADER */}
+                    <div className="relative h-56 w-full bg-gray-100 overflow-hidden flex-shrink-0">
+                      <img 
+                        src={p.imagenUrl || "https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&w=800&q=80"} 
+                        alt={p.titulo}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-in-out"
+                      />
+                      
+                      {/* Etapa Badge */}
+                      <div className="absolute top-3 left-3">
+                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider text-white shadow-md ${
+                          p.etapa === 'DISPONIBLE' ? 'bg-emerald-500' : 
+                          p.etapa === 'RESERVADA' ? 'bg-amber-500' : 
+                          p.etapa === 'VENDIDA' ? 'bg-rose-500' : 'bg-indigo-500'
                         }`}>
+                          {p.etapa}
+                        </span>
+                      </div>
+
+                      {/* Tipo Badge */}
+                      <div className="absolute bottom-3 left-3 bg-white text-gray-800 text-[11px] font-bold px-2.5 py-1 rounded-lg border border-gray-200 shadow-sm">
+                        {p.tipo || "Propiedad"}
+                      </div>
+
+                      {/* Indicators for tasks */}
+                      {(actsPendientes > 0 || actsVencidas > 0) && (
+                        <div className="absolute bottom-3 right-3 flex gap-1">
+                          {actsVencidas > 0 && (
+                            <div className="w-6 h-6 rounded-full bg-red-500 flex items-center justify-center shadow-lg border border-white">
+                              <ExclamationCircleIcon className="w-4 h-4 text-white" />
+                            </div>
+                          )}
+                          {actsPendientes > 0 && actsVencidas === 0 && (
+                            <div className="w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center shadow-lg border border-white">
+                              <ClockIcon className="w-4 h-4 text-white" />
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* BODY */}
+                    <div className="p-4 flex-1 flex flex-col justify-between bg-white relative">
+                      
+                      <div>
+                        {/* Title and 3-dots Kebab */}
+                        <div className="flex justify-between items-start mb-1 gap-2 relative">
+                          <h3 className="font-extrabold text-gray-900 text-base line-clamp-1 truncate flex-1 group-hover:text-purple-600 transition-colors">
+                            {p.titulo}
+                          </h3>
+                          
+                          {/* Kebab dropdown */}
+                          <div className="relative">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setMenuAbiertoId(menuAbiertoId === p.id ? null : p.id);
+                              }}
+                              className="p-1 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-150 transition-colors"
+                            >
+                              <EllipsisVerticalIcon className="w-5 h-5" />
+                            </button>
+                            {menuAbiertoId === p.id && (
+                              <div 
+                                onClick={(e) => e.stopPropagation()}
+                                className="absolute right-0 mt-1 w-32 bg-white border border-gray-100 rounded-xl shadow-lg py-1.5 z-20 animate-fadeIn"
+                              >
+                                <button
+                                  onClick={() => {
+                                    setMenuAbiertoId(null);
+                                    setSelectedOpp(p);
+                                    setForm({
+                                      id: p.id, titulo: p.titulo, direccion: p.direccion || "", 
+                                      habitaciones: p.habitaciones || "", banos: p.banos || "", 
+                                      garages: p.garages || "", metrosCuadrados: p.metrosCuadrados || "", 
+                                      operacion: p.operacion || "", imagenUrl: p.imagenUrl || "", 
+                                      notas: p.notas || "", tipo: p.tipo || "", valor: p.valor || "", 
+                                      clienteId: p.clienteId, etapa: p.etapa
+                                    });
+                                    setOpenForm(true);
+                                  }}
+                                  className="w-full text-left px-4 py-2 text-xs text-gray-700 hover:bg-gray-50 flex items-center gap-2 transition-colors font-semibold"
+                                >
+                                  Editar
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    setMenuAbiertoId(null);
+                                    toggleActivo(p.id);
+                                  }}
+                                  className="w-full text-left px-4 py-2 text-xs text-red-600 hover:bg-red-50 flex items-center gap-2 transition-colors font-semibold border-t border-gray-50 pt-1.5 mt-1"
+                                >
+                                  Archivar
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Subtitle / Address */}
+                        <div className="flex items-center text-gray-500 text-xs mb-3 font-medium">
+                          <MapPinIcon className="w-3.5 h-3.5 mr-1 flex-shrink-0 text-gray-400" />
+                          <span className="truncate">{p.direccion || "Ubicación a confirmar"}</span>
+                        </div>
+
+                        {/* Price and Operation */}
+                        <div className="flex justify-between items-baseline mb-3">
+                          <span className="text-gray-900 font-extrabold text-[17px]">
+                            USD {p.valor?.toLocaleString('es-AR') || '0'}
+                          </span>
+                          <span className="text-[10px] font-bold text-gray-400 tracking-wider uppercase">
+                            {p.operacion}
+                          </span>
+                        </div>
+
+                        {/* Specs badges */}
+                        <div className="grid grid-cols-4 gap-2 mb-3 w-full">
+                          <div className="bg-slate-50 border border-slate-100 text-gray-800 py-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 shadow-sm">
+                            <IconBed />
+                            <span>{p.habitaciones ?? 0}</span>
+                          </div>
+                          <div className="bg-slate-50 border border-slate-100 text-gray-800 py-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 shadow-sm">
+                            <IconBath />
+                            <span>{p.banos ?? 0}</span>
+                          </div>
+                          <div className="bg-slate-50 border border-slate-100 text-gray-800 py-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 shadow-sm">
+                            <IconRuler />
+                            <span>{p.metrosCuadrados ?? 0}m²</span>
+                          </div>
+                          <div className="bg-slate-50 border border-slate-100 text-gray-800 py-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 shadow-sm">
+                            <IconCar />
+                            <span>{p.garages ?? 0}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Footer */}
+                      <div className="pt-2.5 border-t border-gray-100 flex justify-between items-center text-xs text-gray-500 font-medium">
+                        <span>Agente: <strong className="text-gray-700">{p.usuario?.nombre || "Sin Asignar"}</strong></span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {propiedades.map(p => {
+                const actsPendientes = p.actividades?.filter(a => !a.completada).length || 0;
+                const actsVencidas = p.actividades?.filter(a => new Date(a.fechaVencimiento) < new Date() && !a.completada).length || 0;
+
+                return (
+                  <div 
+                    key={p.id} 
+                    className="relative bg-white rounded-2xl shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300 overflow-hidden border border-gray-100 cursor-pointer group flex flex-col md:flex-row"
+                    onClick={() => {
+                      setSelectedOpp(p);
+                      setForm({
+                        id: p.id, titulo: p.titulo, direccion: p.direccion || "", 
+                        habitaciones: p.habitaciones || "", banos: p.banos || "", 
+                        garages: p.garages || "", metrosCuadrados: p.metrosCuadrados || "", 
+                        operacion: p.operacion || "", imagenUrl: p.imagenUrl || "", 
+                        notas: p.notas || "", tipo: p.tipo || "", valor: p.valor || "", 
+                        clienteId: p.clienteId, etapa: p.etapa
+                      });
+                      setShowActividades(true);
+                    }}
+                  >
+                    {/* LEFT IMAGE */}
+                    <div className="relative h-48 md:h-auto md:w-64 bg-gray-100 overflow-hidden flex-shrink-0">
+                      <img 
+                        src={p.imagenUrl || "https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&w=800&q=80"} 
+                        alt={p.titulo}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-in-out"
+                      />
+                      
+                      {/* Etapa Badge */}
+                      <div className="absolute top-3 left-3">
+                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider text-white shadow-md ${
+                          p.etapa === 'DISPONIBLE' ? 'bg-emerald-500' : 
+                          p.etapa === 'RESERVADA' ? 'bg-amber-500' : 
+                          p.etapa === 'VENDIDA' ? 'bg-rose-500' : 'bg-indigo-500'
+                        }`}>
+                          {p.etapa}
+                        </span>
+                      </div>
+
+                      {/* Tipo Badge */}
+                      <div className="absolute bottom-3 left-3 bg-white text-gray-800 text-[11px] font-bold px-2.5 py-1 rounded-lg border border-gray-200 shadow-sm">
+                        {p.tipo || "Propiedad"}
+                      </div>
+
+                      {/* Indicators for tasks */}
+                      {(actsPendientes > 0 || actsVencidas > 0) && (
+                        <div className="absolute bottom-3 right-3 flex gap-1">
+                          {actsVencidas > 0 && (
+                            <div className="w-6 h-6 rounded-full bg-red-500 flex items-center justify-center shadow-lg border border-white">
+                              <ExclamationCircleIcon className="w-4 h-4 text-white" />
+                            </div>
+                          )}
+                          {actsPendientes > 0 && actsVencidas === 0 && (
+                            <div className="w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center shadow-lg border border-white">
+                              <ClockIcon className="w-4 h-4 text-white" />
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* RIGHT CONTENT */}
+                    <div className="p-5 flex-1 flex flex-col justify-between bg-white relative">
+                      
+                      <div>
+                        {/* Header: Title and Kebab & Price */}
+                        <div className="flex justify-between items-start mb-1 gap-4 relative">
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-extrabold text-gray-900 text-lg line-clamp-1 truncate group-hover:text-purple-600 transition-colors">
+                              {p.titulo}
+                            </h3>
+                            {/* Subtitle / Address */}
+                            <div className="flex items-center text-gray-500 text-xs mt-1 font-medium">
+                              <MapPinIcon className="w-3.5 h-3.5 mr-1 flex-shrink-0 text-gray-400" />
+                              <span className="truncate">{p.direccion || "Ubicación a confirmar"}</span>
+                            </div>
+                          </div>
+                          
+                          <div className="flex items-center gap-2 relative">
+                            <span className="text-gray-900 font-extrabold text-xl whitespace-nowrap">
+                              USD {p.valor?.toLocaleString('es-AR') || '0'}
+                            </span>
+                            
+                            {/* Kebab dropdown */}
+                            <div className="relative">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setMenuAbiertoId(menuAbiertoId === p.id ? null : p.id);
+                                }}
+                                className="p-1 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-150 transition-colors"
+                              >
+                                <EllipsisVerticalIcon className="w-5 h-5" />
+                              </button>
+                              {menuAbiertoId === p.id && (
+                                <div 
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="absolute right-0 mt-1 w-32 bg-white border border-gray-100 rounded-xl shadow-lg py-1.5 z-20 animate-fadeIn"
+                                >
+                                  <button
+                                    onClick={() => {
+                                      setMenuAbiertoId(null);
+                                      setSelectedOpp(p);
+                                      setForm({
+                                        id: p.id, titulo: p.titulo, direccion: p.direccion || "", 
+                                        habitaciones: p.habitaciones || "", banos: p.banos || "", 
+                                        garages: p.garages || "", metrosCuadrados: p.metrosCuadrados || "", 
+                                        operacion: p.operacion || "", imagenUrl: p.imagenUrl || "", 
+                                        notas: p.notas || "", tipo: p.tipo || "", valor: p.valor || "", 
+                                        clienteId: p.clienteId, etapa: p.etapa
+                                      });
+                                      setOpenForm(true);
+                                    }}
+                                    className="w-full text-left px-4 py-2 text-xs text-gray-700 hover:bg-gray-50 flex items-center gap-2 transition-colors font-semibold"
+                                  >
+                                    Editar
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      setMenuAbiertoId(null);
+                                      toggleActivo(p.id);
+                                    }}
+                                    className="w-full text-left px-4 py-2 text-xs text-red-600 hover:bg-red-50 flex items-center gap-2 transition-colors font-semibold border-t border-gray-50 pt-1.5 mt-1"
+                                  >
+                                    Archivar
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Specs / Badges */}
+                        <div className="grid grid-cols-4 gap-2 my-4 w-full max-w-xl">
+                          <div className="bg-slate-50 border border-slate-100 text-gray-800 py-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 shadow-sm">
+                            <IconBed />
+                            <span>{p.habitaciones ?? 0} hab.</span>
+                          </div>
+                          <div className="bg-slate-50 border border-slate-100 text-gray-800 py-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 shadow-sm">
+                            <IconBath />
+                            <span>{p.banos ?? 0} baños</span>
+                          </div>
+                          <div className="bg-slate-50 border border-slate-100 text-gray-800 py-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 shadow-sm">
+                            <IconRuler />
+                            <span>{p.metrosCuadrados ?? 0} m²</span>
+                          </div>
+                          <div className="bg-slate-50 border border-slate-100 text-gray-800 py-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 shadow-sm">
+                            <IconCar />
+                            <span>{p.garages ?? 0} garages</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Footer */}
+                      <div className="pt-3 border-t border-gray-100 flex justify-between items-center text-xs text-gray-500 font-medium">
+                        <span>Agente: <strong className="text-gray-700">{p.usuario?.nombre || "Sin Asignar"}</strong></span>
+                        <span className="text-[10px] font-bold text-gray-400 tracking-wider uppercase">
                           {p.operacion}
                         </span>
                       </div>
-                    )}
-                    
-                    {/* Etapa Badge */}
-                    <div className="absolute top-3 left-3">
-                      <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider text-white shadow-lg backdrop-blur-md border ${
-                        p.etapa === 'DISPONIBLE' ? 'bg-blue-500/80 border-blue-400/30' : 
-                        p.etapa === 'RESERVADA' ? 'bg-amber-500/80 border-amber-400/30' : 
-                        p.etapa === 'VENDIDA' ? 'bg-purple-800/80 border-purple-600/30' : 'bg-emerald-800/80 border-emerald-600/30'
-                      }`}>
-                        {p.etapa}
-                      </span>
-                    </div>
 
-                    {/* Precio */}
-                    {p.valor && (
-                      <div className="absolute bottom-4 left-4">
-                        <p className="text-white text-2xl font-bold tracking-tight drop-shadow-md">
-                          $ {p.valor.toLocaleString('es-AR')}
-                        </p>
-                      </div>
-                    )}
-
-                    {/* Indicators for tasks */}
-                    {(actsPendientes > 0 || actsVencidas > 0) && (
-                      <div className="absolute bottom-4 right-4 flex gap-1">
-                        {actsVencidas > 0 && (
-                          <div className="w-6 h-6 rounded-full bg-red-500 flex items-center justify-center shadow-lg border border-white">
-                            <ExclamationCircleIcon className="w-4 h-4 text-white" />
-                          </div>
-                        )}
-                        {actsPendientes > 0 && actsVencidas === 0 && (
-                          <div className="w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center shadow-lg border border-white">
-                            <ClockIcon className="w-4 h-4 text-white" />
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* BODY */}
-                  <div className="p-5 flex-1 flex flex-col bg-white">
-                    <h3 className="font-extrabold text-gray-900 text-[17px] line-clamp-1 mb-1.5 group-hover:text-[#8B5CF6] transition-colors">
-                      {p.titulo}
-                    </h3>
-                    <div className="flex items-center text-gray-500 text-sm mb-5 font-medium">
-                      <MapPinIcon className="w-4 h-4 mr-1.5 flex-shrink-0 text-gray-400" />
-                      <span className="truncate">{p.direccion || "Ubicación a confirmar"}</span>
-                    </div>
-
-                    {/* SPECS GRID */}
-                    <div className="grid grid-cols-2 gap-y-3 gap-x-4 text-[13px] text-gray-600 font-medium mb-5 mt-auto">
-                      <div className="flex items-center gap-2">
-                        <span className="text-lg opacity-80">🛏️</span>
-                        <span className="truncate">{p.habitaciones ?? 0} hab.</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-lg opacity-80">🚿</span>
-                        <span className="truncate">{p.banos ?? 0} baños</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-lg opacity-80">📐</span>
-                        <span className="truncate">{p.metrosCuadrados ?? 0} m²</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-lg opacity-80">🚗</span>
-                        <span className="truncate">{p.garages ?? 0} garages</span>
-                      </div>
-                    </div>
-
-                    {/* FOOTER */}
-                    <div className="pt-4 border-t border-gray-100 flex justify-between items-center mt-auto">
-                      <div className="flex items-center gap-1.5 text-blue-600 bg-blue-50/80 px-2.5 py-1 rounded-md text-xs font-bold border border-blue-100">
-                        <HomeModernIcon className="w-3.5 h-3.5" />
-                        {p.tipo || "Propiedad"}
-                      </div>
-                      <div className="flex items-center gap-1.5 text-gray-500 text-xs font-semibold bg-gray-50 px-2.5 py-1 rounded-md border border-gray-100">
-                        <UserIcon className="w-3.5 h-3.5" />
-                        <span className="truncate max-w-[100px]">{p.usuario?.nombre || "Sin Asignar"}</span>
-                      </div>
                     </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )}
 
           <div className="mt-8">
             <Paginacion
@@ -561,20 +831,32 @@ export default function PropiedadesPage() {
                   <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
                     <h4 className="font-bold text-gray-800 mb-4 text-sm uppercase tracking-wider">Características Físicas</h4>
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                      <div>
-                        <label className="block text-xs font-semibold text-gray-700 mb-1 text-center">🛏️ Habitaciones</label>
+                      <div className="flex flex-col items-center">
+                        <label className="flex items-center gap-1.5 text-xs font-semibold text-gray-700 mb-1.5 justify-center">
+                          <IconBed />
+                          <span>Habitaciones</span>
+                        </label>
                         <input type="number" min="0" className="w-full border border-gray-200 p-2 rounded-lg text-center outline-none focus:border-[#8B5CF6]" value={form.habitaciones} onChange={e=>setForm({...form, habitaciones: e.target.value})} />
                       </div>
-                      <div>
-                        <label className="block text-xs font-semibold text-gray-700 mb-1 text-center">🚿 Baños</label>
+                      <div className="flex flex-col items-center">
+                        <label className="flex items-center gap-1.5 text-xs font-semibold text-gray-700 mb-1.5 justify-center">
+                          <IconBath />
+                          <span>Baños</span>
+                        </label>
                         <input type="number" min="0" className="w-full border border-gray-200 p-2 rounded-lg text-center outline-none focus:border-[#8B5CF6]" value={form.banos} onChange={e=>setForm({...form, banos: e.target.value})} />
                       </div>
-                      <div>
-                        <label className="block text-xs font-semibold text-gray-700 mb-1 text-center">🚗 Garages</label>
+                      <div className="flex flex-col items-center">
+                        <label className="flex items-center gap-1.5 text-xs font-semibold text-gray-700 mb-1.5 justify-center">
+                          <IconCar />
+                          <span>Garages</span>
+                        </label>
                         <input type="number" min="0" className="w-full border border-gray-200 p-2 rounded-lg text-center outline-none focus:border-[#8B5CF6]" value={form.garages} onChange={e=>setForm({...form, garages: e.target.value})} />
                       </div>
-                      <div>
-                        <label className="block text-xs font-semibold text-gray-700 mb-1 text-center">📐 Metros (m²)</label>
+                      <div className="flex flex-col items-center">
+                        <label className="flex items-center gap-1.5 text-xs font-semibold text-gray-700 mb-1.5 justify-center">
+                          <IconRuler />
+                          <span>Metros (m²)</span>
+                        </label>
                         <input type="number" min="0" className="w-full border border-gray-200 p-2 rounded-lg text-center outline-none focus:border-[#8B5CF6]" value={form.metrosCuadrados} onChange={e=>setForm({...form, metrosCuadrados: e.target.value})} />
                       </div>
                     </div>
