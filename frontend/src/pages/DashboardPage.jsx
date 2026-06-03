@@ -774,7 +774,7 @@ function DashboardGerente({ data, periodo, setPeriodo, dashboardRef, token }) {
 }
 
 // ─── DASHBOARD VENDEDOR ──────────────────────────────────────
-function DashboardVendedor({ data }) {
+export function DashboardVendedor({ data }) {
   const propiedadesEstado = {
     disponible: data.estadisticasEstado?.disponible || 0,
     reservada: data.estadisticasEstado?.reservada || 0,

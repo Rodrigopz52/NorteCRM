@@ -4,6 +4,7 @@ import { AuthContext } from "../context/AuthContext.jsx";
 import { UserGroupIcon, CheckCircleIcon, XCircleIcon, ChevronDownIcon, CheckIcon } from "@heroicons/react/24/outline";
 import { useToast, useConfirm } from "../hooks/useNotifications.jsx";
 import Paginacion from "../components/Paginacion.jsx";
+import { DashboardVendedor } from "./DashboardPage.jsx";
 
 function CustomSelect({ value, onChange, options, className }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -81,6 +82,7 @@ export default function UsuariosPage() {
   const [filtroEstado, setFiltroEstado] = useState("ACTIVOS");
   const [metricasGlobales, setMetricasGlobales] = useState({ totalClientes: 0, totalPropiedades: 0, totalTareas: 0 });
   const [menuAbiertoId, setMenuAbiertoId] = useState(null);
+  const [modalMetricas, setModalMetricas] = useState({ open: false, usuario: null, data: null, loading: false });
   const limit = 10;
 
   const fetchUsuarios = async () => {
@@ -121,6 +123,20 @@ export default function UsuariosPage() {
     window.addEventListener("click", handleCloseMenu);
     return () => window.removeEventListener("click", handleCloseMenu);
   }, []);
+
+  const abrirMetricas = async (usuarioObj) => {
+    setModalMetricas({ open: true, usuario: usuarioObj, data: null, loading: true });
+    try {
+      const { data } = await axios.get(`http://localhost:3000/reportes/dashboard-personalizado?usuarioId=${usuarioObj.id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setModalMetricas({ open: true, usuario: usuarioObj, data, loading: false });
+    } catch (err) {
+      console.error("Error cargando métricas:", err);
+      setModalMetricas({ open: false, usuario: null, data: null, loading: false });
+      error("No se pudieron cargar las métricas de este usuario.");
+    }
+  };
 
   const crearOEditarUsuario = async () => {
     try {
@@ -291,7 +307,7 @@ export default function UsuariosPage() {
                       <button
                         onClick={() => {
                           setMenuAbiertoId(null);
-                          alert("Métricas detalladas próximamente...");
+                          abrirMetricas(u);
                         }}
                         className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2 transition-colors"
                       >
@@ -541,6 +557,45 @@ export default function UsuariosPage() {
               >
                 Cancelar
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Métricas */}
+      {modalMetricas.open && (
+        <div className="fixed inset-0 bg-black/60 flex justify-center items-center backdrop-blur-sm z-50 p-4 sm:p-6 overflow-hidden">
+          <div className="bg-gray-50 rounded-2xl shadow-2xl w-full max-w-5xl h-[90vh] flex flex-col border border-gray-200">
+            {/* Header del Modal */}
+            <div className="bg-white px-6 py-4 border-b border-gray-200 flex justify-between items-center flex-shrink-0 rounded-t-2xl">
+              <div>
+                <h3 className="text-xl font-bold text-gray-900">
+                  Métricas de {modalMetricas.usuario?.nombre} {modalMetricas.usuario?.apellido}
+                </h3>
+                <p className="text-sm text-gray-500 font-medium">Dashboard Vendedor</p>
+              </div>
+              <button
+                onClick={() => setModalMetricas({ open: false, usuario: null, data: null, loading: false })}
+                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <XCircleIcon className="w-6 h-6" />
+              </button>
+            </div>
+            
+            {/* Contenido (Scrollable) */}
+            <div className="flex-1 overflow-y-auto p-6">
+              {modalMetricas.loading ? (
+                <div className="flex flex-col items-center justify-center h-full text-gray-400">
+                  <div className="w-10 h-10 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin mb-4"></div>
+                  <p className="font-medium">Cargando métricas...</p>
+                </div>
+              ) : modalMetricas.data ? (
+                <DashboardVendedor data={modalMetricas.data} />
+              ) : (
+                <div className="flex flex-col items-center justify-center h-full text-gray-400">
+                  <p className="font-medium">No hay datos disponibles.</p>
+                </div>
+              )}
             </div>
           </div>
         </div>

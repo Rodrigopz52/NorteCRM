@@ -83,8 +83,14 @@ export const dashboard = async (req, res) => {
 };
 
 export const dashboardPersonalizado = async (req, res) => {
-  const usuarioId = req.usuario.id;
-  const rol = req.usuario.rol;
+  let usuarioId = req.usuario.id;
+  let rol = req.usuario.rol;
+
+  // Si es gerente o administrador y se solicita ver el dashboard de un usuario específico
+  if ((rol === "GERENTE" || rol === "ADMINISTRADOR") && req.query.usuarioId) {
+    usuarioId = parseInt(req.query.usuarioId, 10);
+    rol = "VENDEDOR"; // Forzar la vista de vendedor para que retorne el reporte individual
+  }
   
   const hoy = new Date();
   hoy.setHours(0, 0, 0, 0);
