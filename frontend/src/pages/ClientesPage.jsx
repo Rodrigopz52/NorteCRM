@@ -1,8 +1,8 @@
-import { useContext, useEffect, useState } from "react";
+import { useContext, useEffect, useState, useRef } from "react";
 import axios from "axios";
 import { AuthContext } from "../context/AuthContext.jsx";
 import { useToast, useConfirm } from "../hooks/useNotifications.jsx";
-import { PhoneIcon, EnvelopeIcon, ChatBubbleLeftEllipsisIcon, IdentificationIcon } from "@heroicons/react/24/outline";
+import { PhoneIcon, EnvelopeIcon, ChatBubbleLeftEllipsisIcon, IdentificationIcon, ChevronDownIcon, CheckIcon } from "@heroicons/react/24/outline";
 import Paginacion from "../components/Paginacion.jsx";
 
 // Helper function to format time elapsed
@@ -20,6 +20,56 @@ function formatTiempoHace(dateString) {
   }
   const months = Math.floor(diffDays / 30);
   return `Hace ${months} ${months === 1 ? 'mes' : 'meses'}`;
+}
+
+function CustomSelect({ value, onChange, options, className }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef(null);
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (containerRef.current && !containerRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const selectedOption = options.find(opt => opt.value === value) || options[0];
+
+  return (
+    <div className={`relative ${className}`} ref={containerRef}>
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full flex items-center justify-between border border-gray-200 bg-white px-3 py-2.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm text-gray-700 shadow-sm cursor-pointer"
+      >
+        <span className="truncate pr-2 text-left">{selectedOption?.label}</span>
+        <ChevronDownIcon className="w-4 h-4 text-gray-500 flex-shrink-0" />
+      </button>
+
+      {isOpen && (
+        <div className="absolute z-50 mt-1 w-full min-w-full bg-white border border-gray-100 rounded-xl shadow-lg py-1 animate-fadeIn max-h-60 overflow-auto">
+          {options.map((opt) => (
+            <button
+              key={opt.value}
+              onClick={() => {
+                onChange(opt.value);
+                setIsOpen(false);
+              }}
+              className={`w-full text-left px-3 py-2 text-sm flex items-center justify-between transition-colors ${
+                value === opt.value ? "bg-gray-50 text-gray-900 font-medium" : "text-gray-700 hover:bg-gray-50"
+              }`}
+            >
+              <span className="truncate">{opt.label}</span>
+              {value === opt.value && <CheckIcon className="w-4 h-4 text-gray-600 flex-shrink-0 ml-2" />}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default function ClientesPage() {
@@ -249,24 +299,26 @@ export default function ClientesPage() {
           />
         </div>
         <div className="flex gap-3 w-full sm:w-auto">
-          <select
-            className="w-1/2 sm:w-48 border border-gray-200 bg-white px-3 py-2.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm text-gray-700 shadow-sm cursor-pointer"
+          <CustomSelect
             value={filtroTipo}
-            onChange={e => setFiltroTipo(e.target.value)}
-          >
-            <option value="Todos">Todos los tipos</option>
-            <option value="INQUILINO">Inquilinos</option>
-            <option value="PROPIETARIO">Propietarios</option>
-            <option value="COMPRADOR">Compradores</option>
-          </select>
-          <select
-            className="w-1/2 sm:w-44 border border-gray-200 bg-white px-3 py-2.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm text-gray-700 shadow-sm cursor-pointer"
+            onChange={setFiltroTipo}
+            className="w-1/2 sm:w-48"
+            options={[
+              { value: "Todos", label: "Todos los tipos" },
+              { value: "INQUILINO", label: "Inquilinos" },
+              { value: "PROPIETARIO", label: "Propietarios" },
+              { value: "COMPRADOR", label: "Compradores" }
+            ]}
+          />
+          <CustomSelect
             value={filtroEstado}
-            onChange={e => setFiltroEstado(e.target.value)}
-          >
-            <option value="ACTIVOS">Activos</option>
-            <option value="INACTIVOS">Inactivos</option>
-          </select>
+            onChange={setFiltroEstado}
+            className="w-1/2 sm:w-44"
+            options={[
+              { value: "ACTIVOS", label: "Activos" },
+              { value: "INACTIVOS", label: "Inactivos" }
+            ]}
+          />
         </div>
       </div>
 
