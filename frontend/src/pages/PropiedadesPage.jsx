@@ -129,6 +129,7 @@ export default function PropiedadesPage() {
   const [filtroTipo, setFiltroTipo] = useState("Todos");
   const [filtroEtapa, setFiltroEtapa] = useState("Todos");
   const [filtroOperacion, setFiltroOperacion] = useState("Todos");
+  const [filtroEstadoActivo, setFiltroEstadoActivo] = useState("ACTIVOS");
   const [busqueda, setBusqueda] = useState("");
 
   // Paginación
@@ -144,7 +145,7 @@ export default function PropiedadesPage() {
       if (filtroEtapa !== "Todos") params.append("etapa", filtroEtapa);
       if (filtroOperacion !== "Todos") params.append("operacion", filtroOperacion);
       if (busqueda.trim()) params.append("busqueda", busqueda.trim());
-      params.append("estadoActivo", "ACTIVOS");
+      params.append("estadoActivo", filtroEstadoActivo);
 
       const { data } = await axios.get(`http://localhost:3000/propiedades?${params.toString()}`, {
         headers: { Authorization: `Bearer ${token}` }
@@ -162,9 +163,9 @@ export default function PropiedadesPage() {
     }
   };
 
-  useEffect(() => { fetchPropiedades(); }, [pagina, filtroTipo, filtroEtapa, filtroOperacion, busqueda]);
+  useEffect(() => { fetchPropiedades(); }, [pagina, filtroTipo, filtroEtapa, filtroOperacion, filtroEstadoActivo, busqueda]);
 
-  useEffect(() => { setPagina(1); }, [filtroTipo, filtroEtapa, filtroOperacion, busqueda]);
+  useEffect(() => { setPagina(1); }, [filtroTipo, filtroEtapa, filtroOperacion, filtroEstadoActivo, busqueda]);
 
   const guardarPropiedad = async () => {
     if (!form.titulo || !form.clienteId) {
@@ -217,11 +218,13 @@ export default function PropiedadesPage() {
     }
   };
 
-  const toggleActivo = async (id) => {
+  const toggleActivo = async (id, isActivo) => {
     try {
       const confirmed = await showConfirm({
-        title: "¿Archivar propiedad?",
-        message: "La propiedad se ocultará del listado público, pero no se borrará físicamente.",
+        title: isActivo ? "¿Marcar como no concretada?" : "¿Restaurar propiedad?",
+        message: isActivo 
+          ? "La propiedad se ocultará del listado activo, pero no se borrará físicamente."
+          : "La propiedad volverá a aparecer en el listado activo.",
         type: "warning"
       });
       if (!confirmed) return;
@@ -229,11 +232,11 @@ export default function PropiedadesPage() {
       await axios.put(`http://localhost:3000/propiedades/${id}/toggle-activo`, {}, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      success("Propiedad archivada exitosamente");
+      success(isActivo ? "Propiedad marcada como no concretada" : "Propiedad restaurada exitosamente");
       fetchPropiedades();
       setShowActividades(false);
     } catch (err) {
-      error(err.response?.data?.error || "Error al archivar");
+      error(err.response?.data?.error || "Error al cambiar estado");
     }
   };
 
@@ -366,6 +369,16 @@ export default function PropiedadesPage() {
               { value: "RESERVADA", label: "Reservada" },
               { value: "VENDIDA", label: "Vendida" },
               { value: "ALQUILADA", label: "Alquilada" }
+            ]}
+          />
+
+          <CustomSelect
+            value={filtroEstadoActivo}
+            onChange={setFiltroEstadoActivo}
+            className="flex-1 sm:flex-none sm:w-44"
+            options={[
+              { value: "ACTIVOS", label: "Activas" },
+              { value: "INACTIVOS", label: "No concretadas" }
             ]}
           />
 
@@ -521,11 +534,13 @@ export default function PropiedadesPage() {
                                 <button
                                   onClick={() => {
                                     setMenuAbiertoId(null);
-                                    toggleActivo(p.id);
+                                    toggleActivo(p.id, p.activo);
                                   }}
-                                  className="w-full text-left px-4 py-2 text-xs text-red-600 hover:bg-red-50 flex items-center gap-2 transition-colors font-semibold border-t border-gray-50 pt-1.5 mt-1"
+                                  className={`w-full text-left px-4 py-2 text-xs font-semibold flex items-center gap-2 transition-colors border-t border-gray-50 pt-1.5 mt-1 ${
+                                    p.activo ? 'text-red-600 hover:bg-red-50' : 'text-green-600 hover:bg-green-50'
+                                  }`}
                                 >
-                                  Archivar
+                                  {p.activo ? "No concretada" : "Restaurar"}
                                 </button>
                               </div>
                             )}
@@ -700,11 +715,13 @@ export default function PropiedadesPage() {
                                   <button
                                     onClick={() => {
                                       setMenuAbiertoId(null);
-                                      toggleActivo(p.id);
+                                      toggleActivo(p.id, p.activo);
                                     }}
-                                    className="w-full text-left px-4 py-2 text-xs text-red-600 hover:bg-red-50 flex items-center gap-2 transition-colors font-semibold border-t border-gray-50 pt-1.5 mt-1"
+                                    className={`w-full text-left px-4 py-2 text-xs font-semibold flex items-center gap-2 transition-colors border-t border-gray-50 pt-1.5 mt-1 ${
+                                      p.activo ? 'text-red-600 hover:bg-red-50' : 'text-green-600 hover:bg-green-50'
+                                    }`}
                                   >
-                                    Archivar
+                                    {p.activo ? "No concretada" : "Restaurar"}
                                   </button>
                                 </div>
                               )}
@@ -936,8 +953,8 @@ export default function PropiedadesPage() {
                       {form.id ? "Actualizar" : "Guardar"}
                     </button>
                     {form.id && usuario?.rol === "GERENTE" && (
-                      <button onClick={() => toggleActivo(form.id)} className="bg-red-50 hover:bg-red-100 text-red-600 px-6 rounded-xl font-bold border border-red-200 transition-colors">
-                        Archivar
+                      <button onClick={() => toggleActivo(form.id, selectedOpp?.activo)} className={`px-6 rounded-xl font-bold border transition-colors ${selectedOpp?.activo ? "bg-red-50 hover:bg-red-100 text-red-600 border-red-200" : "bg-green-50 hover:bg-green-100 text-green-600 border-green-200"}`}>
+                        {selectedOpp?.activo ? "No concretada" : "Restaurar"}
                       </button>
                     )}
                   </div>
