@@ -127,9 +127,8 @@ export default function PropiedadesPage() {
 
   // Filtros
   const [filtroTipo, setFiltroTipo] = useState("Todos");
-  const [filtroEtapa, setFiltroEtapa] = useState("Todos");
+  const [filtroEtapa, setFiltroEtapa] = useState("DISPONIBLE");
   const [filtroOperacion, setFiltroOperacion] = useState("Todos");
-  const [filtroEstadoActivo, setFiltroEstadoActivo] = useState("ACTIVOS");
   const [busqueda, setBusqueda] = useState("");
 
   // Paginación
@@ -142,10 +141,17 @@ export default function PropiedadesPage() {
     try {
       const params = new URLSearchParams({ page: pagina, limit });
       if (filtroTipo !== "Todos") params.append("tipo", filtroTipo);
-      if (filtroEtapa !== "Todos") params.append("etapa", filtroEtapa);
       if (filtroOperacion !== "Todos") params.append("operacion", filtroOperacion);
       if (busqueda.trim()) params.append("busqueda", busqueda.trim());
-      params.append("estadoActivo", filtroEstadoActivo);
+      
+      if (filtroEtapa === "NO_CONCRETADAS") {
+        params.append("estadoActivo", "INACTIVOS");
+      } else {
+        params.append("estadoActivo", "ACTIVOS");
+        if (filtroEtapa !== "Todos") {
+          params.append("etapa", filtroEtapa);
+        }
+      }
 
       const { data } = await axios.get(`http://localhost:3000/propiedades?${params.toString()}`, {
         headers: { Authorization: `Bearer ${token}` }
@@ -163,9 +169,9 @@ export default function PropiedadesPage() {
     }
   };
 
-  useEffect(() => { fetchPropiedades(); }, [pagina, filtroTipo, filtroEtapa, filtroOperacion, filtroEstadoActivo, busqueda]);
+  useEffect(() => { fetchPropiedades(); }, [pagina, filtroTipo, filtroEtapa, filtroOperacion, busqueda]);
 
-  useEffect(() => { setPagina(1); }, [filtroTipo, filtroEtapa, filtroOperacion, filtroEstadoActivo, busqueda]);
+  useEffect(() => { setPagina(1); }, [filtroTipo, filtroEtapa, filtroOperacion, busqueda]);
 
   const guardarPropiedad = async () => {
     if (!form.titulo || !form.clienteId) {
@@ -364,21 +370,11 @@ export default function PropiedadesPage() {
             onChange={setFiltroEtapa}
             className="flex-1 sm:flex-none sm:w-44"
             options={[
-              { value: "Todos", label: "Todos los estados" },
               { value: "DISPONIBLE", label: "Disponible" },
               { value: "RESERVADA", label: "Reservada" },
               { value: "VENDIDA", label: "Vendida" },
-              { value: "ALQUILADA", label: "Alquilada" }
-            ]}
-          />
-
-          <CustomSelect
-            value={filtroEstadoActivo}
-            onChange={setFiltroEstadoActivo}
-            className="flex-1 sm:flex-none sm:w-44"
-            options={[
-              { value: "ACTIVOS", label: "Activas" },
-              { value: "INACTIVOS", label: "No concretadas" }
+              { value: "ALQUILADA", label: "Alquilada" },
+              { value: "NO_CONCRETADAS", label: "No concretadas" }
             ]}
           />
 
