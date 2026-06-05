@@ -14,7 +14,13 @@ export const listarClientes = async (req, res) => {
     const estado = req.query.estado || "ACTIVOS";
 
     const filtroRol = usuario.rol === "VENDEDOR" ? { usuarioId: usuario.id } : {};
-    const filtroTipo = tipo ? { empresa: tipo } : {};
+    
+    let filtroTipo = {};
+    if (tipo) {
+      const tiposArr = tipo.split(",").map(t => t.trim()).filter(Boolean);
+      filtroTipo = { empresa: { in: tiposArr } };
+    }
+
     const filtroEstado = estado === "ACTIVOS" ? { activo: true } : estado === "INACTIVOS" ? { activo: false } : {};
     const filtroBusqueda = busqueda
       ? {
