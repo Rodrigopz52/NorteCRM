@@ -256,7 +256,7 @@ export default function ClientesPage() {
       }, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      success("Tarea completada 🎉");
+      success("Tarea completada");
       fetchClientes();
     } catch (err) {
       error("Error al completar la tarea");

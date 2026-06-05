@@ -448,14 +448,14 @@ export default function TareasPage() {
           },
           { headers: { Authorization: `Bearer ${token}` } }
         );
-        success("Actividad actualizada exitosamente");
+        success("Tarea actualizada exitosamente");
       } else {
         await axios.post(
           "http://localhost:3000/tareas",
           form,
           { headers: { Authorization: `Bearer ${token}` } }
         );
-        success("Actividad creada exitosamente");
+        success("Tarea creada exitosamente");
       }
 
       setForm({
@@ -470,8 +470,8 @@ export default function TareasPage() {
       setOpenForm(false);
       load();
     } catch (err) {
-      console.error("Error al guardar actividad:", err);
-      error(err.response?.data?.error || "Error al guardar la actividad");
+      console.error("Error al guardar tarea:", err);
+      error(err.response?.data?.error || "Error al guardar la tarea");
     }
   };
 
@@ -482,9 +482,11 @@ export default function TareasPage() {
         { completada: !completada },
         { headers: { Authorization: `Bearer ${token}` } }
       );
+      success(!completada ? "Tarea completada exitosamente" : "Tarea reabierta");
       load();
-    } catch (error) {
-      console.error("Error al actualizar actividad:", error);
+    } catch (err) {
+      console.error("Error al actualizar tarea:", err);
+      error("Error al actualizar la tarea");
     }
   };
 
@@ -502,11 +504,11 @@ export default function TareasPage() {
         headers: { Authorization: `Bearer ${token}` }
       });
 
-      success("Tarea cancelada correctamente");
+      success("Tarea cancelada exitosamente");
       load();
     } catch (err) {
-      console.error("Error al cancelar actividad:", err);
-      error(err.response?.data?.error || "Error al cancelar la actividad");
+      console.error("Error al cancelar la tarea:", err);
+      error(err.response?.data?.error || "Error al cancelar la tarea");
     }
   };
 
@@ -958,7 +960,7 @@ export default function TareasPage() {
                   </label>
                   <textarea
                     className="w-full border-2 border-gray-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 p-3 rounded-xl transition-all outline-none resize-none text-sm"
-                    placeholder="Detalles, recordatorios o notas de la actividad..."
+                    placeholder="Detalles, recordatorios o notas de la tarea..."
                     rows="3"
                     value={form.descripcion}
                     onChange={(e) => setForm({ ...form, descripcion: e.target.value })}
