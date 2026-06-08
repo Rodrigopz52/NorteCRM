@@ -4,6 +4,7 @@ import { AuthContext } from "../context/AuthContext.jsx";
 import { UserGroupIcon, CheckCircleIcon, XCircleIcon, ChevronDownIcon, CheckIcon } from "@heroicons/react/24/outline";
 import { useToast, useConfirm } from "../hooks/useNotifications.jsx";
 import Paginacion from "../components/Paginacion.jsx";
+import CustomMultiSelect from "../components/CustomMultiSelect.jsx";
 import { DashboardVendedor } from "./DashboardPage.jsx";
 
 function CustomSelect({ value, onChange, options, className }) {
@@ -78,7 +79,7 @@ export default function UsuariosPage() {
   const [busqueda, setBusqueda] = useState("");
   const [usuariosActivos, setUsuariosActivos] = useState(0);
   const [usuariosInactivos, setUsuariosInactivos] = useState(0);
-  const [filtroRol, setFiltroRol] = useState("");
+  const [filtroRol, setFiltroRol] = useState([]);
   const [filtroEstado, setFiltroEstado] = useState("ACTIVOS");
   const [metricasGlobales, setMetricasGlobales] = useState({ totalClientes: 0, totalPropiedades: 0, totalTareas: 0 });
   const [menuAbiertoId, setMenuAbiertoId] = useState(null);
@@ -89,7 +90,7 @@ export default function UsuariosPage() {
     try {
       const params = new URLSearchParams({ page: pagina, limit });
       if (busqueda.trim()) params.append("busqueda", busqueda.trim());
-      if (filtroRol) params.append("rol", filtroRol);
+      if (filtroRol.length > 0) params.append("rol", filtroRol.join(","));
       if (filtroEstado) params.append("estado", filtroEstado);
 
       const { data } = await axios.get(`http://localhost:3000/usuarios?${params.toString()}`, {
@@ -256,12 +257,12 @@ export default function UsuariosPage() {
               { value: "INACTIVOS", label: "Inactivos" }
             ]}
           />
-          <CustomSelect
+          <CustomMultiSelect
             value={filtroRol}
             onChange={setFiltroRol}
             className="w-1/2 sm:w-48"
+            placeholder="Todos los roles"
             options={[
-              { value: "", label: "Todos los roles" },
               { value: "GERENTE", label: "Gerente" },
               { value: "VENDEDOR", label: "Vendedor" },
               { value: "ADMINISTRADOR", label: "Administrador" }

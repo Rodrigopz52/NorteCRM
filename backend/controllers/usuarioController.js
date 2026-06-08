@@ -18,7 +18,11 @@ export const listarUsuarios = async (req, res) => {
     const rol = req.query.rol || "";
     const estado = req.query.estado || "ACTIVOS";
 
-    const filtroRol = rol ? { rol } : {};
+    let filtroRol = {};
+    if (rol) {
+      const rolesArr = rol.split(",").map(r => r.trim()).filter(Boolean);
+      filtroRol = { rol: { in: rolesArr } };
+    }
     const filtroEstado = estado === "INACTIVOS" ? { activo: false } : { activo: true };
     
     const filtroBusqueda = busqueda
