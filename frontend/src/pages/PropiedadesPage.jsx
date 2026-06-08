@@ -3,6 +3,7 @@ import axios from "axios";
 import { AuthContext } from "../context/AuthContext.jsx";
 import { useToast, useConfirm } from "../hooks/useNotifications.jsx";
 import Paginacion from "../components/Paginacion.jsx";
+import CustomMultiSelect from "../components/CustomMultiSelect.jsx";
 import {
   MapPinIcon,
   UserIcon,
@@ -126,8 +127,8 @@ export default function PropiedadesPage() {
   }, []);
 
   // Filtros
-  const [filtroTipo, setFiltroTipo] = useState("Todos");
-  const [filtroEtapa, setFiltroEtapa] = useState("DISPONIBLE");
+  const [filtroTipo, setFiltroTipo] = useState([]);
+  const [filtroEtapa, setFiltroEtapa] = useState(["DISPONIBLE"]);
   const [filtroOperacion, setFiltroOperacion] = useState("Todos");
   const [busqueda, setBusqueda] = useState("");
 
@@ -140,17 +141,12 @@ export default function PropiedadesPage() {
   const fetchPropiedades = async () => {
     try {
       const params = new URLSearchParams({ page: pagina, limit });
-      if (filtroTipo !== "Todos") params.append("tipo", filtroTipo);
+      if (filtroTipo.length > 0) params.append("tipo", filtroTipo.join(","));
       if (filtroOperacion !== "Todos") params.append("operacion", filtroOperacion);
       if (busqueda.trim()) params.append("busqueda", busqueda.trim());
       
-      if (filtroEtapa === "NO_CONCRETADAS") {
-        params.append("estadoActivo", "INACTIVOS");
-      } else {
-        params.append("estadoActivo", "ACTIVOS");
-        if (filtroEtapa !== "Todos") {
-          params.append("etapa", filtroEtapa);
-        }
+      if (filtroEtapa.length > 0) {
+        params.append("etapa", filtroEtapa.join(","));
       }
 
       const { data } = await axios.get(`http://localhost:3000/propiedades?${params.toString()}`, {
@@ -352,12 +348,12 @@ export default function PropiedadesPage() {
 
         {/* Filtros */}
         <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
-          <CustomSelect
+          <CustomMultiSelect
             value={filtroTipo}
             onChange={setFiltroTipo}
             className="flex-1 sm:flex-none sm:w-44"
+            placeholder="Todos los tipos"
             options={[
-              { value: "Todos", label: "Todos los tipos" },
               { value: "Casa", label: "Casa" },
               { value: "Dpto", label: "Departamento" },
               { value: "Terreno", label: "Terreno" },
@@ -365,10 +361,11 @@ export default function PropiedadesPage() {
             ]}
           />
 
-          <CustomSelect
+          <CustomMultiSelect
             value={filtroEtapa}
             onChange={setFiltroEtapa}
             className="flex-1 sm:flex-none sm:w-44"
+            placeholder="Todos los estados"
             options={[
               { value: "DISPONIBLE", label: "Disponible" },
               { value: "RESERVADA", label: "Reservada" },
@@ -383,7 +380,7 @@ export default function PropiedadesPage() {
             onChange={setFiltroOperacion}
             className="flex-1 sm:flex-none sm:w-36"
             options={[
-              { value: "Todos", label: "Operación" },
+              { value: "Todos", label: "Operaciones" },
               { value: "Venta", label: "Venta" },
               { value: "Alquiler", label: "Alquiler" }
             ]}

@@ -15,10 +15,40 @@ export const listarOportunidades = async (req, res) => {
     const filtroEstadoActivo = req.query.estadoActivo || "ACTIVOS";
 
     const filtroRol = usuario.rol === "VENDEDOR" ? { usuarioId: usuario.id } : {};
-    const filtroTipo = tipo ? { tipo } : {};
+    let filtroTipo = {};
+    if (tipo) {
+      const tiposArr = tipo.split(",").map(t => t.trim()).filter(Boolean);
+      filtroTipo = { tipo: { in: tiposArr } };
+    }
+
     const filtroOperacion = operacion ? { operacion } : {};
-    const filtroEtapa = etapa ? { etapa } : {};
-    const filtroActivo = filtroEstadoActivo === "ACTIVOS" ? { activo: true } : filtroEstadoActivo === "INACTIVOS" ? { activo: false } : {};
+    
+    let filtroEtapa = {};
+    let filtroActivo = {};
+    
+    if (etapa) {
+      const etapasArr = etapa.split(",").map(e => e.trim()).filter(Boolean);
+      const incluyeNoConcretadas = etapasArr.includes("NO_CONCRETADAS");
+      const etapasValidas = etapasArr.filter(e => e !== "NO_CONCRETADAS");
+
+      if (incluyeNoConcretadas && etapasValidas.length > 0) {
+        filtroActivo = {
+          OR: [
+            { activo: false },
+            { activo: true, etapa: { in: etapasValidas } }
+          ]
+        };
+      } else if (incluyeNoConcretadas) {
+        filtroActivo = { activo: false };
+      } else if (etapasValidas.length > 0) {
+        filtroActivo = { activo: true, etapa: { in: etapasValidas } };
+      } else {
+        filtroActivo = filtroEstadoActivo === "ACTIVOS" ? { activo: true } : filtroEstadoActivo === "INACTIVOS" ? { activo: false } : {};
+      }
+    } else {
+      filtroActivo = filtroEstadoActivo === "ACTIVOS" ? { activo: true } : filtroEstadoActivo === "INACTIVOS" ? { activo: false } : {};
+    }
+
     const filtroTipoCliente = tipoCliente ? { cliente: { empresa: tipoCliente } } : {};
     const filtroBusqueda = busqueda
       ? {
