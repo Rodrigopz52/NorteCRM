@@ -4,6 +4,7 @@ import { AuthContext } from "../context/AuthContext.jsx";
 import { useToast, useConfirm } from "../hooks/useNotifications.jsx";
 import Navbar from "../components/Navbar.jsx";
 import Paginacion from "../components/Paginacion.jsx";
+import CustomMultiSelect from "../components/CustomMultiSelect.jsx";
 import {
   PhoneIcon,
   CalendarIcon,
@@ -277,55 +278,7 @@ function PeriodoSelector({ periodo, onChange, fechaInicio, setFechaInicio, fecha
   );
 }
 
-function CustomSelect({ value, onChange, options, className }) {
-  const [isOpen, setIsOpen] = useState(false);
-  const containerRef = useRef(null);
 
-  useEffect(() => {
-    function handleClickOutside(event) {
-      if (containerRef.current && !containerRef.current.contains(event.target)) {
-        setIsOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  const selectedOption = options.find(opt => opt.value === value) || options[0];
-
-  return (
-    <div className={`relative ${className}`} ref={containerRef}>
-      <button
-        type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between border border-gray-200 bg-white px-3 py-2.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm text-gray-700 shadow-sm cursor-pointer"
-      >
-        <span className="truncate pr-2 text-left">{selectedOption?.label}</span>
-        <ChevronDownIcon className="w-4 h-4 text-gray-500 flex-shrink-0" />
-      </button>
-
-      {isOpen && (
-        <div className="absolute z-50 mt-1 w-full min-w-full bg-white border border-gray-100 rounded-xl shadow-lg py-1 animate-fadeIn max-h-60 overflow-auto">
-          {options.map((opt) => (
-            <button
-              key={opt.value}
-              onClick={() => {
-                onChange(opt.value);
-                setIsOpen(false);
-              }}
-              className={`w-full text-left px-3 py-2 text-sm flex items-center justify-between transition-colors ${
-                value === opt.value ? "bg-gray-50 text-gray-900 font-medium" : "text-gray-700 hover:bg-gray-50"
-              }`}
-            >
-              <span className="truncate">{opt.label}</span>
-              {value === opt.value && <CheckIcon className="w-4 h-4 text-gray-600 flex-shrink-0 ml-2" />}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
 
 export default function TareasPage() {
   const { token, usuario } = useContext(AuthContext);
@@ -337,14 +290,14 @@ export default function TareasPage() {
   const [openForm, setOpenForm] = useState(false);
 
   // Filtros
-  const [filtro, setFiltro] = useState("PENDIENTES");
+  const [filtro, setFiltro] = useState(["PENDIENTES"]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [filtroTipo, setFiltroTipo] = useState("TODOS");
-  const [filtroPrioridad, setFiltroPrioridad] = useState("TODAS");
+  const [periodo, setPeriodo] = useState("mes");
+  const [filtroTipo, setFiltroTipo] = useState([]);
+  const [filtroPrioridad, setFiltroPrioridad] = useState([]);
   const [openFiltros, setOpenFiltros] = useState(false);
   const dropdownFiltrosRef = useRef(null);
   const [vista, setVista] = useState("GRILLA"); // "GRILLA", "LISTA"
-  const [periodo, setPeriodo] = useState("mes");
   const [fechaInicio, setFechaInicio] = useState(null);
   const [fechaFin, setFechaFin] = useState(null);
 
@@ -525,18 +478,23 @@ export default function TareasPage() {
       if (!tituloMatch && !descMatch) return false;
     }
 
-    if (filtroTipo !== "TODOS" && act.tipo !== filtroTipo) return false;
+    if (filtroTipo.length > 0 && !filtroTipo.includes(act.tipo)) return false;
+    if (filtroPrioridad.length > 0 && !filtroPrioridad.includes(act.prioridad)) return false;
 
-    // Filtro por prioridad
-    if (filtroPrioridad !== "TODAS" && act.prioridad !== filtroPrioridad) return false;
+    // Filtros por estado
+    if (filtro.length > 0) {
+      let match = false;
+      if (filtro.includes("CANCELADAS") && !act.activo) match = true;
+      if (act.activo) {
+        if (filtro.includes("PENDIENTES") && !act.completada) match = true;
+        if (filtro.includes("COMPLETADAS") && act.completada) match = true;
+        if (filtro.includes("VENCIDAS") && vencida) match = true;
+      }
+      if (!match) return false;
+    } else {
+       if (!act.activo) return false;
+    }
 
-    // Filtros por estado (botones)
-    if (filtro === "CANCELADAS") return !act.activo;
-    if (!act.activo) return false;
-
-    if (filtro === "PENDIENTES") return !act.completada;
-    if (filtro === "COMPLETADAS") return act.completada;
-    if (filtro === "VENCIDAS") return vencida;
     return true;
   });
 
@@ -601,12 +559,12 @@ export default function TareasPage() {
           {/* Controles del filtro y Vistas */}
           <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
             {/* Select Tipo */}
-            <CustomSelect
+            <CustomMultiSelect
               value={filtroTipo}
               onChange={setFiltroTipo}
               className="flex-1 sm:flex-none sm:w-44"
+              placeholder="Todos los tipos"
               options={[
-                { value: "TODOS", label: "Todos los tipos" },
                 { value: "LLAMADA", label: "Llamada" },
                 { value: "REUNION", label: "Reunión" },
                 { value: "EMAIL", label: "Email" }
@@ -637,10 +595,11 @@ export default function TareasPage() {
                   {/* Filtro Estado */}
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Estado</label>
-                    <CustomSelect
+                                   <CustomMultiSelect
                       value={filtro}
                       onChange={setFiltro}
                       className="w-full"
+                      placeholder="Todos los estados"
                       options={[
                         { value: "PENDIENTES", label: "Pendientes" },
                         { value: "COMPLETADAS", label: "Completadas" },
@@ -653,12 +612,12 @@ export default function TareasPage() {
                   {/* Filtro Prioridad */}
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Prioridad</label>
-                    <CustomSelect
+                    <CustomMultiSelect
                       value={filtroPrioridad}
                       onChange={setFiltroPrioridad}
                       className="w-full"
+                      placeholder="Todas las prioridades"
                       options={[
-                        { value: "TODAS", label: "Todas las prioridades" },
                         { value: "ALTA", label: "Alta" },
                         { value: "MEDIA", label: "Media" },
                         { value: "BAJA", label: "Baja" }
