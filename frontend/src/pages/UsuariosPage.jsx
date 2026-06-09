@@ -225,7 +225,7 @@ export default function UsuariosPage() {
             setForm({ id: null, nombre: "", apellido: "", email: "", rol: "VENDEDOR", dni: "" });
             setOpenForm(true);
           }}
-          className="w-full sm:w-auto bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded-lg text-sm font-medium shadow-md hover:shadow-lg transition-all"
+          className="w-full sm:w-auto bg-gray-900 hover:bg-black text-white px-3 py-1.5 rounded-lg text-sm font-medium shadow-md hover:shadow-lg transition-all"
         >
           + Nuevo usuario
         </button>
