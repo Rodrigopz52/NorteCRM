@@ -84,7 +84,7 @@ export default function UsuariosPage() {
   const [metricasGlobales, setMetricasGlobales] = useState({ totalClientes: 0, totalPropiedades: 0, totalTareas: 0 });
   const [menuAbiertoId, setMenuAbiertoId] = useState(null);
   const [modalMetricas, setModalMetricas] = useState({ open: false, usuario: null, data: null, loading: false });
-  const limit = 10;
+  const limit = 9;
 
   const fetchUsuarios = async () => {
     try {
