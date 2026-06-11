@@ -396,42 +396,23 @@ export default function UsuariosPage() {
                 </div>
               </div>
 
-              {/* Tarjeta de rendimiento / Métricas globales */}
-              {u.rol === "VENDEDOR" ? (
-                <div className="bg-gray-50 rounded-xl p-3.5 border border-gray-100/80 mt-auto">
-                  <div className="grid grid-cols-3 gap-2 text-center">
-                    <div>
-                      <p className="font-bold text-gray-800 text-lg leading-none">{u._count?.clientes || 0}</p>
-                      <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mt-1.5">Clientes</p>
-                    </div>
-                    <div className="border-l border-gray-200/60">
-                      <p className="font-bold text-gray-800 text-lg leading-none">{u._count?.oportunidades || 0}</p>
-                      <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mt-1.5">Props.</p>
-                    </div>
-                    <div className="border-l border-gray-200/60">
-                      <p className="font-bold text-gray-800 text-lg leading-none">{u._count?.actividades || 0}</p>
-                      <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mt-1.5">Tareas</p>
-                    </div>
+              {/* Tarjeta de rendimiento / Métricas individuales para todos los roles */}
+              <div className="bg-gray-50 rounded-xl p-3.5 border border-gray-100/80 mt-auto">
+                <div className="grid grid-cols-3 gap-2 text-center">
+                  <div>
+                    <p className="font-bold text-gray-800 text-lg leading-none">{u._count?.clientes || 0}</p>
+                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mt-1.5">Clientes</p>
+                  </div>
+                  <div className="border-l border-gray-200/60">
+                    <p className="font-bold text-gray-800 text-lg leading-none">{u._count?.oportunidades || 0}</p>
+                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mt-1.5">Props.</p>
+                  </div>
+                  <div className="border-l border-gray-200/60">
+                    <p className="font-bold text-gray-800 text-lg leading-none">{u._count?.actividades || 0}</p>
+                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mt-1.5">Tareas</p>
                   </div>
                 </div>
-              ) : (
-                <div className="bg-gray-50 rounded-xl p-3.5 border border-gray-100/80 mt-auto">
-                  <div className="grid grid-cols-3 gap-2 text-center">
-                    <div>
-                      <p className="font-bold text-gray-800 text-lg leading-none">{metricasGlobales.totalClientes}</p>
-                      <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mt-1.5">Clientes</p>
-                    </div>
-                    <div className="border-l border-gray-200/60">
-                      <p className="font-bold text-gray-800 text-lg leading-none">{metricasGlobales.totalPropiedades}</p>
-                      <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mt-1.5">Props.</p>
-                    </div>
-                    <div className="border-l border-gray-200/60">
-                      <p className="font-bold text-gray-800 text-lg leading-none">{metricasGlobales.totalTareas}</p>
-                      <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mt-1.5">Tareas</p>
-                    </div>
-                  </div>
-                </div>
-              )}
+              </div>
 
             </div>
           );
