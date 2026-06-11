@@ -30,7 +30,8 @@ const COLORES_ESTADO = {
   disponible: "#6366f1",
   reservada: "#f59e0b",
   vendida: "#10b981",
-  alquilada: "#3b82f6"
+  alquilada: "#3b82f6",
+  no_concretadas: "#9ca3af"
 };
 
 // ─── HELPERS ────────────────────────────────────────────────
@@ -474,7 +475,8 @@ function DonutEstado({ data }) {
     { key: "disponible", label: "Disponible", color: COLORES_ESTADO.disponible, value: data.disponible },
     { key: "reservada", label: "Reservada", color: COLORES_ESTADO.reservada, value: data.reservada },
     { key: "vendida", label: "Vendida", color: COLORES_ESTADO.vendida, value: data.vendida },
-    { key: "alquilada", label: "Alquilada", color: COLORES_ESTADO.alquilada, value: data.alquilada }
+    { key: "alquilada", label: "Alquilada", color: COLORES_ESTADO.alquilada, value: data.alquilada },
+    { key: "no_concretadas", label: "No Concretadas", color: COLORES_ESTADO.no_concretadas, value: data.no_concretadas }
   ].filter(i => i.value > 0);
 
   return (
@@ -503,7 +505,8 @@ function DonutEstado({ data }) {
           { key: "disponible", label: "Disponible", color: COLORES_ESTADO.disponible },
           { key: "reservada", label: "Reservada", color: COLORES_ESTADO.reservada },
           { key: "vendida", label: "Vendida", color: COLORES_ESTADO.vendida },
-          { key: "alquilada", label: "Alquilada", color: COLORES_ESTADO.alquilada }
+          { key: "alquilada", label: "Alquilada", color: COLORES_ESTADO.alquilada },
+          { key: "no_concretadas", label: "No Concretadas", color: COLORES_ESTADO.no_concretadas }
         ].map(item => (
           <div key={item.key} className="flex items-center justify-between text-xs">
             <div className="flex items-center gap-2">

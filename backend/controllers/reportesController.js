@@ -512,14 +512,20 @@ export const dashboardGerencial = async (req, res) => {
       _count: { id: true },
       where: { activo: true }
     });
+    
+    const propiedadesNoConcretadas = await prisma.oportunidad.count({
+      where: { activo: false }
+    });
+
     const propiedadesPorEstado = {
       disponible: estadosGrupos.find(e => e.etapa === 'DISPONIBLE')?._count.id || 0,
       reservada: estadosGrupos.find(e => e.etapa === 'RESERVADA')?._count.id || 0,
       vendida: estadosGrupos.find(e => e.etapa === 'VENDIDA')?._count.id || 0,
       alquilada: estadosGrupos.find(e => e.etapa === 'ALQUILADA')?._count.id || 0,
+      no_concretadas: propiedadesNoConcretadas,
       total: 0
     };
-    propiedadesPorEstado.total = propiedadesPorEstado.disponible + propiedadesPorEstado.reservada + propiedadesPorEstado.vendida + propiedadesPorEstado.alquilada;
+    propiedadesPorEstado.total = propiedadesPorEstado.disponible + propiedadesPorEstado.reservada + propiedadesPorEstado.vendida + propiedadesPorEstado.alquilada + propiedadesPorEstado.no_concretadas;
 
     // ── EMBUDO DE VENTAS ──────────────────────────────────────
     const etapasEmbudo = ["LEAD", "CONTACTADO", "VISITA", "NEGOCIACION", "CERRADO"];
