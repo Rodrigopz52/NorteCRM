@@ -677,22 +677,37 @@ export default function TareasPage() {
                 return "OTROS";
               };
 
+              const getGroupWeight = (dateString) => {
+                const hoy = new Date();
+                hoy.setHours(0, 0, 0, 0);
+                const d = new Date(dateString);
+                d.setHours(0, 0, 0, 0);
+                const diffTime = d - hoy;
+                const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+
+                if (diffDays < -1) return 1; // ANTERIORES
+                if (diffDays === -1) return 2; // AYER
+                if (diffDays === 0) return 3; // HOY
+                if (diffDays === 1) return 4; // MAÑANA
+                if (diffDays > 1 && diffDays <= 7) return 5; // ESTA SEMANA
+                if (diffDays > 7) return 6; // MÁS ADELANTE
+                return 7;
+              };
+
               const priorityWeight = { ALTA: 3, MEDIA: 2, BAJA: 1 };
 
               const sortedActividades = [...actividadesFiltradas].sort((a, b) => {
-                const dateA = new Date(a.fechaVencimiento);
-                const dateB = new Date(b.fechaVencimiento);
-
-                const dayA = new Date(dateA.getFullYear(), dateA.getMonth(), dateA.getDate()).getTime();
-                const dayB = new Date(dateB.getFullYear(), dateB.getMonth(), dateB.getDate()).getTime();
-
-                if (dayA !== dayB) return dayA - dayB; // Orden por día
+                const gA = getGroupWeight(a.fechaVencimiento);
+                const gB = getGroupWeight(b.fechaVencimiento);
+                if (gA !== gB) return gA - gB; // Orden por grupo temporal
 
                 const wA = priorityWeight[a.prioridad] || 0;
                 const wB = priorityWeight[b.prioridad] || 0;
                 if (wA !== wB) return wB - wA; // Orden por prioridad (Alta primero)
 
-                return dateA.getTime() - dateB.getTime(); // Orden por hora
+                const dateA = new Date(a.fechaVencimiento).getTime();
+                const dateB = new Date(b.fechaVencimiento).getTime();
+                return dateA - dateB; // Orden exacto por hora/fecha
               });
 
               const totalPaginas = Math.ceil(sortedActividades.length / limit);

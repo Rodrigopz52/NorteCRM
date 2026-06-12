@@ -653,12 +653,20 @@ export const dashboardGerencial = async (req, res) => {
         usuario: { select: { nombre: true, apellido: true } },
         oportunidad: { include: { cliente: true } },
         cliente: true
-      },
-      orderBy: { fechaVencimiento: 'asc' },
-      take: 5
+      }
     });
 
-    const tareasVencidas = tareasVencidasRaw.map(t => {
+    const priorityWeight = { ALTA: 3, MEDIA: 2, BAJA: 1 };
+    tareasVencidasRaw.sort((a, b) => {
+      const wA = priorityWeight[a.prioridad] || 0;
+      const wB = priorityWeight[b.prioridad] || 0;
+      if (wA !== wB) return wB - wA;
+      return new Date(a.fechaVencimiento).getTime() - new Date(b.fechaVencimiento).getTime();
+    });
+
+    const tareasVencidasTop = tareasVencidasRaw.slice(0, 20);
+
+    const tareasVencidas = tareasVencidasTop.map(t => {
       const diasVencida = Math.floor((ahora - new Date(t.fechaVencimiento)) / (1000 * 60 * 60 * 24));
       return {
         id: t.id,
