@@ -115,6 +115,18 @@ async function main() {
     
     let titulo = `${tipo} en ${['Palermo', 'Belgrano', 'Caballito', 'Recoleta', 'Puerto Madero', 'San Telmo'][Math.floor(Math.random() * 6)]}`;
     
+    // Fechas aleatorias históricas para que el gráfico tenga líneas (hasta 1 año atrás)
+    const hoy = new Date();
+    const creadoEn = new Date(hoy);
+    creadoEn.setDate(hoy.getDate() - Math.floor(Math.random() * 365));
+    
+    let fechaCierre = null;
+    if (etapa === 'VENDIDA' || etapa === 'ALQUILADA') {
+      fechaCierre = new Date(creadoEn);
+      fechaCierre.setDate(creadoEn.getDate() + 10 + Math.floor(Math.random() * 60)); // Cierre 10-70 días después
+      if (fechaCierre > hoy) fechaCierre = new Date(hoy); // Asegurar que no sea futuro
+    }
+
     const op = await prisma.oportunidad.create({
       data: {
         titulo,
@@ -129,7 +141,8 @@ async function main() {
         valor: operacion === 'Venta' ? 50000 + Math.floor(Math.random() * 300000) : 300 + Math.floor(Math.random() * 1500),
         clienteId: c.id,
         usuarioId: v.id,
-        fechaCierre: (etapa === 'VENDIDA' || etapa === 'ALQUILADA') ? new Date() : null,
+        fechaCierre,
+        creadoEn,
       }
     });
     oportunidadesCreadas.push(op);

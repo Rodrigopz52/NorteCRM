@@ -624,8 +624,12 @@ export const dashboardGerencial = async (req, res) => {
         }
       }
       const meta = mesesConDatos > 0 ? sumaMeses / mesesConDatos : 0;
-      const metaPorcentaje = meta > 0 ? Math.min(Math.round((montoPeriodo / meta) * 100), 200) : 0;
-
+      let metaPorcentaje = 0;
+      if (meta > 0) {
+        metaPorcentaje = Math.min(Math.round((montoPeriodo / meta) * 100), 200);
+      } else if (montoPeriodo > 0) {
+        metaPorcentaje = 100; // Si no hay histórico pero vendió algo, llega al 100%
+      }
       return {
         id: v.id,
         nombre: `${v.nombre} ${v.apellido}`,
