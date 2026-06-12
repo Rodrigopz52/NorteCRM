@@ -430,15 +430,16 @@ function ExportButtons({ data, periodo, dashboardRef }) {
 }
 
 // ─── GRÁFICO DE INGRESOS ─────────────────────────────────────
-function IngresoChart({ data }) {
+function IngresoChart({ data, periodoLabel }) {
   const CustomTooltip = ({ active, payload, label }) => {
     if (!active || !payload?.length) return null;
+    const capitalize = (s) => s ? s.charAt(0).toUpperCase() + s.slice(1) : "";
     return (
       <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-3 text-xs">
         <p className="font-bold text-gray-700 mb-1">{label}</p>
         {payload.map(p => (
           <p key={p.name} style={{ color: p.color }}>
-            {p.name === "actual" ? "Actual" : "Anterior"}: {fmt(p.value)}
+            {p.name === "actual" ? "Actual" : (periodoLabel ? capitalize(periodoLabel) : "Anterior")}: {fmt(p.value)}
           </p>
         ))}
       </div>
@@ -676,7 +677,7 @@ function InsightsBanner({ insights }) {
 }
 
 // ─── DASHBOARD GERENTE NUEVO ─────────────────────────────────
-function DashboardGerente({ data, periodo, setPeriodo, dashboardRef, token }) {
+function DashboardGerente({ data, periodo, setPeriodo, dashboardRef, token, periodoLabel }) {
   return (
     <div ref={dashboardRef} className="space-y-5">
       {/* INSIGHTS */}
@@ -689,7 +690,7 @@ function DashboardGerente({ data, periodo, setPeriodo, dashboardRef, token }) {
           color="purple"
           titulo="Ingresos del período"
           valor={fmt(data.kpis.ingresos.actual)}
-          subtitulo={`vs. ${fmt(data.kpis.ingresos.anterior)} anterior`}
+          subtitulo={`vs. ${fmt(data.kpis.ingresos.anterior)} ${periodoLabel}`}
           variacion={data.kpis.ingresos.variacion}
         />
         <KpiCard
@@ -733,10 +734,10 @@ function DashboardGerente({ data, periodo, setPeriodo, dashboardRef, token }) {
             </div>
             <div className="flex items-center gap-1.5 text-xs text-gray-400">
               <div className="w-6 h-0.5 border-t-2 border-dashed border-gray-400" />
-              <span>Anterior</span>
+              <span>{periodoLabel}</span>
             </div>
           </div>
-          <IngresoChart data={data.graficoIngresos} />
+          <IngresoChart data={data.graficoIngresos} periodoLabel={periodoLabel} />
         </SectionCard>
 
         <SectionCard
@@ -903,6 +904,14 @@ export default function DashboardPage() {
   const dashboardRef = useRef(null);
   const esGerente = usuario?.rol === "GERENTE" || usuario?.rol === "ADMINISTRADOR";
 
+  const periodoLabel = (() => {
+    if (periodo === "semana") return "sem. pasada";
+    if (periodo === "mes") return "mes pasado";
+    if (periodo === "trimestre") return "trim. pasado";
+    if (periodo === "anio") return "año pasado";
+    return "período previo";
+  })();
+
   const cargar = async (p = periodo, start = fechaInicio, end = fechaFin) => {
     setLoading(true);
     try {
@@ -993,6 +1002,7 @@ export default function DashboardPage() {
               setPeriodo={setPeriodo}
               dashboardRef={dashboardRef}
               token={token}
+              periodoLabel={periodoLabel}
             />
           ) : (
             <DashboardVendedor data={data} />
