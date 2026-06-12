@@ -4,6 +4,7 @@ import { AuthContext } from "../context/AuthContext.jsx";
 import { useToast, useConfirm } from "../hooks/useNotifications.jsx";
 import Paginacion from "../components/Paginacion.jsx";
 import CustomMultiSelect from "../components/CustomMultiSelect.jsx";
+import PeriodoSelector from "../components/PeriodoSelector.jsx";
 import {
   MapPinIcon,
   UserIcon,
@@ -131,6 +132,9 @@ export default function PropiedadesPage() {
   const [filtroEtapa, setFiltroEtapa] = useState(["DISPONIBLE"]);
   const [filtroOperacion, setFiltroOperacion] = useState("Todos");
   const [busqueda, setBusqueda] = useState("");
+  const [periodo, setPeriodo] = useState("mes");
+  const [fechaInicio, setFechaInicio] = useState(null);
+  const [fechaFin, setFechaFin] = useState(null);
 
   // Paginación
   const [pagina, setPagina] = useState(1);
@@ -144,6 +148,10 @@ export default function PropiedadesPage() {
       if (filtroTipo.length > 0) params.append("tipo", filtroTipo.join(","));
       if (filtroOperacion !== "Todos") params.append("operacion", filtroOperacion);
       if (busqueda.trim()) params.append("busqueda", busqueda.trim());
+      if (fechaInicio && fechaFin) {
+        params.append("fechaInicio", fechaInicio.toISOString());
+        params.append("fechaFin", fechaFin.toISOString());
+      }
       
       if (filtroEtapa.length > 0) {
         params.append("etapa", filtroEtapa.join(","));
@@ -165,9 +173,9 @@ export default function PropiedadesPage() {
     }
   };
 
-  useEffect(() => { fetchPropiedades(); }, [pagina, filtroTipo, filtroEtapa, filtroOperacion, busqueda]);
+  useEffect(() => { fetchPropiedades(); }, [pagina, filtroTipo, filtroEtapa, filtroOperacion, busqueda, fechaInicio, fechaFin]);
 
-  useEffect(() => { setPagina(1); }, [filtroTipo, filtroEtapa, filtroOperacion, busqueda]);
+  useEffect(() => { setPagina(1); }, [filtroTipo, filtroEtapa, filtroOperacion, busqueda, fechaInicio, fechaFin]);
 
   const guardarPropiedad = async () => {
     if (!form.titulo || !form.clienteId) {
@@ -386,6 +394,15 @@ export default function PropiedadesPage() {
             ]}
           />
 
+          <PeriodoSelector
+            periodo={periodo}
+            onChange={setPeriodo}
+            fechaInicio={fechaInicio}
+            setFechaInicio={setFechaInicio}
+            fechaFin={fechaFin}
+            setFechaFin={setFechaFin}
+          />
+
           {/* Selector de vistas */}
           <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-lg border border-gray-200 h-[42px] flex-shrink-0">
             <button
@@ -578,8 +595,16 @@ export default function PropiedadesPage() {
                       </div>
 
                       {/* Footer */}
-                      <div className="pt-2.5 border-t border-gray-100 flex justify-between items-center text-xs text-gray-500 font-medium">
-                        <span>Agente: <strong className="text-gray-700">{p.usuario?.nombre || "Sin Asignar"}</strong></span>
+                      <div className="pt-2.5 border-t border-gray-100 flex flex-col gap-1.5 text-xs text-gray-500 font-medium">
+                        <div className="flex justify-between items-center">
+                          <span>Agente: <strong className="text-gray-700">{p.usuario?.nombre || "Sin Asignar"}</strong></span>
+                        </div>
+                        <div className="flex justify-between items-center text-[10px] text-gray-400">
+                          <span>Cargada: {new Date(p.creadoEn).toLocaleDateString('es-AR')}</span>
+                          {p.fechaCierre && (
+                            <span className="text-indigo-500 font-semibold">Cierre: {new Date(p.fechaCierre).toLocaleDateString('es-AR')}</span>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -956,6 +981,19 @@ export default function PropiedadesPage() {
                 {/* COLUMNA DERECHA: TAREAS E HISTORIAL (Solo visible al editar) */}
                 {form.id ? (
                   <div className="flex flex-col h-full bg-gray-50 p-5 rounded-2xl border border-gray-100">
+                    <div className="mb-5 bg-white p-3 rounded-xl border border-gray-200 shadow-sm text-xs text-gray-500 font-medium space-y-1.5">
+                      <div className="flex justify-between">
+                        <span>Cargada en sistema:</span>
+                        <span className="text-gray-800">{new Date(selectedOpp.creadoEn).toLocaleDateString('es-AR')}</span>
+                      </div>
+                      {selectedOpp.fechaCierre && (
+                        <div className="flex justify-between">
+                          <span className="text-indigo-600 font-bold">Fecha de operación:</span>
+                          <span className="text-indigo-600 font-bold">{new Date(selectedOpp.fechaCierre).toLocaleDateString('es-AR')}</span>
+                        </div>
+                      )}
+                    </div>
+
                     <h4 className="font-extrabold text-gray-900 text-lg mb-4 flex items-center gap-2">
                       <ClockIcon className="w-5 h-5 text-[#8B5CF6]" />
                       Agenda y tareas

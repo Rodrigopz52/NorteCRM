@@ -13,6 +13,8 @@ export const listarOportunidades = async (req, res) => {
     const etapa = req.query.etapa || "";
     const tipoCliente = req.query.tipoCliente || "";
     const filtroEstadoActivo = req.query.estadoActivo || "ACTIVOS";
+    const fechaInicio = req.query.fechaInicio;
+    const fechaFin = req.query.fechaFin;
 
     const filtroRol = usuario.rol === "VENDEDOR" ? { usuarioId: usuario.id } : {};
     let filtroTipo = {};
@@ -61,13 +63,29 @@ export const listarOportunidades = async (req, res) => {
         }
       : {};
 
+    let filtroFecha = {};
+    if (fechaInicio && fechaFin) {
+      const inicio = new Date(fechaInicio);
+      const fin = new Date(fechaFin);
+      // Ampliamos al final del día para la fecha fin
+      fin.setHours(23, 59, 59, 999);
+      
+      filtroFecha = {
+        OR: [
+          { fechaCierre: { gte: inicio, lte: fin } },
+          { creadoEn: { gte: inicio, lte: fin } }
+        ]
+      };
+    }
+
     const whereStats = {
       ...filtroRol,
       ...filtroTipo,
       ...filtroOperacion,
       ...filtroEtapa,
       ...filtroTipoCliente,
-      ...filtroBusqueda
+      ...filtroBusqueda,
+      ...filtroFecha
     };
 
     const where = { ...whereStats, ...filtroActivo };
