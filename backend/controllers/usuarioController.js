@@ -16,8 +16,15 @@ export const listarUsuarios = async (req, res) => {
     const { page, limit, skip, take } = parsearPaginacion(req.query);
     const busqueda = req.query.busqueda?.trim() || "";
     const rol = req.query.rol || "";
+    const estado = req.query.estado || "ACTIVOS";
 
-    const filtroRol = rol ? { rol } : {};
+    let filtroRol = {};
+    if (rol) {
+      const rolesArr = rol.split(",").map(r => r.trim()).filter(Boolean);
+      filtroRol = { rol: { in: rolesArr } };
+    }
+    const filtroEstado = estado === "INACTIVOS" ? { activo: false } : { activo: true };
+    
     const filtroBusqueda = busqueda
       ? {
           OR: [
@@ -29,9 +36,10 @@ export const listarUsuarios = async (req, res) => {
         }
       : {};
 
-    const where = { ...filtroRol, ...filtroBusqueda };
+    const whereStats = { ...filtroRol, ...filtroBusqueda };
+    const where = { ...filtroRol, ...filtroEstado, ...filtroBusqueda };
 
-    const [usuarios, total] = await Promise.all([
+    const [todosLosUsuarios, totalActivos, totalInactivos, totalClientes, totalPropiedades, totalTareas] = await Promise.all([
       prisma.usuario.findMany({
         where,
         select: {
@@ -42,16 +50,45 @@ export const listarUsuarios = async (req, res) => {
           dni: true,
           rol: true,
           activo: true,
-          creadoEn: true
-        },
-        orderBy: { nombre: "asc" },
-        skip,
-        take
+          creadoEn: true,
+          _count: {
+            select: {
+              clientes: true,
+              oportunidades: true,
+              actividades: true
+            }
+          }
+        }
       }),
-      prisma.usuario.count({ where })
+      prisma.usuario.count({ where: { ...whereStats, activo: true } }),
+      prisma.usuario.count({ where: { ...whereStats, activo: false } }),
+      prisma.cliente.count({ where: { activo: true } }),
+      prisma.oportunidad.count({ where: { activo: true } }),
+      prisma.actividad.count({ where: { activo: true } })
     ]);
 
-    res.json(construirRespuestaPaginada(usuarios, total, page, limit));
+    const ordenRoles = { GERENTE: 1, ADMINISTRADOR: 2, VENDEDOR: 3 };
+
+    todosLosUsuarios.sort((a, b) => {
+      if (ordenRoles[a.rol] !== ordenRoles[b.rol]) {
+        return ordenRoles[a.rol] - ordenRoles[b.rol];
+      }
+      return a.nombre.localeCompare(b.nombre);
+    });
+
+    const total = todosLosUsuarios.length;
+    const usuarios = todosLosUsuarios.slice(skip, skip + take);
+
+    const baseResponse = construirRespuestaPaginada(usuarios, total, page, limit);
+    baseResponse.meta.totalActivos = totalActivos;
+    baseResponse.meta.totalInactivos = totalInactivos;
+    baseResponse.meta.metricasGlobales = {
+      totalClientes,
+      totalPropiedades,
+      totalTareas
+    };
+    
+    res.json(baseResponse);
   } catch (error) {
     console.error(error);
     if (error.status) return res.status(error.status).json({ error: error.message });
@@ -59,11 +96,11 @@ export const listarUsuarios = async (req, res) => {
   }
 };
 
-// Crear nuevo usuario/vendedor (solo GERENTE, ADMINISTRADOR no puede)
+// Crear nuevo usuario/vendedor (GERENTE y ADMINISTRADOR)
 export const crearUsuario = async (req, res) => {
   try {
-    if (req.usuario.rol !== "GERENTE") {
-      return res.status(403).json({ error: "Solo el gerente puede crear usuarios" });
+    if (req.usuario.rol !== "GERENTE" && req.usuario.rol !== "ADMINISTRADOR") {
+      return res.status(403).json({ error: "Solo el gerente o administrador pueden crear usuarios" });
     }
 
     const { nombre, apellido, email, rol, dni } = req.body;
@@ -143,11 +180,11 @@ export const crearUsuario = async (req, res) => {
   }
 };
 
-// Editar usuario (solo GERENTE, ADMINISTRADOR no puede)
+// Editar usuario (GERENTE y ADMINISTRADOR)
 export const editarUsuario = async (req, res) => {
   try {
-    if (req.usuario.rol !== "GERENTE") {
-      return res.status(403).json({ error: "Solo el gerente puede editar usuarios" });
+    if (req.usuario.rol !== "GERENTE" && req.usuario.rol !== "ADMINISTRADOR") {
+      return res.status(403).json({ error: "Solo el gerente o administrador pueden editar usuarios" });
     }
 
     const { id } = req.params;
@@ -183,11 +220,11 @@ export const editarUsuario = async (req, res) => {
   }
 };
 
-// Toggle activo/inactivo (solo GERENTE, ADMINISTRADOR no puede)
+// Toggle activo/inactivo (GERENTE y ADMINISTRADOR)
 export const toggleActivo = async (req, res) => {
   try {
-    if (req.usuario.rol !== "GERENTE") {
-      return res.status(403).json({ error: "Solo el gerente puede cambiar el estado" });
+    if (req.usuario.rol !== "GERENTE" && req.usuario.rol !== "ADMINISTRADOR") {
+      return res.status(403).json({ error: "Solo el gerente o administrador pueden cambiar el estado" });
     }
 
     const { id } = req.params;
@@ -200,6 +237,15 @@ export const toggleActivo = async (req, res) => {
     const usuarioActual = await prisma.usuario.findUnique({
       where: { id: Number(id) }
     });
+
+    if (!usuarioActual) {
+      return res.status(404).json({ error: "Usuario no encontrado" });
+    }
+
+    // Un administrador no puede desactivar/activar a un gerente
+    if (req.usuario.rol === "ADMINISTRADOR" && usuarioActual.rol === "GERENTE") {
+      return res.status(403).json({ error: "Un administrador no puede cambiar el estado de un gerente" });
+    }
 
     const usuario = await prisma.usuario.update({
       where: { id: Number(id) },
@@ -228,11 +274,11 @@ export const toggleActivo = async (req, res) => {
   }
 };
 
-// Resetear contraseña (solo GERENTE, ADMINISTRADOR no puede)
+// Resetear contraseña (GERENTE y ADMINISTRADOR)
 export const resetearPassword = async (req, res) => {
   try {
-    if (req.usuario.rol !== "GERENTE") {
-      return res.status(403).json({ error: "Solo el gerente puede resetear contraseñas" });
+    if (req.usuario.rol !== "GERENTE" && req.usuario.rol !== "ADMINISTRADOR") {
+      return res.status(403).json({ error: "Solo el gerente o administrador pueden resetear contraseñas" });
     }
 
     const { id } = req.params;

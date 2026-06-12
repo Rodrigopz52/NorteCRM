@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import Toast from "../components/Toast";
 import ConfirmModal from "../components/ConfirmModal";
 
@@ -9,7 +9,7 @@ export function useToast() {
     setToast({ message, type });
   };
 
-  const ToastContainer = () => (
+  const ToastContainer = useCallback(() => (
     toast && (
       <Toast
         message={toast.message}
@@ -17,7 +17,7 @@ export function useToast() {
         onClose={() => setToast(null)}
       />
     )
-  );
+  ), [toast]);
 
   return {
     showToast,
@@ -50,17 +50,17 @@ export function useConfirm() {
     });
   };
 
-  const handleConfirm = () => {
+  const handleConfirm = useCallback(() => {
     confirmState.resolve(true);
-    setConfirmState({ ...confirmState, isOpen: false });
-  };
+    setConfirmState(prev => ({ ...prev, isOpen: false }));
+  }, [confirmState]);
 
-  const handleCancel = () => {
+  const handleCancel = useCallback(() => {
     confirmState.resolve(false);
-    setConfirmState({ ...confirmState, isOpen: false });
-  };
+    setConfirmState(prev => ({ ...prev, isOpen: false }));
+  }, [confirmState]);
 
-  const ConfirmContainer = () => (
+  const ConfirmContainer = useCallback(() => (
     <ConfirmModal
       isOpen={confirmState.isOpen}
       title={confirmState.title}
@@ -69,7 +69,7 @@ export function useConfirm() {
       onConfirm={handleConfirm}
       onCancel={handleCancel}
     />
-  );
+  ), [confirmState, handleConfirm, handleCancel]);
 
   return { showConfirm, ConfirmContainer };
 }

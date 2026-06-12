@@ -7,34 +7,30 @@ export const dashboard = async (req, res) => {
     return res.status(403).json({ error: "Acceso denegado" });
   }
 
-  // Todas las oportunidades
-  const total = await prisma.oportunidad.count();
+  // Todas las propiedades (activas)
+  const total = await prisma.oportunidad.count({
+    where: { activo: true }
+  });
 
   // Vendidas/Alquiladas (cerradas)
   const ganadas = await prisma.oportunidad.count({
     where: { 
-      OR: [
-        { estado: "Alquilada" },
-        { estado: "Vendida" }
-      ],
-      fechaCierre: { not: null }
+      activo: true,
+      etapa: { in: ["VENDIDA", "ALQUILADA"] }
     }
   });
 
-  // No concretadas
+  // Archivadas o dadas de baja (borrado lógico)
   const perdidas = await prisma.oportunidad.count({
-    where: { etapa: "NO_CONCRETADO" }
+    where: { activo: false }
   });
 
-  // Monto total ganado
+  // Monto total ganado (VENDIDAS o ALQUILADAS)
   const montoGanado = await prisma.oportunidad.aggregate({
     _sum: { valor: true },
     where: { 
-      OR: [
-        { estado: "Alquilada" },
-        { estado: "Vendida" }
-      ],
-      fechaCierre: { not: null }
+      activo: true,
+      etapa: { in: ["VENDIDA", "ALQUILADA"] }
     }
   });
 
@@ -50,7 +46,7 @@ export const dashboard = async (req, res) => {
       oportunidades: {
         select: {
           etapa: true,
-          estado: true,
+          activo: true,
           valor: true,
           fechaCierre: true
         }
@@ -59,11 +55,11 @@ export const dashboard = async (req, res) => {
   });
 
   const rendimiento = vendedores.map(v => {
-    const activas = v.oportunidades.filter(o => o.estado !== "Alquilada" && o.estado !== "Vendida" && o.etapa !== "NO_CONCRETADO").length;
-    const ganadas = v.oportunidades.filter(o => (o.estado === "Alquilada" || o.estado === "Vendida") && o.fechaCierre).length;
-    const perdidas = v.oportunidades.filter(o => o.etapa === "NO_CONCRETADO").length;
+    const activas = v.oportunidades.filter(o => o.activo && o.etapa !== "VENDIDA" && o.etapa !== "ALQUILADA").length;
+    const ganadas = v.oportunidades.filter(o => o.activo && (o.etapa === "VENDIDA" || o.etapa === "ALQUILADA")).length;
+    const perdidas = v.oportunidades.filter(o => !o.activo).length;
     const monto = v.oportunidades
-      .filter(o => (o.estado === "Alquilada" || o.estado === "Vendida") && o.fechaCierre)
+      .filter(o => o.activo && (o.etapa === "VENDIDA" || o.etapa === "ALQUILADA"))
       .reduce((sum, o) => sum + (o.valor || 0), 0);
 
     return {
@@ -87,12 +83,14 @@ export const dashboard = async (req, res) => {
 };
 
 export const dashboardPersonalizado = async (req, res) => {
-  console.log("🎯 Dashboard personalizado llamado para usuario:", req.usuario);
-  
-  const usuarioId = req.usuario.id;
-  const rol = req.usuario.rol;
-  
-  console.log("📋 Usuario ID:", usuarioId, "Rol:", rol);
+  let usuarioId = req.usuario.id;
+  let rol = req.usuario.rol;
+
+  // Si es gerente o administrador y se solicita ver el dashboard de un usuario específico
+  if ((rol === "GERENTE" || rol === "ADMINISTRADOR") && req.query.usuarioId) {
+    usuarioId = parseInt(req.query.usuarioId, 10);
+    rol = "VENDEDOR"; // Forzar la vista de vendedor para que retorne el reporte individual
+  }
   
   const hoy = new Date();
   hoy.setHours(0, 0, 0, 0);
@@ -104,8 +102,6 @@ export const dashboardPersonalizado = async (req, res) => {
 
   try {
     if (rol === "VENDEDOR") {
-      console.log("📦 Consultando datos para VENDEDOR, usuarioId:", usuarioId);
-      
       // ACTIVIDADES DEL DÍA
       const actividadesHoy = await prisma.actividad.findMany({
         where: {
@@ -123,8 +119,6 @@ export const dashboardPersonalizado = async (req, res) => {
         },
         orderBy: { fechaVencimiento: 'asc' }
       });
-      
-      console.log("✅ Actividades hoy encontradas:", actividadesHoy.length);
 
       // ACTIVIDADES VENCIDAS
       const actividadesVencidas = await prisma.actividad.count({
@@ -148,11 +142,12 @@ export const dashboardPersonalizado = async (req, res) => {
         }
       });
 
-      // OPORTUNIDADES CALIENTES (en NEGOCIACION)
+      // OPORTUNIDADES CALIENTES (Reservadas)
       const oportunidadesCalientes = await prisma.oportunidad.findMany({
         where: {
           usuarioId,
-          etapa: "NEGOCIACION"
+          activo: true,
+          etapa: "RESERVADA"
         },
         include: { cliente: true },
         orderBy: { valor: 'desc' },
@@ -166,8 +161,8 @@ export const dashboardPersonalizado = async (req, res) => {
       const todasMisOportunidades = await prisma.oportunidad.findMany({
         where: {
           usuarioId,
-          estado: { not: "Alquilada", not: "Vendida" },
-          etapa: { not: "NO_CONCRETADO" }
+          activo: true,
+          etapa: { in: ["DISPONIBLE"] }
         },
         include: {
           cliente: true,
@@ -188,10 +183,8 @@ export const dashboardPersonalizado = async (req, res) => {
       const oportunidadesGanadasMes = await prisma.oportunidad.findMany({
         where: {
           usuarioId,
-          OR: [
-            { estado: "Alquilada" },
-            { estado: "Vendida" }
-          ],
+          activo: true,
+          etapa: { in: ["VENDIDA", "ALQUILADA"] },
           fechaCierre: { gte: inicioMes, lte: finMes }
         }
       });
@@ -202,26 +195,26 @@ export const dashboardPersonalizado = async (req, res) => {
       const oportunidadesActivasMes = await prisma.oportunidad.count({
         where: {
           usuarioId,
-          estado: { notIn: ["Alquilada", "Vendida"] },
-          etapa: { not: "NO_CONCRETADO" }
+          activo: true,
+          etapa: { in: ["DISPONIBLE", "RESERVADA"] }
         }
       });
 
       // PROPIEDADES POR ESTADO (del vendedor)
       const propiedadesPorEstado = await prisma.oportunidad.groupBy({
-        by: ['estado'],
+        by: ['etapa'],
         _count: { id: true },
         where: {
           usuarioId,
-          estado: { not: null }
+          activo: true
         }
       });
 
       const estadisticasEstado = {
-        disponible: propiedadesPorEstado.find(e => e.estado === 'Disponible')?._count.id || 0,
-        reservada: propiedadesPorEstado.find(e => e.estado === 'Reservada')?._count.id || 0,
-        alquilada: propiedadesPorEstado.find(e => e.estado === 'Alquilada')?._count.id || 0,
-        vendida: propiedadesPorEstado.find(e => e.estado === 'Vendida')?._count.id || 0
+        disponible: propiedadesPorEstado.find(e => e.etapa === 'DISPONIBLE')?._count.id || 0,
+        reservada: propiedadesPorEstado.find(e => e.etapa === 'RESERVADA')?._count.id || 0,
+        alquilada: propiedadesPorEstado.find(e => e.etapa === 'ALQUILADA')?._count.id || 0,
+        vendida: propiedadesPorEstado.find(e => e.etapa === 'VENDIDA')?._count.id || 0
       };
 
       // VENTAS POR MES (últimos 6 meses del vendedor)
@@ -233,10 +226,8 @@ export const dashboardPersonalizado = async (req, res) => {
         const ventasDelMes = await prisma.oportunidad.findMany({
           where: {
             usuarioId,
-            OR: [
-              { estado: "Alquilada" },
-              { estado: "Vendida" }
-            ],
+            activo: true,
+            etapa: { in: ["VENDIDA", "ALQUILADA"] },
             fechaCierre: { gte: mes, lte: finMesLoop }
           }
         });
@@ -250,158 +241,92 @@ export const dashboardPersonalizado = async (req, res) => {
         });
       }
 
-      console.log("✅ Datos completos para VENDEDOR:", {
-        actividadesHoy: actividadesHoy.length,
-        actividadesVencidas,
-        oportunidadesCalientes: oportunidadesCalientes.length,
-        oportunidadesEstancadas: oportunidadesEstancadas.length,
-        resumenMes: { montoGanado: montoGanadoMes, cantidadGanadas, oportunidadesActivas: oportunidadesActivasMes }
-      });
-
       return res.json({
-        rol: "VENDEDOR",
-        actividadesHoy,
-        actividadesVencidas,
-        visitasHoy,
-        oportunidadesCalientes,
-        oportunidadesEstancadas,
-        propiedadesPorEstado: estadisticasEstado,
-        ventasPorMes: ventasPorMes,
         resumenMes: {
-          montoGanado: montoGanadoMes,
-          cantidadGanadas,
-          oportunidadesActivas: oportunidadesActivasMes
-        }
+          monto: montoGanadoMes,
+          ganadas: cantidadGanadas,
+          activas: oportunidadesActivasMes
+        },
+        actividadesHoy,
+        estadisticas: {
+          vencidas: actividadesVencidas,
+          visitasHoy
+        },
+        alertas: {
+          calientes: oportunidadesCalientes,
+          estancadas: oportunidadesEstancadas
+        },
+        graficoVentas: ventasPorMes,
+        estadisticasEstado
       });
 
     } else {
-      // GERENTE/ADMINISTRADOR: Vista general del equipo
-      
-      // RANKING DE VENDEDORES DEL MES
+      // DASHBOARD GERENTE (legacy - mantener compatibilidad)
+      const metricasGrales = await prisma.$transaction([
+        prisma.oportunidad.count({ where: { activo: true } }),
+        prisma.cliente.count({ where: { activo: true } }),
+        prisma.usuario.count({ where: { activo: true, rol: "VENDEDOR" } }),
+        prisma.oportunidad.aggregate({
+          _sum: { valor: true },
+          where: { 
+            activo: true,
+            etapa: { in: ["VENDIDA", "ALQUILADA"] },
+            fechaCierre: { gte: inicioMes, lte: finMes }
+          }
+        })
+      ]);
+
+      const [totalPropiedades, totalClientes, totalVendedores, montoMesObj] = metricasGrales;
+
+      const propiedadesPorEstadoGlobal = await prisma.oportunidad.groupBy({
+        by: ['etapa'],
+        _count: { id: true },
+        where: { activo: true }
+      });
+
+      const estadisticasEstado = {
+        disponible: propiedadesPorEstadoGlobal.find(e => e.etapa === 'DISPONIBLE')?._count.id || 0,
+        reservada: propiedadesPorEstadoGlobal.find(e => e.etapa === 'RESERVADA')?._count.id || 0,
+        alquilada: propiedadesPorEstadoGlobal.find(e => e.etapa === 'ALQUILADA')?._count.id || 0,
+        vendida: propiedadesPorEstadoGlobal.find(e => e.etapa === 'VENDIDA')?._count.id || 0
+      };
+
       const vendedores = await prisma.usuario.findMany({
-        where: { rol: "VENDEDOR" },
+        where: { activo: true, rol: "VENDEDOR" },
         include: {
           oportunidades: {
             where: {
-              OR: [
-                { estado: "Alquilada" },
-                { estado: "Vendida" }
-              ],
+              activo: true,
+              etapa: { in: ["VENDIDA", "ALQUILADA"] },
               fechaCierre: { gte: inicioMes, lte: finMes }
             }
           }
         }
       });
 
-      const ranking = vendedores.map(v => {
-        const monto = v.oportunidades.reduce((sum, opp) => sum + (opp.valor || 0), 0);
-        const cantidad = v.oportunidades.length;
-        return {
-          id: v.id,
-          nombre: v.nombre,
-          apellido: v.apellido,
-          monto,
-          cantidad
-        };
-      }).sort((a, b) => b.monto - a.monto);
+      const rankingVendedores = vendedores.map(v => ({
+        id: v.id,
+        nombre: `${v.nombre} ${v.apellido}`,
+        ventas: v.oportunidades.length,
+        monto: v.oportunidades.reduce((sum, op) => sum + (op.valor || 0), 0)
+      })).sort((a, b) => b.monto - a.monto).slice(0, 5);
 
-      // OPORTUNIDADES ESTANCADAS DEL EQUIPO
-      const todasOportunidades = await prisma.oportunidad.findMany({
-        where: {
-          estado: { notIn: ["Alquilada", "Vendida"] },
-          etapa: { not: "NO_CONCRETADO" }
-        },
-        include: {
-          cliente: true,
-          usuario: true,
-          actividades: {
-            orderBy: { fechaVencimiento: 'desc' },
-            take: 1
-          }
-        }
-      });
-
-      const hace15Dias = new Date();
-      hace15Dias.setDate(hace15Dias.getDate() - 15);
-
-      const estancadasEquipo = todasOportunidades.filter(opp => {
-        if (opp.actividades.length === 0) return true;
-        const ultimaActividad = new Date(opp.actividades[0].fechaVencimiento);
-        return ultimaActividad < hace15Dias;
-      }).slice(0, 10);
-
-      // ACTIVIDADES VENCIDAS DEL EQUIPO
-      const actividadesVencidasEquipo = await prisma.actividad.count({
-        where: {
-          completada: false,
-          fechaVencimiento: { lt: hoy }
-        }
-      });
-
-      // VISITAS DE LA SEMANA
-      const finSemana = new Date(hoy);
-      finSemana.setDate(finSemana.getDate() + 7);
-      finSemana.setHours(23, 59, 59, 999);
-      
-      const visitasSemana = await prisma.actividad.count({
-        where: {
-          tipo: "REUNION",
-          completada: false,
-          fechaVencimiento: {
-            gte: hoy,
-            lte: finSemana
-          }
-        }
-      });
-
-      // RESUMEN DEL EQUIPO DEL MES
-      const todasGanadasMes = await prisma.oportunidad.findMany({
-        where: {
-          OR: [
-            { estado: "Alquilada" },
-            { estado: "Vendida" }
-          ],
-          fechaCierre: { gte: inicioMes, lte: finMes }
-        }
-      });
-
-      const montoTotalMes = todasGanadasMes.reduce((sum, opp) => sum + (opp.valor || 0), 0);
-
-      // PROPIEDADES POR ESTADO
-      const propiedadesPorEstado = await prisma.oportunidad.groupBy({
-        by: ['estado'],
-        _count: { id: true },
-        where: {
-          estado: { not: null }
-        }
-      });
-
-      const estadisticasEstado = {
-        disponible: propiedadesPorEstado.find(e => e.estado === 'Disponible')?._count.id || 0,
-        reservada: propiedadesPorEstado.find(e => e.estado === 'Reservada')?._count.id || 0,
-        alquilada: propiedadesPorEstado.find(e => e.estado === 'Alquilada')?._count.id || 0,
-        vendida: propiedadesPorEstado.find(e => e.estado === 'Vendida')?._count.id || 0
-      };
-
-      // VENTAS POR MES (últimos 6 meses)
-      const ventasPorMes = [];
+      const ventasEmpresaPorMes = [];
       for (let i = 5; i >= 0; i--) {
         const mes = new Date(hoy.getFullYear(), hoy.getMonth() - i, 1);
         const finMesLoop = new Date(hoy.getFullYear(), hoy.getMonth() - i + 1, 0, 23, 59, 59, 999);
         
         const ventasDelMes = await prisma.oportunidad.findMany({
           where: {
-            OR: [
-              { estado: "Alquilada" },
-              { estado: "Vendida" }
-            ],
+            activo: true,
+            etapa: { in: ["VENDIDA", "ALQUILADA"] },
             fechaCierre: { gte: mes, lte: finMesLoop }
           }
         });
 
         const monto = ventasDelMes.reduce((sum, opp) => sum + (opp.valor || 0), 0);
         
-        ventasPorMes.push({
+        ventasEmpresaPorMes.push({
           mes: mes.toLocaleDateString('es-ES', { month: 'short' }),
           monto: monto,
           cantidad: ventasDelMes.length
@@ -409,22 +334,408 @@ export const dashboardPersonalizado = async (req, res) => {
       }
 
       return res.json({
-        rol: req.usuario.rol, // GERENTE o ADMINISTRADOR
-        rankingVendedores: ranking,
-        oportunidadesEstancadas: estancadasEquipo,
-        actividadesVencidas: actividadesVencidasEquipo,
-        visitasSemana,
-        propiedadesPorEstado: estadisticasEstado,
-        ventasPorMes: ventasPorMes,
         resumenMes: {
-          montoTotal: montoTotalMes,
-          cantidadGanadas: todasGanadasMes.length,
-          oportunidadesActivas: todasOportunidades.length
-        }
+          monto: montoMesObj._sum.valor || 0,
+          propiedadesActivas: totalPropiedades,
+          clientesActivos: totalClientes,
+          vendedoresActivos: totalVendedores
+        },
+        estadisticasEstado,
+        rankingVendedores,
+        graficoVentas: ventasEmpresaPorMes
       });
     }
   } catch (error) {
-    console.error("❌ Error en dashboard personalizado:", error);
-    res.status(500).json({ error: "Error al obtener dashboard personalizado", detalle: error.message });
+    console.error("Error en dashboard personalizado:", error);
+    res.status(500).json({ error: "Error al cargar el dashboard" });
+  }
+};
+
+// ============================================================
+// NUEVO: Dashboard Gerencial con filtros de período
+// ============================================================
+export const dashboardGerencial = async (req, res) => {
+  if (req.usuario.rol !== "GERENTE" && req.usuario.rol !== "ADMINISTRADOR") {
+    return res.status(403).json({ error: "Acceso denegado" });
+  }
+
+  try {
+    const { periodo = "mes", compararAnterior = "true", fechaInicio, fechaFin } = req.query;
+    const ahora = new Date();
+
+    // Calcular rangos de fechas
+    const calcularRango = (p, offset = 0) => {
+      const hoy = new Date(ahora);
+      let desde, hasta;
+
+      if (p === "semana") {
+        const diaSemana = hoy.getDay(); // 0=Dom, 1=Lun...
+        const lunes = new Date(hoy);
+        lunes.setDate(hoy.getDate() - ((diaSemana + 6) % 7) + offset * 7);
+        lunes.setHours(0, 0, 0, 0);
+        const domingo = new Date(lunes);
+        domingo.setDate(lunes.getDate() + 6);
+        domingo.setHours(23, 59, 59, 999);
+        desde = lunes;
+        hasta = domingo;
+      } else if (p === "trimestre") {
+        const mesActual = hoy.getMonth();
+        const inicioTrimestre = Math.floor(mesActual / 3) * 3 + offset * 3;
+        const anio = hoy.getFullYear() + (inicioTrimestre < 0 ? -1 : inicioTrimestre > 11 ? 1 : 0);
+        const mesNorm = ((inicioTrimestre % 12) + 12) % 12;
+        desde = new Date(anio, mesNorm, 1, 0, 0, 0, 0);
+        hasta = new Date(anio, mesNorm + 3, 0, 23, 59, 59, 999);
+      } else if (p === "anio") {
+        const anio = hoy.getFullYear() + offset;
+        desde = new Date(anio, 0, 1, 0, 0, 0, 0);
+        hasta = new Date(anio, 11, 31, 23, 59, 59, 999);
+      } else {
+        // mes (default)
+        const anio = hoy.getFullYear();
+        const mes = hoy.getMonth() + offset;
+        const anioReal = anio + Math.floor(mes / 12);
+        const mesReal = ((mes % 12) + 12) % 12;
+        desde = new Date(anioReal, mesReal, 1, 0, 0, 0, 0);
+        hasta = new Date(anioReal, mesReal + 1, 0, 23, 59, 59, 999);
+      }
+
+      return { desde, hasta };
+    };
+
+    let desde, hasta, desdeAnt, hastaAnt;
+
+    if (fechaInicio && fechaFin) {
+      const [y1, m1, d1] = fechaInicio.split("-").map(Number);
+      desde = new Date(y1, m1 - 1, d1, 0, 0, 0, 0);
+
+      const [y2, m2, d2] = fechaFin.split("-").map(Number);
+      hasta = new Date(y2, m2 - 1, d2, 23, 59, 59, 999);
+
+      // Calcular rango anterior equivalente en duración
+      const diffMs = hasta.getTime() - desde.getTime();
+      desdeAnt = new Date(desde.getTime() - diffMs - 1);
+      desdeAnt.setHours(0, 0, 0, 0);
+      hastaAnt = new Date(desde.getTime() - 1);
+      hastaAnt.setHours(23, 59, 59, 999);
+    } else {
+      const rangoAct = calcularRango(periodo, 0);
+      desde = rangoAct.desde;
+      hasta = rangoAct.hasta;
+
+      const rangoAnt = calcularRango(periodo, -1);
+      desdeAnt = rangoAnt.desde;
+      hastaAnt = rangoAnt.hasta;
+    }
+
+    const hoyInicio = new Date(ahora);
+    hoyInicio.setHours(0, 0, 0, 0);
+    const hoyFin = new Date(ahora);
+    hoyFin.setHours(23, 59, 59, 999);
+
+    // ── KPIs ACTUALES ──────────────────────────────────────────
+    const [opsCerradasAct, opsAnteriores, totalLeads] = await Promise.all([
+      prisma.oportunidad.findMany({
+        where: { activo: true, etapa: { in: ["VENDIDA", "ALQUILADA"] }, fechaCierre: { gte: desde, lte: hasta } },
+        select: { valor: true, fechaCierre: true, creadoEn: true }
+      }),
+      prisma.oportunidad.findMany({
+        where: { activo: true, etapa: { in: ["VENDIDA", "ALQUILADA"] }, fechaCierre: { gte: desdeAnt, lte: hastaAnt } },
+        select: { valor: true, fechaCierre: true, creadoEn: true }
+      }),
+      prisma.cliente.count({ where: { activo: true, creadoEn: { gte: desde, lte: hasta } } })
+    ]);
+
+    const ingresosAct = opsCerradasAct.reduce((s, o) => s + (o.valor || 0), 0);
+    const ingresosAnt = opsAnteriores.reduce((s, o) => s + (o.valor || 0), 0);
+    const variacionIngresos = ingresosAnt > 0 ? ((ingresosAct - ingresosAnt) / ingresosAnt) * 100 : 0;
+
+    // Props disponibles
+    const propsDisponiblesAct = await prisma.oportunidad.count({ where: { activo: true, etapa: "DISPONIBLE" } });
+    const propsDisponiblesAnt = await prisma.oportunidad.count({
+      where: { activo: true, etapa: "DISPONIBLE", creadoEn: { lte: hastaAnt } }
+    });
+    const variacionProps = propsDisponiblesAnt > 0 ? ((propsDisponiblesAct - propsDisponiblesAnt) / propsDisponiblesAnt) * 100 : 0;
+
+    // Tasa de conversión
+    const leadsAnt = await prisma.cliente.count({ where: { activo: true, creadoEn: { gte: desdeAnt, lte: hastaAnt } } });
+    const tasaAct = totalLeads > 0 ? (opsCerradasAct.length / totalLeads) * 100 : 0;
+    const tasaAnt = leadsAnt > 0 ? (opsAnteriores.length / leadsAnt) * 100 : 0;
+    const variacionTasa = tasaAnt > 0 ? ((tasaAct - tasaAnt) / tasaAnt) * 100 : 0;
+
+    // Días promedio a cierre
+    const calcDiasPromedio = (ops) => {
+      const opsConFecha = ops.filter(o => o.fechaCierre && o.creadoEn);
+      if (opsConFecha.length === 0) return 0;
+      const total = opsConFecha.reduce((s, o) => {
+        return s + (new Date(o.fechaCierre) - new Date(o.creadoEn)) / (1000 * 60 * 60 * 24);
+      }, 0);
+      return Math.round(total / opsConFecha.length);
+    };
+    const diasAct = calcDiasPromedio(opsCerradasAct);
+    const diasAnt = calcDiasPromedio(opsAnteriores);
+    const variacionDias = diasAnt > 0 ? ((diasAct - diasAnt) / diasAnt) * 100 : 0;
+
+    // ── GRÁFICO DE INGRESOS (últimos 6 períodos) ──────────────
+    const graficoPuntos = 6;
+    const graficoIngresos = [];
+    for (let i = graficoPuntos - 1; i >= 0; i--) {
+      const { desde: d1, hasta: h1 } = calcularRango(periodo, -i);
+      const { desde: d2, hasta: h2 } = calcularRango(periodo, -(i + graficoPuntos));
+
+      const [ventasAct, ventasAnt] = await Promise.all([
+        prisma.oportunidad.findMany({
+          where: { activo: true, etapa: { in: ["VENDIDA", "ALQUILADA"] }, fechaCierre: { gte: d1, lte: h1 } },
+          select: { valor: true }
+        }),
+        prisma.oportunidad.findMany({
+          where: { activo: true, etapa: { in: ["VENDIDA", "ALQUILADA"] }, fechaCierre: { gte: d2, lte: h2 } },
+          select: { valor: true }
+        })
+      ]);
+
+      let label;
+      if (periodo === "semana") label = i === 0 ? "Esta sem." : `Sem -${i}`;
+      else if (periodo === "trimestre") label = i === 0 ? "Este trim." : `Trim -${i}`;
+      else if (periodo === "anio") label = d1.getFullYear().toString();
+      else label = d1.toLocaleDateString('es-ES', { month: 'short' });
+
+      graficoIngresos.push({
+        label,
+        actual: ventasAct.reduce((s, o) => s + (o.valor || 0), 0),
+        anterior: ventasAnt.reduce((s, o) => s + (o.valor || 0), 0)
+      });
+    }
+
+    // ── PROPIEDADES POR ESTADO ────────────────────────────────
+    const estadosGrupos = await prisma.oportunidad.groupBy({
+      by: ['etapa'],
+      _count: { id: true },
+      where: { activo: true }
+    });
+    
+    const propiedadesNoConcretadas = await prisma.oportunidad.count({
+      where: { activo: false }
+    });
+
+    const propiedadesPorEstado = {
+      disponible: estadosGrupos.find(e => e.etapa === 'DISPONIBLE')?._count.id || 0,
+      reservada: estadosGrupos.find(e => e.etapa === 'RESERVADA')?._count.id || 0,
+      vendida: estadosGrupos.find(e => e.etapa === 'VENDIDA')?._count.id || 0,
+      alquilada: estadosGrupos.find(e => e.etapa === 'ALQUILADA')?._count.id || 0,
+      no_concretadas: propiedadesNoConcretadas,
+      total: 0
+    };
+    propiedadesPorEstado.total = propiedadesPorEstado.disponible + propiedadesPorEstado.reservada + propiedadesPorEstado.vendida + propiedadesPorEstado.alquilada + propiedadesPorEstado.no_concretadas;
+
+    // ── EMBUDO DE VENTAS ──────────────────────────────────────
+    const etapasEmbudo = ["LEAD", "CONTACTADO", "VISITA", "NEGOCIACION", "CERRADO"];
+    const embudoGrupos = await prisma.cliente.groupBy({
+      by: ['etapaLead'],
+      _count: { id: true },
+      where: { activo: true }
+    });
+
+    const embudoMap = {};
+    etapasEmbudo.forEach(e => {
+      embudoMap[e] = embudoGrupos.find(g => g.etapaLead === e)?._count.id || 0;
+    });
+
+    // Acumulativo: cada etapa incluye todos los de etapas posteriores
+    const leads = etapasEmbudo.reduce((s, e) => s + embudoMap[e], 0);
+    const contactados = embudoMap.CONTACTADO + embudoMap.VISITA + embudoMap.NEGOCIACION + embudoMap.CERRADO;
+    const visitas = embudoMap.VISITA + embudoMap.NEGOCIACION + embudoMap.CERRADO;
+    const reservas = embudoMap.NEGOCIACION + embudoMap.CERRADO;
+    const cerradas = embudoMap.CERRADO;
+
+    const pct = (a, b) => b > 0 ? Math.round((a / b) * 100) : 0;
+
+    const embudo = [
+      { etapa: "Leads", cantidad: leads, porcentaje: 100, conversion: null },
+      { etapa: "Contactados", cantidad: contactados, porcentaje: pct(contactados, leads), conversion: pct(contactados, leads) },
+      { etapa: "Visitas", cantidad: visitas, porcentaje: pct(visitas, leads), conversion: pct(visitas, contactados) },
+      { etapa: "En negociación", cantidad: reservas, porcentaje: pct(reservas, leads), conversion: pct(reservas, visitas) },
+      { etapa: "Cerradas", cantidad: cerradas, porcentaje: pct(cerradas, leads), conversion: pct(cerradas, reservas) }
+    ];
+
+    // ── VISITAS DE HOY ────────────────────────────────────────
+    const visitasHoyRaw = await prisma.actividad.findMany({
+      where: {
+        tipo: "REUNION",
+        completada: false,
+        activo: true,
+        fechaVencimiento: { gte: hoyInicio, lte: hoyFin }
+      },
+      include: {
+        oportunidad: { include: { cliente: true } },
+        cliente: true,
+        usuario: { select: { nombre: true, apellido: true } }
+      },
+      orderBy: { fechaVencimiento: 'asc' },
+      take: 8
+    });
+
+    const visitasHoy = visitasHoyRaw.map(v => ({
+      id: v.id,
+      hora: new Date(v.fechaVencimiento).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }),
+      cliente: v.cliente?.nombre || v.oportunidad?.cliente?.nombre || 'Sin cliente',
+      propiedad: v.oportunidad?.titulo || v.titulo,
+      asesor: `${v.usuario.nombre} ${v.usuario.apellido}`,
+      asesorIniciales: `${v.usuario.nombre[0]}${v.usuario.apellido[0]}`.toUpperCase()
+    }));
+
+    // ── RANKING DE ASESORES (con meta histórica) ──────────────
+    const vendedores = await prisma.usuario.findMany({
+      where: { activo: true, rol: "VENDEDOR" },
+      select: { id: true, nombre: true, apellido: true }
+    });
+
+    const rankingAsesores = await Promise.all(vendedores.map(async (v) => {
+      // Ventas en el período actual
+      const ventasPeriodo = await prisma.oportunidad.findMany({
+        where: {
+          usuarioId: v.id,
+          activo: true,
+          etapa: { in: ["VENDIDA", "ALQUILADA"] },
+          fechaCierre: { gte: desde, lte: hasta }
+        },
+        select: { valor: true }
+      });
+      const montoPeriodo = ventasPeriodo.reduce((s, o) => s + (o.valor || 0), 0);
+      const cantidadPeriodo = ventasPeriodo.length;
+
+      // Meta = promedio mensual histórico (últimos 6 meses, excluyendo período actual)
+      let sumaMeses = 0;
+      let mesesConDatos = 0;
+      for (let i = 1; i <= 6; i++) {
+        const { desde: dHist, hasta: hHist } = calcularRango("mes", -i);
+        const ventasMes = await prisma.oportunidad.findMany({
+          where: {
+            usuarioId: v.id,
+            activo: true,
+            etapa: { in: ["VENDIDA", "ALQUILADA"] },
+            fechaCierre: { gte: dHist, lte: hHist }
+          },
+          select: { valor: true }
+        });
+        const montoMes = ventasMes.reduce((s, o) => s + (o.valor || 0), 0);
+        if (montoMes > 0) {
+          sumaMeses += montoMes;
+          mesesConDatos++;
+        }
+      }
+      const meta = mesesConDatos > 0 ? sumaMeses / mesesConDatos : 0;
+      let metaPorcentaje = 0;
+      if (meta > 0) {
+        metaPorcentaje = Math.min(Math.round((montoPeriodo / meta) * 100), 200);
+      } else if (montoPeriodo > 0) {
+        metaPorcentaje = 100; // Si no hay histórico pero vendió algo, llega al 100%
+      }
+      return {
+        id: v.id,
+        nombre: `${v.nombre} ${v.apellido}`,
+        propiedades: cantidadPeriodo,
+        monto: montoPeriodo,
+        meta: Math.round(meta),
+        metaPorcentaje
+      };
+    }));
+
+    rankingAsesores.sort((a, b) => b.monto - a.monto);
+
+    // ── TAREAS VENCIDAS ───────────────────────────────────────
+    const tareasVencidasRaw = await prisma.actividad.findMany({
+      where: {
+        completada: false,
+        activo: true,
+        fechaVencimiento: { lt: hoyInicio }
+      },
+      include: {
+        usuario: { select: { nombre: true, apellido: true } },
+        oportunidad: { include: { cliente: true } },
+        cliente: true
+      }
+    });
+
+    const priorityWeight = { ALTA: 3, MEDIA: 2, BAJA: 1 };
+    tareasVencidasRaw.sort((a, b) => {
+      const wA = priorityWeight[a.prioridad] || 0;
+      const wB = priorityWeight[b.prioridad] || 0;
+      if (wA !== wB) return wB - wA;
+      return new Date(a.fechaVencimiento).getTime() - new Date(b.fechaVencimiento).getTime();
+    });
+
+    const tareasVencidasTop = tareasVencidasRaw.slice(0, 20);
+
+    const tareasVencidas = tareasVencidasTop.map(t => {
+      const diasVencida = Math.floor((ahora - new Date(t.fechaVencimiento)) / (1000 * 60 * 60 * 24));
+      return {
+        id: t.id,
+        titulo: t.titulo,
+        diasVencida,
+        asesor: `${t.usuario.nombre} ${t.usuario.apellido}`,
+        asesorIniciales: `${t.usuario.nombre[0]}${t.usuario.apellido[0]}`.toUpperCase(),
+        cliente: t.cliente?.nombre || t.oportunidad?.cliente?.nombre || null
+      };
+    });
+
+    // ── INSIGHTS AUTOMÁTICOS ──────────────────────────────────
+    const insights = [];
+    if (Math.abs(variacionIngresos) >= 5) {
+      insights.push({
+        tipo: variacionIngresos > 0 ? "success" : "warning",
+        mensaje: variacionIngresos > 0
+          ? `Las ventas subieron un ${Math.abs(variacionIngresos).toFixed(1)}% respecto al período anterior`
+          : `Las ventas bajaron un ${Math.abs(variacionIngresos).toFixed(1)}% respecto al período anterior`
+      });
+    }
+    if (Math.abs(variacionTasa) >= 5) {
+      insights.push({
+        tipo: variacionTasa > 0 ? "success" : "warning",
+        mensaje: variacionTasa > 0
+          ? `La tasa de conversión mejoró un ${Math.abs(variacionTasa).toFixed(1)}%`
+          : `La tasa de conversión cayó un ${Math.abs(variacionTasa).toFixed(1)}%`
+      });
+    }
+    if (tareasVencidas.length >= 3) {
+      insights.push({
+        tipo: "warning",
+        mensaje: `${tareasVencidas.length} tareas llevan más de un día sin completarse`
+      });
+    }
+
+    // ── ETIQUETA DEL PERÍODO ──────────────────────────────────
+    const formatearFecha = (d) => d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' });
+    const labelPeriodo = (fechaInicio && fechaFin)
+      ? `${formatearFecha(desde)} - ${formatearFecha(hasta)}`
+      : (periodo === "semana" ? "Esta semana"
+         : periodo === "trimestre" ? "Este trimestre"
+         : periodo === "anio" ? `Año ${ahora.getFullYear()}`
+         : `${desde.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })}`);
+
+    return res.json({
+      periodo: {
+        tipo: periodo,
+        desde: desde.toISOString(),
+        hasta: hasta.toISOString(),
+        label: labelPeriodo
+      },
+      kpis: {
+        ingresos: { actual: ingresosAct, anterior: ingresosAnt, variacion: parseFloat(variacionIngresos.toFixed(1)) },
+        propiedadesDisponibles: { actual: propsDisponiblesAct, anterior: propsDisponiblesAnt, variacion: parseFloat(variacionProps.toFixed(1)) },
+        tasaConversion: { actual: parseFloat(tasaAct.toFixed(1)), anterior: parseFloat(tasaAnt.toFixed(1)), variacion: parseFloat(variacionTasa.toFixed(1)) },
+        diasPromedioCierre: { actual: diasAct, anterior: diasAnt, variacion: parseFloat(variacionDias.toFixed(1)) }
+      },
+      graficoIngresos,
+      propiedadesPorEstado,
+      embudo,
+      visitasHoy,
+      rankingAsesores,
+      tareasVencidas,
+      insights
+    });
+
+  } catch (error) {
+    console.error("Error en dashboard gerencial:", error);
+    res.status(500).json({ error: "Error al cargar el dashboard gerencial" });
   }
 };

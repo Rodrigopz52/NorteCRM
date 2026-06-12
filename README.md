@@ -375,4 +375,4 @@ Este proyecto está bajo la Licencia MIT.
 
 **⭐ Si este proyecto te resulta útil, dale una estrella en GitHub!**
 
-*Desarrollado con 💜 por Rodrigo Paz y Duclos Ezequiel*
+*Desarrollado por Rodrigo Paz y Duclos Ezequiel*

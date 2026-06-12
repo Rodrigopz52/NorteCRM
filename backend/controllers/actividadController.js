@@ -5,8 +5,29 @@ const prisma = new PrismaClient();
 export const obtenerActividades = async (req, res) => {
   try {
     const { rol, id: usuarioId } = req.usuario;
+    const estadoActivo = req.query.estadoActivo || "ACTIVOS"; // "ACTIVOS", "INACTIVOS", "TODOS"
+    const { fechaInicio, fechaFin } = req.query;
 
-    const where = rol === "VENDEDOR" ? { usuarioId } : {};
+    let where = rol === "VENDEDOR" ? { usuarioId } : {};
+    
+    if (estadoActivo === "ACTIVOS") {
+      where.activo = true;
+    } else if (estadoActivo === "INACTIVOS") {
+      where.activo = false;
+    }
+
+    if (fechaInicio && fechaFin) {
+      const [y1, m1, d1] = fechaInicio.split("-").map(Number);
+      const desde = new Date(y1, m1 - 1, d1, 0, 0, 0, 0);
+
+      const [y2, m2, d2] = fechaFin.split("-").map(Number);
+      const hasta = new Date(y2, m2 - 1, d2, 23, 59, 59, 999);
+
+      where.fechaVencimiento = {
+        gte: desde,
+        lte: hasta
+      };
+    }
 
     const actividades = await prisma.actividad.findMany({
       where,
@@ -16,6 +37,7 @@ export const obtenerActividades = async (req, res) => {
             cliente: true
           }
         },
+        cliente: true,
         usuario: {
           select: {
             nombre: true,
@@ -40,20 +62,31 @@ export const obtenerActividades = async (req, res) => {
 // Crear actividad
 export const crearActividad = async (req, res) => {
   try {
-    const { tipo, titulo, descripcion, fechaVencimiento, oportunidadId } = req.body;
+    const { tipo, titulo, descripcion, fechaVencimiento, oportunidadId, clienteId, prioridad, estado } = req.body;
     const { id: usuarioId, rol } = req.usuario;
 
-    // Verificar que la oportunidad existe y pertenece al usuario (si es vendedor)
-    const oportunidad = await prisma.oportunidad.findUnique({
-      where: { id: Number(oportunidadId) }
-    });
-
-    if (!oportunidad) {
-      return res.status(404).json({ error: "Oportunidad no encontrada" });
+    if (!oportunidadId && !clienteId) {
+      return res.status(400).json({ error: "Debe proporcionar una oportunidad o un cliente para la actividad" });
     }
 
-    if (rol === "VENDEDOR" && oportunidad.usuarioId !== usuarioId) {
-      return res.status(403).json({ error: "No tienes permiso para esta oportunidad" });
+    let clienteIdFinal = clienteId ? Number(clienteId) : null;
+
+    if (oportunidadId) {
+      const oportunidad = await prisma.oportunidad.findUnique({ where: { id: Number(oportunidadId) } });
+      if (!oportunidad) return res.status(404).json({ error: "Oportunidad no encontrada" });
+      if (rol === "VENDEDOR" && oportunidad.usuarioId !== usuarioId) {
+        return res.status(403).json({ error: "No tienes permiso para esta oportunidad" });
+      }
+      // Auto-asignar el cliente de la oportunidad a la actividad
+      clienteIdFinal = oportunidad.clienteId;
+    }
+
+    if (clienteIdFinal && !oportunidadId) {
+      const cliente = await prisma.cliente.findUnique({ where: { id: clienteIdFinal } });
+      if (!cliente) return res.status(404).json({ error: "Cliente no encontrado" });
+      if (rol === "VENDEDOR" && cliente.usuarioId !== usuarioId) {
+        return res.status(403).json({ error: "No tienes permiso para este cliente" });
+      }
     }
 
     const actividad = await prisma.actividad.create({
@@ -62,19 +95,47 @@ export const crearActividad = async (req, res) => {
         titulo,
         descripcion,
         fechaVencimiento: new Date(fechaVencimiento),
-        oportunidadId: Number(oportunidadId),
+        oportunidadId: oportunidadId ? Number(oportunidadId) : null,
+        clienteId: clienteIdFinal,
+        prioridad: prioridad || "MEDIA",
+        estado: estado || "PENDIENTE",
         usuarioId
       },
       include: {
-        oportunidad: {
-          include: {
-            cliente: true
-          }
-        }
+        oportunidad: { include: { cliente: true } },
+        cliente: true
       }
     });
 
-    res.status(201).json(actividad);
+    // AUTO-AVANCE DEL EMBUDO DE VENTAS
+    if (clienteIdFinal) {
+      const clienteActual = await prisma.cliente.findUnique({
+        where: { id: clienteIdFinal },
+        select: { etapaLead: true }
+      });
+
+      if (clienteActual) {
+        let nuevaEtapa = null;
+
+        // LLAMADA o EMAIL + cliente en LEAD → pasar a CONTACTADO
+        if ((tipo === "LLAMADA" || tipo === "EMAIL") && clienteActual.etapaLead === "LEAD") {
+          nuevaEtapa = "CONTACTADO";
+        }
+        // REUNION + cliente en CONTACTADO → pasar a VISITA
+        else if (tipo === "REUNION" && clienteActual.etapaLead === "CONTACTADO") {
+          nuevaEtapa = "VISITA";
+        }
+
+        if (nuevaEtapa) {
+          await prisma.cliente.update({
+            where: { id: clienteIdFinal },
+            data: { etapaLead: nuevaEtapa }
+          });
+        }
+      }
+    }
+
+    res.status(201).json({ mensaje: "Actividad creada", actividad });
   } catch (error) {
     console.error("Error al crear actividad:", error);
     res.status(500).json({ error: "Error al crear actividad: " + error.message });
@@ -85,7 +146,7 @@ export const crearActividad = async (req, res) => {
 export const editarActividad = async (req, res) => {
   try {
     const { id } = req.params;
-    const { tipo, titulo, descripcion, fechaVencimiento, oportunidadId } = req.body;
+    const { tipo, titulo, descripcion, fechaVencimiento, oportunidadId, clienteId, prioridad, estado } = req.body;
     const { id: usuarioId, rol } = req.usuario;
 
     const actividad = await prisma.actividad.findUnique({
@@ -123,7 +184,10 @@ export const editarActividad = async (req, res) => {
         titulo,
         descripcion,
         fechaVencimiento: new Date(fechaVencimiento),
-        oportunidadId: Number(oportunidadId)
+        ...(oportunidadId !== undefined && { oportunidadId: oportunidadId ? Number(oportunidadId) : null }),
+        ...(clienteId !== undefined && { clienteId: clienteId ? Number(clienteId) : null }),
+        ...(prioridad && { prioridad }),
+        ...(estado && { estado })
       },
       include: {
         oportunidad: {
@@ -172,6 +236,7 @@ export const completarActividad = async (req, res) => {
       where: { id: Number(id) },
       data: {
         completada,
+        estado: completada ? "COMPLETADA" : "PENDIENTE",
         fechaCompletada: completada ? new Date() : null
       },
       include: {
@@ -208,11 +273,12 @@ export const eliminarActividad = async (req, res) => {
       return res.status(403).json({ error: "No puedes eliminar esta actividad" });
     }
 
-    await prisma.actividad.delete({
-      where: { id: Number(id) }
+    await prisma.actividad.update({
+      where: { id: Number(id) },
+      data: { activo: false }
     });
 
-    res.json({ mensaje: "Actividad eliminada correctamente" });
+    res.json({ mensaje: "Actividad cancelada (borrado lógico) correctamente" });
   } catch (error) {
     console.error("Error al eliminar actividad:", error);
     res.status(500).json({ error: "Error al eliminar actividad" });

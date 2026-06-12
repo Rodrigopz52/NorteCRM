@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { verificarToken } from "../middleware/authMiddleware.js";
-import { listarClientes, crearCliente, editarCliente, eliminarCliente } from "../controllers/clienteController.js";
+import { listarClientes, crearCliente, editarCliente, toggleActivoCliente } from "../controllers/clienteController.js";
 
 
 const router = Router();
@@ -92,9 +92,9 @@ router.put("/:id", verificarToken, editarCliente);
 
 /**
  * @swagger
- * /clientes/{id}:
- *   delete:
- *     summary: Eliminar un cliente (solo gerente)
+ * /clientes/{id}/toggle-activo:
+ *   put:
+ *     summary: Alternar estado activo/inactivo de un cliente
  *     tags: [Clientes]
  *     security:
  *       - bearerAuth: []
@@ -104,8 +104,8 @@ router.put("/:id", verificarToken, editarCliente);
  *         required: true
  *     responses:
  *       200:
- *         description: Cliente eliminado correctamente
+ *         description: Estado actualizado correctamente
  */
-router.delete("/:id", verificarToken, eliminarCliente);
+router.put("/:id/toggle-activo", verificarToken, toggleActivoCliente);
 
 export default router;

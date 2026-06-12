@@ -16,16 +16,16 @@ export default function Paginacion({ page, totalPages, total, limit, onPageChang
 
   // Genera los números de página visibles con "..." cuando hay muchas páginas
   const generarPaginas = () => {
-    if (totalPages <= 7) {
+    if (totalPages <= 5) {
       return Array.from({ length: totalPages }, (_, i) => i + 1);
     }
     const paginas = [];
-    if (page <= 4) {
-      paginas.push(1, 2, 3, 4, 5, "...", totalPages);
-    } else if (page >= totalPages - 3) {
-      paginas.push(1, "...", totalPages - 4, totalPages - 3, totalPages - 2, totalPages - 1, totalPages);
+    if (page <= 3) {
+      paginas.push(1, 2, 3, "...", totalPages);
+    } else if (page >= totalPages - 2) {
+      paginas.push(1, "...", totalPages - 2, totalPages - 1, totalPages);
     } else {
-      paginas.push(1, "...", page - 1, page, page + 1, "...", totalPages);
+      paginas.push(1, "...", page, "...", totalPages);
     }
     return paginas;
   };

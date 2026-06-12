@@ -30,24 +30,39 @@ model Cliente {
   nombre        String
   empresa       String?
   telefono      String?
+  dni           String?
   email         String?
   notas         String?
+  activo        Boolean       @default(true)
+  temperatura   String        @default("FRIO") // "CALIENTE", "TIBIO", "FRIO"
+  interes       String?       // Ej: "Casa en Yerba Buena"
+  etapaLead     String        @default("LEAD") // "LEAD", "CONTACTADO", "VISITA", "NEGOCIACION", "CERRADO"
   usuario       Usuario?      @relation(fields: [usuarioId], references: [id])
   usuarioId     Int?
   oportunidades Oportunidad[]
   tareas        Tarea[]
+  actividades   Actividad[]
   creadoEn      DateTime      @default(now())
 }
 
+
 model Oportunidad {
-  id          Int          @id @default(autoincrement())
-  titulo      String
-  notas       String?
-  tipo        String?
-  estado      String?
-  valor       Float?
-  etapa       Etapa        @default(CONTACTO)
-  fechaCierre DateTime?
+  id              Int          @id @default(autoincrement())
+  titulo          String
+  direccion       String?
+  habitaciones    Int?
+  banos           Int?
+  garages         Int?
+  metrosCuadrados Int?
+  operacion       String?      // "Venta" o "Alquiler"
+  imagenUrl       String?
+  activo          Boolean      @default(true)
+  notas           String?
+  tipo            String?      // "Casa", "Departamento", "Oficina"
+  estado          String?
+  valor           Float?
+  etapa           Etapa        @default(DISPONIBLE)
+  fechaCierre     DateTime?
   cliente     Cliente      @relation(fields: [clienteId], references: [id])
   clienteId   Int
   usuario     Usuario?     @relation(fields: [usuarioId], references: [id])
@@ -77,12 +92,17 @@ model Actividad {
   titulo             String
   descripcion        String?
   fechaVencimiento   DateTime
+  estado             String       @default("PENDIENTE") // "PENDIENTE", "EN_PROCESO", "COMPLETADA"
+  prioridad          String       @default("MEDIA")     // "ALTA", "MEDIA", "BAJA"
   completada         Boolean      @default(false)
   fechaCompletada    DateTime?
-  oportunidad        Oportunidad  @relation(fields: [oportunidadId], references: [id], onDelete: Cascade)
-  oportunidadId      Int
+  oportunidad        Oportunidad? @relation(fields: [oportunidadId], references: [id], onDelete: Cascade)
+  oportunidadId      Int?
+  cliente            Cliente?     @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  clienteId          Int?
   usuario            Usuario      @relation(fields: [usuarioId], references: [id])
   usuarioId          Int
+  activo             Boolean      @default(true)
   creadoEn           DateTime     @default(now())
   actualizadoEn      DateTime     @updatedAt
 }
@@ -94,9 +114,8 @@ enum Rol {
 }
 
 enum Etapa {
-  CONTACTO
-  NEGOCIACION
-  EN_ALQUILER
-  EN_VENTA
-  NO_CONCRETADO
+  DISPONIBLE
+  RESERVADA
+  VENDIDA
+  ALQUILADA
 }
