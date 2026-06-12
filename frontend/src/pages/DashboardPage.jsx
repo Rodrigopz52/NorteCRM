@@ -481,14 +481,14 @@ function DonutEstado({ data }) {
   ].filter(i => i.value > 0);
 
   return (
-    <div className="flex items-center gap-4">
-      <div className="flex-shrink-0" style={{ width: 160, height: 160 }}>
+    <div className="flex items-center gap-6">
+      <div className="flex-shrink-0" style={{ width: 190, height: 190 }}>
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie
               data={items}
               cx="50%" cy="50%"
-              innerRadius={52} outerRadius={72}
+              innerRadius={62} outerRadius={85}
               paddingAngle={2}
               dataKey="value"
             >
@@ -501,7 +501,7 @@ function DonutEstado({ data }) {
         </ResponsiveContainer>
       </div>
 
-      <div className="flex-1 space-y-2">
+      <div className="flex-1 space-y-3">
         {[
           { key: "disponible", label: "Disponible", color: COLORES_ESTADO.disponible },
           { key: "reservada", label: "Reservada", color: COLORES_ESTADO.reservada },
@@ -509,12 +509,12 @@ function DonutEstado({ data }) {
           { key: "alquilada", label: "Alquilada", color: COLORES_ESTADO.alquilada },
           { key: "no_concretadas", label: "No Concretadas", color: COLORES_ESTADO.no_concretadas }
         ].map(item => (
-          <div key={item.key} className="flex items-center justify-between text-xs">
-            <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }} />
-              <span className="text-gray-600 font-medium">{item.label}</span>
+          <div key={item.key} className="flex items-center justify-between text-sm gap-4">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }} />
+              <span className="text-gray-600 font-medium truncate">{item.label}</span>
             </div>
-            <span className="font-bold text-gray-900">{data[item.key] || 0}</span>
+            <span className="font-bold text-gray-900 flex-shrink-0">{data[item.key] || 0}</span>
           </div>
         ))}
       </div>
@@ -569,7 +569,7 @@ function VisitasHoyPanel({ visitas }) {
   const coloresBg = ["bg-purple-100 text-purple-700", "bg-blue-100 text-blue-700", "bg-green-100 text-green-700", "bg-amber-100 text-amber-700", "bg-rose-100 text-rose-700"];
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-2 max-h-[280px] overflow-y-auto pr-2 custom-scrollbar">
       {visitas.map((v, idx) => (
         <div key={v.id} className="flex items-center gap-3 py-2 border-b border-gray-50 last:border-0">
           <span className="text-xs font-bold text-gray-500 w-10 flex-shrink-0">{v.hora}</span>
@@ -600,7 +600,7 @@ function RankingAsesoresPanel({ asesores }) {
   const medallas = ["🥇", "🥈", "🥉"];
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 max-h-[280px] overflow-y-auto pr-2 custom-scrollbar">
       {asesores.map((a, idx) => (
         <div key={a.id} className="space-y-1.5">
           <div className="flex items-center justify-between">
@@ -630,7 +630,7 @@ function TareasVencidasPanel({ tareas }) {
   const coloresBg = ["bg-purple-100 text-purple-700", "bg-blue-100 text-blue-700", "bg-amber-100 text-amber-700"];
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-2 max-h-[280px] overflow-y-auto pr-2 custom-scrollbar">
       {tareas.length === 0 ? (
         <div className="text-center py-8 text-gray-400">
           <p className="text-sm">✅ No hay tareas vencidas</p>
@@ -743,9 +743,11 @@ function DashboardGerente({ data, periodo, setPeriodo, dashboardRef, token, peri
         <SectionCard
           titulo="Propiedades por estado"
           subtitulo={`${data.propiedadesPorEstado.total} en cartera`}
-          className="lg:col-span-2"
+          className="lg:col-span-2 flex flex-col"
         >
-          <DonutEstado data={data.propiedadesPorEstado} />
+          <div className="flex-1 flex items-center justify-center">
+            <DonutEstado data={data.propiedadesPorEstado} />
+          </div>
         </SectionCard>
       </div>
 
