@@ -133,29 +133,7 @@ export default function LoginPage() {
             </button>
           </form>
 
-          {/* Caja de credenciales de prueba */}
-          <div className="mt-10 p-5 bg-purple-50/80 border border-purple-100 rounded-2xl relative overflow-hidden">
-            <div className="absolute top-0 left-0 w-1 h-full bg-purple-500" />
-            <p className="text-xs font-bold text-purple-900 mb-3 uppercase tracking-wider flex items-center gap-1.5">
-              <svg className="w-4 h-4 text-purple-600" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" /></svg>
-              Credenciales de exposición
-            </p>
-            <div className="space-y-2 text-sm text-gray-700">
-              <div className="flex justify-between items-center bg-white/60 px-3 py-1.5 rounded-lg border border-purple-100/50">
-                <span className="font-semibold text-purple-800">Admin</span>
-                <span className="font-mono text-xs">admin@crm.com / 123456</span>
-              </div>
-              <div className="flex justify-between items-center bg-white/60 px-3 py-1.5 rounded-lg border border-purple-100/50">
-                <span className="font-semibold text-purple-800">Gerente</span>
-                <span className="font-mono text-xs">gerente@crm.com / 123456</span>
-              </div>
-              <div className="flex justify-between items-center bg-white/60 px-3 py-1.5 rounded-lg border border-purple-100/50">
-                <span className="font-semibold text-purple-800">Vendedor</span>
-                <span className="font-mono text-xs">vendedor@crm.com / 123456</span>
-              </div>
-            </div>
-          </div>
-          
+
         </div>
       </div>
     </div>
