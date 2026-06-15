@@ -105,6 +105,8 @@ export default function PropiedadesPage() {
   const [openForm, setOpenForm] = useState(false);
   const [selectedOpp, setSelectedOpp] = useState(null);
   const [showActividades, setShowActividades] = useState(false);
+  const [imagenArchivo, setImagenArchivo] = useState(null);
+  const [subiendo, setSubiendo] = useState(false);
 
   const [formActividad, setFormActividad] = useState({
     tipo: "LLAMADA", titulo: "", descripcion: "", fechaVencimiento: ""
@@ -188,43 +190,56 @@ export default function PropiedadesPage() {
       return;
     }
 
+    setSubiendo(true);
+
     try {
-      const payload = {
-        titulo: form.titulo,
-        direccion: form.direccion,
-        habitaciones: form.habitaciones,
-        banos: form.banos,
-        garages: form.garages,
-        metrosCuadrados: form.metrosCuadrados,
-        operacion: form.operacion,
-        imagenUrl: form.imagenUrl,
-        notas: form.notas,
-        tipo: form.tipo,
-        valor: form.valor,
-        etapa: form.etapa || "DISPONIBLE",
-        clienteId: Number(form.clienteId)
+      const formData = new FormData();
+      formData.append("titulo", form.titulo);
+      if (form.direccion) formData.append("direccion", form.direccion);
+      if (form.habitaciones) formData.append("habitaciones", form.habitaciones);
+      if (form.banos) formData.append("banos", form.banos);
+      if (form.garages) formData.append("garages", form.garages);
+      if (form.metrosCuadrados) formData.append("metrosCuadrados", form.metrosCuadrados);
+      if (form.operacion) formData.append("operacion", form.operacion);
+      if (form.notas) formData.append("notas", form.notas);
+      if (form.tipo) formData.append("tipo", form.tipo);
+      if (form.valor) formData.append("valor", form.valor);
+      formData.append("etapa", form.etapa || "DISPONIBLE");
+      formData.append("clienteId", form.clienteId);
+      
+      // Si hay un archivo físico, lo mandamos. Si no, mandamos la URL vieja (para cuando editan sin cambiar foto)
+      if (imagenArchivo) {
+        formData.append("imagen", imagenArchivo);
+      } else if (form.imagenUrl) {
+        formData.append("imagenUrl", form.imagenUrl);
+      }
+
+      const headers = { 
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "multipart/form-data" 
       };
 
       if (form.id) {
-        await axios.put(`http://localhost:3000/propiedades/${form.id}`, payload, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        await axios.put(`http://localhost:3000/propiedades/${form.id}`, formData, { headers });
         success("Propiedad actualizada");
       } else {
-        await axios.post("http://localhost:3000/propiedades", payload, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        await axios.post("http://localhost:3000/propiedades", formData, { headers });
         success("Propiedad creada");
       }
 
       setOpenForm(false);
+      setImagenArchivo(null);
       fetchPropiedades();
       if (showActividades) {
-        // Actualizamos localmente para no cerrar el modal de golpe
-        setSelectedOpp({ ...selectedOpp, ...payload });
+        // En una edición real, para no romper el modal recargamos la opp entera o simulamos
+        // Como formData no es JSON directo, usamos fetchPropiedades para limpiar
+        setSelectedOpp(null);
+        setShowActividades(false);
       }
     } catch (err) {
       error(err.response?.data?.error || "Error al guardar");
+    } finally {
+      setSubiendo(false);
     }
   };
 
@@ -951,24 +966,38 @@ export default function PropiedadesPage() {
                   </div>
 
                   <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
-                    <h4 className="font-bold text-gray-800 mb-3 text-sm uppercase tracking-wider">Multimedia</h4>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">URL de portada</label>
+                    <h4 className="font-bold text-gray-800 mb-3 text-sm uppercase tracking-wider">Foto Principal</h4>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">Subir imagen</label>
                     <input
-                      className="w-full border border-gray-200 focus:border-[#8B5CF6] p-2.5 rounded-lg transition-all outline-none text-sm"
-                      placeholder="https://ejemplo.com/foto.jpg"
-                      value={form.imagenUrl}
-                      onChange={(e) => setForm({ ...form, imagenUrl: e.target.value })}
+                      type="file"
+                      accept="image/*"
+                      className="w-full border border-gray-200 focus:border-[#8B5CF6] p-2.5 rounded-lg transition-all outline-none text-sm bg-white"
+                      onChange={(e) => {
+                        const file = e.target.files[0];
+                        if (file) setImagenArchivo(file);
+                      }}
                     />
-                    {form.imagenUrl && (
+                    
+                    {/* Previsualización dinámica: Si sube foto nueva, muestra la nueva. Si no, la URL vieja si existe */}
+                    {(imagenArchivo || form.imagenUrl) && (
                       <div className="mt-3 h-24 w-full rounded-lg overflow-hidden border border-gray-200">
-                        <img src={form.imagenUrl} alt="Preview" className="w-full h-full object-cover" onError={(e) => e.target.style.display = 'none'} />
+                        <img 
+                          src={imagenArchivo ? URL.createObjectURL(imagenArchivo) : form.imagenUrl} 
+                          alt="Preview" 
+                          className="w-full h-full object-cover" 
+                          onError={(e) => e.target.style.display = 'none'} 
+                        />
                       </div>
                     )}
                   </div>
 
                   <div className="flex gap-3 pt-2">
-                    <button onClick={guardarPropiedad} className="flex-1 bg-purple-600 hover:bg-purple-700 text-white py-2.5 rounded-lg font-medium shadow-md transition-all">
-                      {form.id ? "Actualizar" : "Guardar"}
+                    <button 
+                      onClick={guardarPropiedad} 
+                      disabled={subiendo}
+                      className="flex-1 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white py-2.5 rounded-lg font-medium shadow-md transition-all"
+                    >
+                      {subiendo ? "Subiendo foto..." : form.id ? "Actualizar" : "Guardar"}
                     </button>
                     {form.id && usuario?.rol === "GERENTE" && (
                       <button onClick={() => toggleActivo(form.id, selectedOpp?.activo)} className={`px-6 rounded-xl font-bold border transition-colors ${selectedOpp?.activo ? "bg-red-50 hover:bg-red-100 text-red-600 border-red-200" : "bg-green-50 hover:bg-green-100 text-green-600 border-green-200"}`}>

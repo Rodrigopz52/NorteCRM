@@ -136,6 +136,9 @@ export const crearOportunidad = async (req, res) => {
     operacion, imagenUrl, notas, tipo, estado, valor, etapa, clienteId 
   } = req.body;
 
+  const imagenSubida = req.file ? req.file.path : undefined;
+  const imagenFinal = imagenSubida || imagenUrl || null;
+
   const op = await prisma.oportunidad.create({
     data: {
       titulo,
@@ -145,13 +148,13 @@ export const crearOportunidad = async (req, res) => {
       garages: garages ? Number(garages) : null,
       metrosCuadrados: metrosCuadrados ? Number(metrosCuadrados) : null,
       operacion: operacion || null,
-      imagenUrl: imagenUrl || null,
+      imagenUrl: imagenFinal,
       notas: notas || null,
       tipo: tipo || null,
       estado: estado || null,
       valor: valor ? Number(valor) : null,
       etapa: etapa || "DISPONIBLE",
-      clienteId,
+      clienteId: Number(clienteId),
       usuarioId: usuario.id
     }
   });
@@ -166,6 +169,9 @@ export const editarOportunidad = async (req, res) => {
     titulo, direccion, habitaciones, banos, garages, metrosCuadrados, 
     operacion, imagenUrl, notas, tipo, estado, valor, clienteId, etapa 
   } = req.body;
+
+  const imagenSubida = req.file ? req.file.path : undefined;
+  const imagenFinal = imagenSubida || imagenUrl || null;
 
   // Obtener la oportunidad actual para verificar cambios de estado
   const oppActual = await prisma.oportunidad.findUnique({
@@ -196,12 +202,12 @@ export const editarOportunidad = async (req, res) => {
       garages: garages ? Number(garages) : null,
       metrosCuadrados: metrosCuadrados ? Number(metrosCuadrados) : null,
       operacion: operacion || null,
-      imagenUrl: imagenUrl || null,
+      imagenUrl: imagenFinal,
       notas: notas || null, 
       tipo: tipo || null, 
       estado: estado || null, 
       valor: valor ? Number(valor) : null, 
-      clienteId,
+      clienteId: Number(clienteId),
       etapa: etapa || oppActual.etapa,
       fechaCierre
     }
