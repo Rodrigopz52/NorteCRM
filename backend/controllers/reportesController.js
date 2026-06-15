@@ -656,15 +656,13 @@ export const dashboardGerencial = async (req, res) => {
       }
     });
 
-    const priorityWeight = { ALTA: 3, MEDIA: 2, BAJA: 1 };
     tareasVencidasRaw.sort((a, b) => {
-      const wA = priorityWeight[a.prioridad] || 0;
-      const wB = priorityWeight[b.prioridad] || 0;
-      if (wA !== wB) return wB - wA;
       return new Date(a.fechaVencimiento).getTime() - new Date(b.fechaVencimiento).getTime();
     });
 
     const tareasVencidasTop = tareasVencidasRaw.slice(0, 20);
+    
+    const formatearFechaCorto = (d) => d.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' });
 
     const tareasVencidas = tareasVencidasTop.map(t => {
       const diasVencida = Math.floor((ahora - new Date(t.fechaVencimiento)) / (1000 * 60 * 60 * 24));
@@ -672,6 +670,8 @@ export const dashboardGerencial = async (req, res) => {
         id: t.id,
         titulo: t.titulo,
         diasVencida,
+        fechaOriginal: formatearFechaCorto(new Date(t.fechaVencimiento)),
+        prioridad: t.prioridad,
         asesor: `${t.usuario.nombre} ${t.usuario.apellido}`,
         asesorIniciales: `${t.usuario.nombre[0]}${t.usuario.apellido[0]}`.toUpperCase(),
         cliente: t.cliente?.nombre || t.oportunidad?.cliente?.nombre || null

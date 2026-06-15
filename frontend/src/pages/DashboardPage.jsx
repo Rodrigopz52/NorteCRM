@@ -394,10 +394,13 @@ function TareasVencidasPanel({ tareas }) {
           {tareas.map((t, idx) => (
             <div key={t.id} className="flex items-center gap-3 py-2 border-b border-gray-50 last:border-0">
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-800 truncate">{t.titulo}</p>
-                <p className="text-xs text-red-500 font-medium">Hace {t.diasVencida} {t.diasVencida === 1 ? 'día' : 'días'}</p>
+                <div className="flex items-center gap-2 mb-0.5">
+                  <span className={`text-[9px] px-1.5 py-0.5 rounded-md font-bold tracking-wider ${t.prioridad === 'ALTA' ? 'bg-red-100 text-red-700' : t.prioridad === 'MEDIA' ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'}`}>{t.prioridad}</span>
+                  <p className="text-sm font-medium text-gray-800 truncate">{t.titulo}</p>
+                </div>
+                <p className="text-xs text-red-500 font-medium">Venció el {t.fechaOriginal} (hace {t.diasVencida} {t.diasVencida === 1 ? 'día' : 'días'})</p>
               </div>
-              <span className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0 ${coloresBg[idx % coloresBg.length]}`}>
+              <span className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0 ${coloresBg[idx % coloresBg.length]}`} title={t.asesor}>
                 {t.asesorIniciales}
               </span>
             </div>
