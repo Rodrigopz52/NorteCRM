@@ -640,7 +640,12 @@ export const dashboardGerencial = async (req, res) => {
       };
     }));
 
-    rankingAsesores.sort((a, b) => b.monto - a.monto);
+    rankingAsesores.sort((a, b) => {
+      if (b.metaPorcentaje !== a.metaPorcentaje) {
+        return b.metaPorcentaje - a.metaPorcentaje;
+      }
+      return b.monto - a.monto;
+    });
 
     // ── TAREAS VENCIDAS ───────────────────────────────────────
     const tareasVencidasRaw = await prisma.actividad.findMany({
