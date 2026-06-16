@@ -24,6 +24,7 @@ import {
 import Navbar from "../components/Navbar.jsx";
 import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 import html2canvas from "html2canvas";
 
 // ─── COLORES GLOBALES ────────────────────────────────────────
@@ -101,62 +102,83 @@ function SectionCard({ titulo, subtitulo, children, className = "" }) {
 function ExportButtons({ data, periodo, dashboardRef }) {
   const [exportandoPDF, setExportandoPDF] = useState(false);
 
-  const exportarExcel = () => {
-    if (!data) return;
-    const wb = XLSX.utils.book_new();
-
-    // Hoja 1: KPIs
-    const kpisData = [
-      ["Métrica", "Período Actual", "Período Anterior", "Variación %"],
-      ["Ingresos ($)", data.kpis.ingresos.actual, data.kpis.ingresos.anterior, data.kpis.ingresos.variacion],
-      ["Propiedades Disponibles", data.kpis.propiedadesDisponibles.actual, data.kpis.propiedadesDisponibles.anterior, data.kpis.propiedadesDisponibles.variacion],
-      ["Tasa de Conversión (%)", data.kpis.tasaConversion.actual, data.kpis.tasaConversion.anterior, data.kpis.tasaConversion.variacion],
-      ["Días Promedio a Cierre", data.kpis.diasPromedioCierre.actual, data.kpis.diasPromedioCierre.anterior, data.kpis.diasPromedioCierre.variacion]
-    ];
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(kpisData), "KPIs");
-
-    // Hoja 2: Ranking Asesores
-    const rankData = [
-      ["Asesor", "Propiedades", "Monto ($)", "Meta ($)", "% Meta"],
-      ...(data.rankingAsesores || []).map(r => [r.nombre, r.propiedades, r.monto, r.meta, r.metaPorcentaje])
-    ];
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rankData), "Ranking Asesores");
-
-    // Hoja 3: Embudo de Ventas
-    const embudoData = [
-      ["Etapa", "Cantidad", "% del Total", "% Conversión desde anterior"],
-      ...(data.embudo || []).map(e => [e.etapa, e.cantidad, e.porcentaje, e.conversion || 100])
-    ];
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(embudoData), "Embudo de Ventas");
-
-    // Hoja 4: Evolución de Ingresos
-    const ingresosData = [
-      ["Período", "Actual ($)", "Anterior ($)"],
-      ...(data.graficoIngresos || []).map(g => [g.label, g.actual, g.anterior])
-    ];
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(ingresosData), "Evolución Ingresos");
-
-    XLSX.writeFile(wb, `dashboard_${periodo}_${new Date().toISOString().slice(0, 10)}.xlsx`);
+  const exportarExcel = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.get("http://localhost:3000/reportes/excel", {
+        headers: { Authorization: `Bearer ${token}` },
+        responseType: 'blob'
+      });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `NorteCRM_Reporte_Operativo_${new Date().toISOString().slice(0, 10)}.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      console.error("Error al descargar Excel detallado:", error);
+      alert("Hubo un error al generar el Excel.");
+    }
   };
 
-  const exportarPDF = async () => {
-    if (!dashboardRef.current) return;
+  const exportarPDF = () => {
     setExportandoPDF(true);
     try {
-      const canvas = await html2canvas(dashboardRef.current, {
-        scale: 1.5,
-        useCORS: true,
-        backgroundColor: "#f9fafb"
-      });
-      const imgData = canvas.toDataURL("image/jpeg", 0.85);
-      const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "a3" });
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+      const doc = new jsPDF();
+      const fecha = new Date().toLocaleDateString('es-ES');
+      const fmtMonto = (n) => `$${n.toLocaleString()}`;
+      
+      doc.setFontSize(18);
+      doc.setTextColor(40, 40, 40);
+      doc.text("NorteCRM - Reporte Ejecutivo", 14, 22);
+      
+      doc.setFontSize(11);
+      doc.setTextColor(100, 100, 100);
+      doc.text(`Generado el: ${fecha} | Período Seleccionado: ${periodo}`, 14, 30);
 
-      pdf.addImage(imgData, "JPEG", 0, 0, pdfWidth, pdfHeight);
-      pdf.save(`dashboard_${periodo}_${new Date().toISOString().slice(0, 10)}.pdf`);
+      // Tabla de KPIs
+      autoTable(doc, {
+        startY: 40,
+        head: [['Métrica', 'Actual', 'Anterior', 'Variación']],
+        body: [
+          ['Ingresos', fmtMonto(data.kpis.ingresos.actual), fmtMonto(data.kpis.ingresos.anterior), `${data.kpis.ingresos.variacion}%`],
+          ['Propiedades Disponibles', data.kpis.propiedadesDisponibles.actual, data.kpis.propiedadesDisponibles.anterior, `${data.kpis.propiedadesDisponibles.variacion}%`],
+          ['Tasa Conversión', `${data.kpis.tasaConversion.actual}%`, `${data.kpis.tasaConversion.anterior}%`, `${data.kpis.tasaConversion.variacion}%`],
+          ['Días Promedio Cierre', data.kpis.diasPromedioCierre.actual, data.kpis.diasPromedioCierre.anterior, `${data.kpis.diasPromedioCierre.variacion}%`]
+        ],
+        theme: 'striped',
+        headStyles: { fillColor: [99, 102, 241] }
+      });
+
+      // Ranking
+      autoTable(doc, {
+        startY: doc.lastAutoTable.finalY + 15,
+        head: [['Asesor', 'Monto', 'Propiedades', '% Meta']],
+        body: (data.rankingAsesores || []).map(r => [
+          r.nombre, fmtMonto(r.monto), r.propiedades, `${r.metaPorcentaje}%`
+        ]),
+        theme: 'striped',
+        headStyles: { fillColor: [99, 102, 241] }
+      });
+
+      // Tareas Vencidas Críticas
+      if (data.tareasVencidas && data.tareasVencidas.length > 0) {
+        autoTable(doc, {
+          startY: doc.lastAutoTable.finalY + 15,
+          head: [['Prioridad', 'Tarea', 'Asesor', 'Días Vencida']],
+          body: data.tareasVencidas.slice(0, 10).map(t => [
+            t.prioridad, t.titulo, t.asesor, t.diasVencida
+          ]),
+          theme: 'striped',
+          headStyles: { fillColor: [244, 63, 94] }
+        });
+      }
+
+      doc.save(`NorteCRM_Reporte_${fecha.replace(/\//g, '-')}.pdf`);
     } catch (e) {
       console.error("Error exportando PDF:", e);
+      alert("Hubo un error al generar el PDF.");
     } finally {
       setExportandoPDF(false);
     }

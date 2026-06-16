@@ -1,4 +1,5 @@
 import { PrismaClient } from "@prisma/client";
+import * as XLSX from "xlsx";
 const prisma = new PrismaClient();
 
 export const dashboard = async (req, res) => {
@@ -742,5 +743,77 @@ export const dashboardGerencial = async (req, res) => {
   } catch (error) {
     console.error("Error en dashboard gerencial:", error);
     res.status(500).json({ error: "Error al cargar el dashboard gerencial" });
+  }
+};
+
+export const exportarExcelDetallado = async (req, res) => {
+  if (req.usuario.rol !== "GERENTE" && req.usuario.rol !== "ADMINISTRADOR") {
+    return res.status(403).json({ error: "Acceso denegado" });
+  }
+
+  try {
+    const wb = XLSX.utils.book_new();
+
+    // 1. Propiedades Activas
+    const activas = await prisma.oportunidad.findMany({
+      where: { activo: true, etapa: { in: ["DISPONIBLE", "RESERVADA"] } },
+      include: { usuario: true, cliente: true }
+    });
+
+    const activasData = [
+      ["ID", "Título", "Dirección", "Tipo", "Operación", "Etapa", "Valor ($)", "Vendedor", "Cliente", "Fecha Creación"],
+      ...activas.map(o => [
+        o.id, o.titulo, o.direccion, o.tipo, o.operacion, o.etapa, o.valor, 
+        o.usuario ? `${o.usuario.nombre} ${o.usuario.apellido}` : "Sin asignar",
+        o.cliente ? o.cliente.nombre : "Sin cliente",
+        o.creadoEn.toLocaleDateString('es-ES')
+      ])
+    ];
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(activasData), "Propiedades Activas");
+
+    // 2. Operaciones Cerradas (Vendidas y Alquiladas)
+    const cerradas = await prisma.oportunidad.findMany({
+      where: { activo: true, etapa: { in: ["VENDIDA", "ALQUILADA"] } },
+      include: { usuario: true, cliente: true }
+    });
+
+    const cerradasData = [
+      ["ID", "Título", "Tipo", "Operación", "Valor Cierre ($)", "Fecha Cierre", "Vendedor", "Cliente", "Fecha Creación"],
+      ...cerradas.map(o => [
+        o.id, o.titulo, o.tipo, o.operacion, o.valor, 
+        o.fechaCierre ? o.fechaCierre.toLocaleDateString('es-ES') : "N/A",
+        o.usuario ? `${o.usuario.nombre} ${o.usuario.apellido}` : "Sin asignar",
+        o.cliente ? o.cliente.nombre : "Sin cliente",
+        o.creadoEn.toLocaleDateString('es-ES')
+      ])
+    ];
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(cerradasData), "Operaciones Cerradas");
+
+    // 3. Clientes Activos
+    const clientes = await prisma.cliente.findMany({
+      where: { activo: true },
+      include: { usuario: true }
+    });
+
+    const clientesData = [
+      ["ID", "Nombre", "Email", "Teléfono", "Etapa Lead", "Temperatura", "Vendedor Asignado", "Fecha Ingreso"],
+      ...clientes.map(c => [
+        c.id, c.nombre, c.email, c.telefono, c.etapaLead, c.temperatura,
+        c.usuario ? `${c.usuario.nombre} ${c.usuario.apellido}` : "Sin asignar",
+        c.creadoEn.toLocaleDateString('es-ES')
+      ])
+    ];
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(clientesData), "Clientes Activos");
+
+    // Generar buffer
+    const buf = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+
+    res.setHeader('Content-Disposition', 'attachment; filename="NorteCRM_Reporte_Operativo.xlsx"');
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.send(buf);
+
+  } catch (error) {
+    console.error("Error al exportar Excel:", error);
+    res.status(500).json({ error: "Error al exportar Excel" });
   }
 };
