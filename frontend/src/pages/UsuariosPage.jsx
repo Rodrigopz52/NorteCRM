@@ -141,8 +141,13 @@ export default function UsuariosPage() {
 
   const crearOEditarUsuario = async () => {
     try {
-      if (!form.nombre || !form.apellido || !form.email) {
-        error("Nombre, apellido y email son obligatorios");
+      if (!form.nombre || !form.apellido || !form.email || !form.dni) {
+        error("Nombre, apellido, email y DNI son obligatorios");
+        return;
+      }
+
+      if (form.dni.length < 7) {
+        error("El DNI debe tener 7 u 8 dígitos");
         return;
       }
 
@@ -483,7 +488,7 @@ export default function UsuariosPage() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  DNI <span className="text-gray-400 font-normal">(opcional)</span>
+                  DNI *
                 </label>
                 <input
                   className="w-full border-2 border-gray-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 p-3 rounded-lg transition-all outline-none"
