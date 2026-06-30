@@ -105,7 +105,7 @@ function ExportButtons({ data, periodo, dashboardRef }) {
   const exportarExcel = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await axios.get("http://localhost:3000/reportes/excel", {
+      const response = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/reportes/excel`, {
         headers: { Authorization: `Bearer ${token}` },
         responseType: 'blob'
       });
@@ -700,8 +700,8 @@ export default function DashboardPage() {
       await new Promise(resolve => setTimeout(resolve, 300));
       
       let endpoint = esGerente
-        ? `http://localhost:3000/reportes/dashboard-gerencial?periodo=${p}`
-        : "http://localhost:3000/reportes/dashboard-personalizado";
+        ? `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/reportes/dashboard-gerencial?periodo=${p}`
+        : `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/reportes/dashboard-personalizado`;
       
       if (esGerente && start && end) {
         // Adjust timezone shift by formatting to date string YYYY-MM-DD

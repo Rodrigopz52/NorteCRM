@@ -164,14 +164,14 @@ export default function PropiedadesPage() {
         params.append("etapa", filtroEtapa.join(","));
       }
 
-      const { data } = await axios.get(`http://localhost:3000/propiedades?${params.toString()}`, {
+      const { data } = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/propiedades?${params.toString()}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setPropiedades(data.data);
       setTotalPaginas(data.meta.totalPaginas);
       setTotalPropiedades(data.meta.total);
 
-      const cl = await axios.get("http://localhost:3000/clientes?limit=100&estado=ACTIVOS", {
+      const cl = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/clientes?limit=100&estado=ACTIVOS`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setClientes(cl.data.data);
@@ -227,10 +227,10 @@ export default function PropiedadesPage() {
       };
 
       if (form.id) {
-        await axios.put(`http://localhost:3000/propiedades/${form.id}`, formData, { headers });
+        await axios.put(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/propiedades/${form.id}`, formData, { headers });
         success("Propiedad actualizada");
       } else {
-        await axios.post("http://localhost:3000/propiedades", formData, { headers });
+        await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/propiedades`, formData, { headers });
         success("Propiedad creada");
       }
 
@@ -261,7 +261,7 @@ export default function PropiedadesPage() {
       });
       if (!confirmed) return;
 
-      await axios.put(`http://localhost:3000/propiedades/${id}/toggle-activo`, {}, {
+      await axios.put(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/propiedades/${id}/toggle-activo`, {}, {
         headers: { Authorization: `Bearer ${token}` }
       });
       success(isActivo ? "Propiedad marcada como no concretada" : "Propiedad restaurada exitosamente");
@@ -278,7 +278,7 @@ export default function PropiedadesPage() {
       return;
     }
     try {
-      await axios.post("http://localhost:3000/tareas", {
+      await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/tareas`, {
         ...formActividad, oportunidadId: selectedOpp.id
       }, { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -287,7 +287,7 @@ export default function PropiedadesPage() {
       fetchPropiedades();
 
       // Actualizamos la vista del modal
-      const { data } = await axios.get(`http://localhost:3000/propiedades?estadoActivo=ACTIVOS&limit=100`, {
+      const { data } = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/propiedades?estadoActivo=ACTIVOS&limit=100`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const actualizada = data.data.find(p => p.id === selectedOpp.id);
@@ -300,12 +300,12 @@ export default function PropiedadesPage() {
 
   const toggleActividadCompletada = async (actividadId, completada) => {
     try {
-      await axios.put(`http://localhost:3000/tareas/${actividadId}/completar`,
+      await axios.put(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/tareas/${actividadId}/completar`,
         { completada: !completada },
         { headers: { Authorization: `Bearer ${token}` } }
       );
       fetchPropiedades();
-      const { data } = await axios.get(`http://localhost:3000/propiedades?estadoActivo=ACTIVOS&limit=100`, { headers: { Authorization: `Bearer ${token}` } });
+      const { data } = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/propiedades?estadoActivo=ACTIVOS&limit=100`, { headers: { Authorization: `Bearer ${token}` } });
       const actualizada = data.data.find(p => p.id === selectedOpp.id);
       if (actualizada) setSelectedOpp(actualizada);
     } catch (error) {
@@ -320,13 +320,13 @@ export default function PropiedadesPage() {
       });
       if (!confirmed) return;
 
-      await axios.delete(`http://localhost:3000/tareas/${actividadId}`, {
+      await axios.delete(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/tareas/${actividadId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       success("Tarea cancelada");
       fetchPropiedades();
 
-      const { data } = await axios.get(`http://localhost:3000/propiedades?estadoActivo=ACTIVOS&limit=100`, {
+      const { data } = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/propiedades?estadoActivo=ACTIVOS&limit=100`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const actualizada = data.data.find(p => p.id === selectedOpp.id);

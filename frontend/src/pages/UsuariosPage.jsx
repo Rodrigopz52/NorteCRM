@@ -98,7 +98,7 @@ export default function UsuariosPage() {
       if (filtroRol.length > 0) params.append("rol", filtroRol.join(","));
       if (filtroEstado) params.append("estado", filtroEstado);
 
-      const { data } = await axios.get(`http://localhost:3000/usuarios?${params.toString()}`, {
+      const { data } = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/usuarios?${params.toString()}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setUsuarios(data.data);
@@ -137,7 +137,7 @@ export default function UsuariosPage() {
   const abrirMetricas = async (usuarioObj) => {
     setModalMetricas({ open: true, usuario: usuarioObj, data: null, loading: true });
     try {
-      const { data } = await axios.get(`http://localhost:3000/reportes/dashboard-personalizado?usuarioId=${usuarioObj.id}`, {
+      const { data } = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/reportes/dashboard-personalizado?usuarioId=${usuarioObj.id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setModalMetricas({ open: true, usuario: usuarioObj, data, loading: false });
@@ -162,7 +162,7 @@ export default function UsuariosPage() {
 
       if (form.id) {
         // EDITAR
-        await axios.put(`http://localhost:3000/usuarios/${form.id}`, {
+        await axios.put(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/usuarios/${form.id}`, {
           nombre: form.nombre,
           apellido: form.apellido,
           email: form.email,
@@ -174,7 +174,7 @@ export default function UsuariosPage() {
         success("Usuario actualizado correctamente");
       } else {
         // CREAR
-        await axios.post("http://localhost:3000/usuarios", form, {
+        await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/usuarios`, form, {
           headers: { Authorization: `Bearer ${token}` }
         });
         success("Usuario creado exitosamente");
@@ -199,7 +199,7 @@ export default function UsuariosPage() {
 
       if (!confirmed) return;
 
-      await axios.put(`http://localhost:3000/usuarios/${id}/toggle-activo`, {}, {
+      await axios.put(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/usuarios/${id}/toggle-activo`, {}, {
         headers: { Authorization: `Bearer ${token}` }
       });
       

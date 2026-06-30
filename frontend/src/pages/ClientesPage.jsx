@@ -108,7 +108,7 @@ export default function ClientesPage() {
       if (filtroEstado) params.append("estado", filtroEstado);
       if (busqueda.trim()) params.append("busqueda", busqueda.trim());
 
-      const { data } = await axios.get(`http://localhost:3000/clientes?${params.toString()}`, {
+      const { data } = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/clientes?${params.toString()}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setClientes(data.data);
@@ -177,12 +177,12 @@ export default function ClientesPage() {
       }
 
       if (form.id) {
-        await axios.put(`http://localhost:3000/clientes/${form.id}`, form, {
+        await axios.put(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/clientes/${form.id}`, form, {
           headers: { Authorization: `Bearer ${token}` }
         });
         success("Cliente actualizado correctamente");
       } else {
-        await axios.post("http://localhost:3000/clientes", form, {
+        await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/clientes`, form, {
           headers: { Authorization: `Bearer ${token}` }
         });
         success("Cliente creado exitosamente");
@@ -209,7 +209,7 @@ export default function ClientesPage() {
 
       if (!confirmed) return;
 
-      const response = await axios.put(`http://localhost:3000/clientes/${id}/toggle-activo`, {}, {
+      const response = await axios.put(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/clientes/${id}/toggle-activo`, {}, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
@@ -228,7 +228,7 @@ export default function ClientesPage() {
     }
     try {
       if (tareaModal.id) {
-        await axios.put(`http://localhost:3000/actividades/${tareaModal.id}`, {
+        await axios.put(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/actividades/${tareaModal.id}`, {
           tipo: "TAREA",
           titulo: tareaModal.descripcion,
           descripcion: tareaModal.descripcion,
@@ -239,7 +239,7 @@ export default function ClientesPage() {
         });
         success("Tarea actualizada");
       } else {
-        await axios.post("http://localhost:3000/actividades", {
+        await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/actividades`, {
           tipo: "TAREA",
           titulo: tareaModal.descripcion,
           descripcion: tareaModal.descripcion,
@@ -259,7 +259,7 @@ export default function ClientesPage() {
 
   const completarActividad = async (actividadId) => {
     try {
-      await axios.put(`http://localhost:3000/actividades/${actividadId}/completar`, {
+      await axios.put(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/actividades/${actividadId}/completar`, {
         completada: true
       }, {
         headers: { Authorization: `Bearer ${token}` }

@@ -42,7 +42,7 @@ export default function ResetPasswordPage() {
     setErrorMsg("");
 
     try {
-      const res = await axios.post("http://localhost:3000/auth/reset-password", { token, password });
+      const res = await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/auth/reset-password`, { token, password });
       setSuccessMsg(res.data.mensaje || "Contraseña actualizada exitosamente.");
     } catch (err) {
       setErrorMsg(err.response?.data?.error || "Hubo un error al restablecer la contraseña. Puede que el enlace esté expirado.");
