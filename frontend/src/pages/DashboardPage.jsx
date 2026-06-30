@@ -696,6 +696,9 @@ export default function DashboardPage() {
   const cargar = async (p = periodo, start = fechaInicio, end = fechaFin) => {
     setLoading(true);
     try {
+      // Retraso artificial para mostrar la animación de carga (efecto premium)
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
       let endpoint = esGerente
         ? `http://localhost:3000/reportes/dashboard-gerencial?periodo=${p}`
         : "http://localhost:3000/reportes/dashboard-personalizado";

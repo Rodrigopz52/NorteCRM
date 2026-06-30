@@ -142,10 +142,15 @@ export default function PropiedadesPage() {
   const [pagina, setPagina] = useState(1);
   const [totalPaginas, setTotalPaginas] = useState(1);
   const [totalPropiedades, setTotalPropiedades] = useState(0);
+  const [loading, setLoading] = useState(true);
   const limit = 12;
 
   const fetchPropiedades = async () => {
+    setLoading(true);
     try {
+      // Retraso artificial para efecto premium
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
       const params = new URLSearchParams({ page: pagina, limit });
       if (filtroTipo.length > 0) params.append("tipo", filtroTipo.join(","));
       if (filtroOperacion !== "Todos") params.append("operacion", filtroOperacion);
@@ -172,6 +177,8 @@ export default function PropiedadesPage() {
       setClientes(cl.data.data);
     } catch (err) {
       console.error("Error al cargar propiedades:", err);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -439,7 +446,14 @@ export default function PropiedadesPage() {
       </div>
 
       {/* GRID DE PROPIEDADES */}
-      {propiedades.length === 0 ? (
+      {loading ? (
+        <div className="flex items-center justify-center py-32">
+          <div className="text-center">
+            <div className="w-12 h-12 rounded-full border-2 border-purple-600 border-t-transparent animate-spin mx-auto mb-4" />
+            <p className="text-sm text-gray-400">Cargando propiedades...</p>
+          </div>
+        </div>
+      ) : propiedades.length === 0 ? (
         <div className="bg-white rounded-3xl p-12 text-center shadow-sm border border-gray-100 flex flex-col items-center">
           <div className="w-24 h-24 bg-gray-50 rounded-full flex items-center justify-center mb-4">
             <HomeModernIcon className="w-10 h-10 text-gray-400" />
@@ -798,6 +812,7 @@ export default function PropiedadesPage() {
             </div>
           )}
 
+          {!loading && (
           <div className="mt-8">
             <Paginacion
               page={pagina}
@@ -807,6 +822,7 @@ export default function PropiedadesPage() {
               onPageChange={setPagina}
             />
           </div>
+          )}
         </>
       )}
 

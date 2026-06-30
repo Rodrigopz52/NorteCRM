@@ -84,10 +84,15 @@ export default function UsuariosPage() {
   const [metricasGlobales, setMetricasGlobales] = useState({ totalClientes: 0, totalPropiedades: 0, totalTareas: 0 });
   const [menuAbiertoId, setMenuAbiertoId] = useState(null);
   const [modalMetricas, setModalMetricas] = useState({ open: false, usuario: null, data: null, loading: false });
+  const [loading, setLoading] = useState(true);
   const limit = 9;
 
   const fetchUsuarios = async () => {
+    setLoading(true);
     try {
+      // Retraso artificial para efecto premium
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
       const params = new URLSearchParams({ page: pagina, limit });
       if (busqueda.trim()) params.append("busqueda", busqueda.trim());
       if (filtroRol.length > 0) params.append("rol", filtroRol.join(","));
@@ -101,11 +106,15 @@ export default function UsuariosPage() {
       setTotalUsuarios(filtroEstado === "ACTIVOS" ? data.meta.totalActivos : data.meta.totalInactivos);
       setUsuariosActivos(data.meta.totalActivos);
       setUsuariosInactivos(data.meta.totalInactivos);
-      if (data.meta.metricasGlobales) {
-        setMetricasGlobales(data.meta.metricasGlobales);
-      }
-    } catch (error) {
-      console.error("Error al cargar usuarios:", error);
+      setMetricasGlobales({
+        totalClientes: data.meta.totalClientes || 0,
+        totalPropiedades: data.meta.totalPropiedades || 0,
+        totalTareas: data.meta.totalTareas || 0
+      });
+    } catch (err) {
+      console.error("Error al cargar usuarios:", err);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -283,6 +292,14 @@ export default function UsuariosPage() {
       </div>
 
       {/* LISTA DE USUARIOS */}
+      {loading ? (
+        <div className="flex items-center justify-center py-32">
+          <div className="text-center">
+            <div className="w-12 h-12 rounded-full border-2 border-purple-600 border-t-transparent animate-spin mx-auto mb-4" />
+            <p className="text-sm text-gray-400">Cargando usuarios...</p>
+          </div>
+        </div>
+      ) : (
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mb-6 items-start">
         {usuarios.map(u => {
           let avatarBg = "bg-emerald-600";
@@ -431,8 +448,10 @@ export default function UsuariosPage() {
           </div>
         )}
       </div>
+      )}
 
       {/* PAGINACIÓN */}
+      {!loading && (
       <Paginacion
         page={pagina}
         totalPages={totalPaginas}
@@ -440,6 +459,7 @@ export default function UsuariosPage() {
         limit={limit}
         onPageChange={setPagina}
       />
+      )}
       {openForm && (
         <div className="fixed inset-0 bg-black/50 flex justify-center items-center backdrop-blur-sm z-50 p-4">
           <div className="bg-white p-6 sm:p-8 rounded-xl shadow-2xl w-full max-w-md border border-gray-200 max-h-[90vh] overflow-y-auto">
