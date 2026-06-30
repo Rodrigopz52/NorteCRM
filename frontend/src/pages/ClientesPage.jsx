@@ -83,6 +83,7 @@ export default function ClientesPage() {
   const [filtroEstado, setFiltroEstado] = useState("ACTIVOS");
   const [busqueda, setBusqueda] = useState("");
   const [openForm, setOpenForm] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [form, setForm] = useState({ id: null, nombre: "", empresa: "", telefono: "", dni: "", email: "", notas: "", temperatura: "FRIO", interes: "", usuarioId: "" });
   const [tareaModal, setTareaModal] = useState({ open: false, clienteId: null, descripcion: "", fechaLimite: "" });
   const [menuAbiertoId, setMenuAbiertoId] = useState(null);
@@ -97,13 +98,17 @@ export default function ClientesPage() {
   const limit = 6;
 
   const fetchClientes = async () => {
+    setLoading(true);
     try {
+      // Retraso artificial para efecto premium
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
       const params = new URLSearchParams({ page: pagina, limit });
       if (filtroTipo.length > 0) params.append("tipo", filtroTipo.join(","));
       if (filtroEstado) params.append("estado", filtroEstado);
       if (busqueda.trim()) params.append("busqueda", busqueda.trim());
 
-      const { data } = await axios.get(`http://localhost:3000/clientes?${params.toString()}`, {
+      const { data } = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/clientes?${params.toString()}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setClientes(data.data);
@@ -114,6 +119,8 @@ export default function ClientesPage() {
       setTotalConTareasPendientes(data.meta.totalConTareasPendientes || 0);
     } catch (err) {
       console.error("Error al cargar clientes:", err);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -170,12 +177,12 @@ export default function ClientesPage() {
       }
 
       if (form.id) {
-        await axios.put(`http://localhost:3000/clientes/${form.id}`, form, {
+        await axios.put(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/clientes/${form.id}`, form, {
           headers: { Authorization: `Bearer ${token}` }
         });
         success("Cliente actualizado correctamente");
       } else {
-        await axios.post("http://localhost:3000/clientes", form, {
+        await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/clientes`, form, {
           headers: { Authorization: `Bearer ${token}` }
         });
         success("Cliente creado exitosamente");
@@ -202,7 +209,7 @@ export default function ClientesPage() {
 
       if (!confirmed) return;
 
-      const response = await axios.put(`http://localhost:3000/clientes/${id}/toggle-activo`, {}, {
+      const response = await axios.put(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/clientes/${id}/toggle-activo`, {}, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
@@ -221,7 +228,7 @@ export default function ClientesPage() {
     }
     try {
       if (tareaModal.id) {
-        await axios.put(`http://localhost:3000/actividades/${tareaModal.id}`, {
+        await axios.put(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/actividades/${tareaModal.id}`, {
           tipo: "TAREA",
           titulo: tareaModal.descripcion,
           descripcion: tareaModal.descripcion,
@@ -232,7 +239,7 @@ export default function ClientesPage() {
         });
         success("Tarea actualizada");
       } else {
-        await axios.post("http://localhost:3000/actividades", {
+        await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/actividades`, {
           tipo: "TAREA",
           titulo: tareaModal.descripcion,
           descripcion: tareaModal.descripcion,
@@ -252,7 +259,7 @@ export default function ClientesPage() {
 
   const completarActividad = async (actividadId) => {
     try {
-      await axios.put(`http://localhost:3000/actividades/${actividadId}/completar`, {
+      await axios.put(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/actividades/${actividadId}/completar`, {
         completada: true
       }, {
         headers: { Authorization: `Bearer ${token}` }
@@ -335,8 +342,16 @@ export default function ClientesPage() {
       </div>
 
       {/* Grilla 2 Columnas - Tarjetas Horizontales */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        {clientes.length > 0 ? (
+      {loading ? (
+        <div className="flex items-center justify-center py-32">
+          <div className="text-center">
+            <div className="w-12 h-12 rounded-full border-2 border-purple-600 border-t-transparent animate-spin mx-auto mb-4" />
+            <p className="text-sm text-gray-400">Cargando clientes...</p>
+          </div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+          {clientes.length > 0 ? (
           clientes.map(c => {
             let borderTypeColor = "border-l-gray-200";
             if (c.activo) {
@@ -563,9 +578,10 @@ export default function ClientesPage() {
           </div>
         )}
       </div>
+      )}
 
       {/* Controles de Paginación */}
-      {clientes.length > 0 && (
+      {!loading && clientes.length > 0 && (
         <Paginacion
           page={pagina}
           totalPages={totalPaginas}

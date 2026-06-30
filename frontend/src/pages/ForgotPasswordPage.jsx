@@ -21,7 +21,7 @@ export default function ForgotPasswordPage() {
     setSuccessMsg("");
 
     try {
-      const res = await axios.post("http://localhost:3000/auth/forgot-password", { email });
+      const res = await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/auth/forgot-password`, { email });
       setSuccessMsg(res.data.mensaje || "Revisa tu bandeja de entrada para continuar.");
       setEmail("");
     } catch (err) {

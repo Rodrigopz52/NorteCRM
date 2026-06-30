@@ -84,16 +84,21 @@ export default function UsuariosPage() {
   const [metricasGlobales, setMetricasGlobales] = useState({ totalClientes: 0, totalPropiedades: 0, totalTareas: 0 });
   const [menuAbiertoId, setMenuAbiertoId] = useState(null);
   const [modalMetricas, setModalMetricas] = useState({ open: false, usuario: null, data: null, loading: false });
+  const [loading, setLoading] = useState(true);
   const limit = 9;
 
   const fetchUsuarios = async () => {
+    setLoading(true);
     try {
+      // Retraso artificial para efecto premium
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
       const params = new URLSearchParams({ page: pagina, limit });
       if (busqueda.trim()) params.append("busqueda", busqueda.trim());
       if (filtroRol.length > 0) params.append("rol", filtroRol.join(","));
       if (filtroEstado) params.append("estado", filtroEstado);
 
-      const { data } = await axios.get(`http://localhost:3000/usuarios?${params.toString()}`, {
+      const { data } = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/usuarios?${params.toString()}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setUsuarios(data.data);
@@ -101,11 +106,15 @@ export default function UsuariosPage() {
       setTotalUsuarios(filtroEstado === "ACTIVOS" ? data.meta.totalActivos : data.meta.totalInactivos);
       setUsuariosActivos(data.meta.totalActivos);
       setUsuariosInactivos(data.meta.totalInactivos);
-      if (data.meta.metricasGlobales) {
-        setMetricasGlobales(data.meta.metricasGlobales);
-      }
-    } catch (error) {
-      console.error("Error al cargar usuarios:", error);
+      setMetricasGlobales({
+        totalClientes: data.meta.totalClientes || 0,
+        totalPropiedades: data.meta.totalPropiedades || 0,
+        totalTareas: data.meta.totalTareas || 0
+      });
+    } catch (err) {
+      console.error("Error al cargar usuarios:", err);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -128,7 +137,7 @@ export default function UsuariosPage() {
   const abrirMetricas = async (usuarioObj) => {
     setModalMetricas({ open: true, usuario: usuarioObj, data: null, loading: true });
     try {
-      const { data } = await axios.get(`http://localhost:3000/reportes/dashboard-personalizado?usuarioId=${usuarioObj.id}`, {
+      const { data } = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/reportes/dashboard-personalizado?usuarioId=${usuarioObj.id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setModalMetricas({ open: true, usuario: usuarioObj, data, loading: false });
@@ -141,25 +150,31 @@ export default function UsuariosPage() {
 
   const crearOEditarUsuario = async () => {
     try {
-      if (!form.nombre || !form.apellido || !form.email) {
-        error("Nombre, apellido y email son obligatorios");
+      if (!form.nombre || !form.apellido || !form.email || !form.dni) {
+        error("Nombre, apellido, email y DNI son obligatorios");
+        return;
+      }
+
+      if (form.dni.length < 7) {
+        error("El DNI debe tener 7 u 8 dígitos");
         return;
       }
 
       if (form.id) {
         // EDITAR
-        await axios.put(`http://localhost:3000/usuarios/${form.id}`, {
+        await axios.put(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/usuarios/${form.id}`, {
           nombre: form.nombre,
           apellido: form.apellido,
           email: form.email,
-          dni: form.dni || null
+          dni: form.dni || null,
+          rol: form.rol
         }, {
           headers: { Authorization: `Bearer ${token}` }
         });
         success("Usuario actualizado correctamente");
       } else {
         // CREAR
-        await axios.post("http://localhost:3000/usuarios", form, {
+        await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/usuarios`, form, {
           headers: { Authorization: `Bearer ${token}` }
         });
         success("Usuario creado exitosamente");
@@ -184,7 +199,7 @@ export default function UsuariosPage() {
 
       if (!confirmed) return;
 
-      await axios.put(`http://localhost:3000/usuarios/${id}/toggle-activo`, {}, {
+      await axios.put(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/usuarios/${id}/toggle-activo`, {}, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
@@ -277,6 +292,14 @@ export default function UsuariosPage() {
       </div>
 
       {/* LISTA DE USUARIOS */}
+      {loading ? (
+        <div className="flex items-center justify-center py-32">
+          <div className="text-center">
+            <div className="w-12 h-12 rounded-full border-2 border-purple-600 border-t-transparent animate-spin mx-auto mb-4" />
+            <p className="text-sm text-gray-400">Cargando usuarios...</p>
+          </div>
+        </div>
+      ) : (
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mb-6 items-start">
         {usuarios.map(u => {
           let avatarBg = "bg-emerald-600";
@@ -425,8 +448,10 @@ export default function UsuariosPage() {
           </div>
         )}
       </div>
+      )}
 
       {/* PAGINACIÓN */}
+      {!loading && (
       <Paginacion
         page={pagina}
         totalPages={totalPaginas}
@@ -434,6 +459,7 @@ export default function UsuariosPage() {
         limit={limit}
         onPageChange={setPagina}
       />
+      )}
       {openForm && (
         <div className="fixed inset-0 bg-black/50 flex justify-center items-center backdrop-blur-sm z-50 p-4">
           <div className="bg-white p-6 sm:p-8 rounded-xl shadow-2xl w-full max-w-md border border-gray-200 max-h-[90vh] overflow-y-auto">
@@ -483,7 +509,7 @@ export default function UsuariosPage() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  DNI <span className="text-gray-400 font-normal">(opcional)</span>
+                  DNI *
                 </label>
                 <input
                   className="w-full border-2 border-gray-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 p-3 rounded-lg transition-all outline-none"
@@ -509,17 +535,11 @@ export default function UsuariosPage() {
                   className="w-full border-2 border-gray-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 p-3 rounded-lg transition-all outline-none"
                   value={form.rol}
                   onChange={(e) => setForm({ ...form, rol: e.target.value })}
-                  disabled={form.id} // No se puede cambiar el rol al editar
                 >
                   <option value="VENDEDOR">Vendedor</option>
                   <option value="GERENTE">Gerente</option>
                   <option value="ADMINISTRADOR">Administrador</option>
                 </select>
-                {form.id && (
-                  <p className="text-xs text-gray-500 mt-1">
-                    El rol no se puede modificar
-                  </p>
-                )}
               </div>
             </div>
 

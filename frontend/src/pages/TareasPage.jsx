@@ -352,7 +352,7 @@ export default function TareasPage() {
 
   const load = async (start = fechaInicio, end = fechaFin) => {
     try {
-      let url = "http://localhost:3000/tareas?estadoActivo=TODOS";
+      let url = `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/tareas?estadoActivo=TODOS`;
       if (start && end) {
         const y1 = start.getFullYear();
         const m1 = String(start.getMonth() + 1).padStart(2, '0');
@@ -368,7 +368,7 @@ export default function TareasPage() {
       });
       setActividades(data);
 
-      const opps = await axios.get("http://localhost:3000/propiedades?limit=100", {
+      const opps = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/propiedades?limit=100`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setOportunidades(opps.data.data || opps.data);
@@ -390,7 +390,7 @@ export default function TareasPage() {
     try {
       if (form.id) {
         await axios.put(
-          `http://localhost:3000/tareas/${form.id}`,
+          `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/tareas/${form.id}`,
           {
             tipo: form.tipo,
             titulo: form.titulo,
@@ -404,7 +404,7 @@ export default function TareasPage() {
         success("Tarea actualizada exitosamente");
       } else {
         await axios.post(
-          "http://localhost:3000/tareas",
+          `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/tareas`,
           form,
           { headers: { Authorization: `Bearer ${token}` } }
         );
@@ -431,7 +431,7 @@ export default function TareasPage() {
   const toggleCompletada = async (id, completada) => {
     try {
       await axios.put(
-        `http://localhost:3000/tareas/${id}/completar`,
+        `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/tareas/${id}/completar`,
         { completada: !completada },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -453,7 +453,7 @@ export default function TareasPage() {
 
       if (!confirmed) return;
 
-      await axios.delete(`http://localhost:3000/tareas/${id}`, {
+      await axios.delete(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/tareas/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
 

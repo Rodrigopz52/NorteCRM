@@ -105,8 +105,8 @@ export const crearUsuario = async (req, res) => {
 
     const { nombre, apellido, email, rol, dni } = req.body;
 
-    if (!nombre || !apellido || !email) {
-      return res.status(400).json({ error: "Faltan campos obligatorios (nombre, apellido, email)" });
+    if (!nombre || !apellido || !email || !dni) {
+      return res.status(400).json({ error: "Faltan campos obligatorios (nombre, apellido, email, dni)" });
     }
 
     // Verificar que el email no exista
@@ -176,6 +176,16 @@ export const crearUsuario = async (req, res) => {
     });
   } catch (error) {
     console.error(error);
+    if (error.code === 'P2002') {
+      const target = error.meta?.target || [];
+      if (target.includes('email')) {
+        return res.status(400).json({ error: "Este email ya está registrado en otro usuario." });
+      }
+      if (target.includes('dni')) {
+        return res.status(400).json({ error: "Este DNI ya está registrado en otro usuario." });
+      }
+      return res.status(400).json({ error: "Un dato único ingresado ya está en uso." });
+    }
     res.status(500).json({ error: "Error al crear usuario" });
   }
 };
@@ -188,7 +198,11 @@ export const editarUsuario = async (req, res) => {
     }
 
     const { id } = req.params;
-    const { nombre, apellido, email, dni } = req.body;
+    const { nombre, apellido, email, dni, rol } = req.body;
+
+    if (!nombre || !apellido || !email || !dni) {
+      return res.status(400).json({ error: "Faltan campos obligatorios (nombre, apellido, email, dni)" });
+    }
 
     const usuario = await prisma.usuario.update({
       where: { id: Number(id) },
@@ -196,7 +210,8 @@ export const editarUsuario = async (req, res) => {
         nombre,
         apellido,
         email,
-        dni: dni !== undefined ? (dni || null) : undefined
+        dni,
+        ...(rol && { rol })
       },
       select: {
         id: true,
@@ -216,6 +231,16 @@ export const editarUsuario = async (req, res) => {
     });
   } catch (error) {
     console.error(error);
+    if (error.code === 'P2002') {
+      const target = error.meta?.target || [];
+      if (target.includes('email')) {
+        return res.status(400).json({ error: "Este email ya está registrado en otro usuario." });
+      }
+      if (target.includes('dni')) {
+        return res.status(400).json({ error: "Este DNI ya está registrado en otro usuario." });
+      }
+      return res.status(400).json({ error: "Un dato único ingresado ya está en uso." });
+    }
     res.status(500).json({ error: "Error al editar usuario" });
   }
 };
