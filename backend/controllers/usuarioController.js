@@ -198,7 +198,7 @@ export const editarUsuario = async (req, res) => {
     }
 
     const { id } = req.params;
-    const { nombre, apellido, email, dni } = req.body;
+    const { nombre, apellido, email, dni, rol } = req.body;
 
     if (!nombre || !apellido || !email || !dni) {
       return res.status(400).json({ error: "Faltan campos obligatorios (nombre, apellido, email, dni)" });
@@ -210,7 +210,8 @@ export const editarUsuario = async (req, res) => {
         nombre,
         apellido,
         email,
-        dni
+        dni,
+        ...(rol && { rol })
       },
       select: {
         id: true,

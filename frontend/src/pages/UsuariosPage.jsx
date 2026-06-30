@@ -157,7 +157,8 @@ export default function UsuariosPage() {
           nombre: form.nombre,
           apellido: form.apellido,
           email: form.email,
-          dni: form.dni || null
+          dni: form.dni || null,
+          rol: form.rol
         }, {
           headers: { Authorization: `Bearer ${token}` }
         });
@@ -514,17 +515,11 @@ export default function UsuariosPage() {
                   className="w-full border-2 border-gray-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 p-3 rounded-lg transition-all outline-none"
                   value={form.rol}
                   onChange={(e) => setForm({ ...form, rol: e.target.value })}
-                  disabled={form.id} // No se puede cambiar el rol al editar
                 >
                   <option value="VENDEDOR">Vendedor</option>
                   <option value="GERENTE">Gerente</option>
                   <option value="ADMINISTRADOR">Administrador</option>
                 </select>
-                {form.id && (
-                  <p className="text-xs text-gray-500 mt-1">
-                    El rol no se puede modificar
-                  </p>
-                )}
               </div>
             </div>
 
